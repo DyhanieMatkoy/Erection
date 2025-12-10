@@ -1,0 +1,260 @@
+"""Daily report list form"""
+from PyQt6.QtWidgets import (QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
+                              QTableWidgetItem, QHeaderView, QMessageBox, QLineEdit, QLabel, QMenu)
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
+from .base_list_form import BaseListForm
+from .daily_report_document_form import DailyReportDocumentForm
+from ..data.database_manager import DatabaseManager
+from ..services.document_posting_service import DocumentPostingService
+
+
+class DailyReportListForm(BaseListForm):
+    def __init__(self):
+        self.db = DatabaseManager().get_connection()
+        self.posting_service = DocumentPostingService()
+        self.opened_forms = []  # Keep references to opened forms
+        super().__init__()
+        self.setWindowTitle("Документы: Ежедневные отчеты")
+        self.resize(900, 600)
+        self.load_data()
+    
+    def setup_ui(self):
+        """Setup UI"""
+        layout = QVBoxLayout()
+        
+        # Search bar
+        search_layout = QHBoxLayout()
+        search_layout.addWidget(QLabel("Поиск (Ctrl+F):"))
+        self.search_edit = QLineEdit()
+        self.search_edit.textChanged.connect(self.on_search_text_changed)
+        search_layout.addWidget(self.search_edit)
+        
+        # Posting status filter
+        from PyQt6.QtWidgets import QComboBox
+        search_layout.addWidget(QLabel("Статус:"))
+        self.status_filter = QComboBox()
+        self.status_filter.addItem("Все", None)
+        self.status_filter.addItem("Проведенные", 1)
+        self.status_filter.addItem("Не проведенные", 0)
+        self.status_filter.currentIndexChanged.connect(self.on_filter_changed)
+        search_layout.addWidget(self.status_filter)
+        
+        layout.addLayout(search_layout)
+        
+        # Table
+        self.table_view = QTableWidget()
+        self.table_view.setColumnCount(6)
+        self.table_view.setHorizontalHeaderLabels([
+            "Проведен", "Дата", "Смета", "Бригадир", "Строк", "ID"
+        ])
+        self.table_view.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.table_view.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self.table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table_view.doubleClicked.connect(self.on_enter_pressed)
+        self.table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table_view.customContextMenuRequested.connect(self.on_context_menu)
+        layout.addWidget(self.table_view)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        
+        self.new_button = QPushButton("Создать (Insert/F9)")
+        self.new_button.clicked.connect(self.on_insert_pressed)
+        button_layout.addWidget(self.new_button)
+        
+        self.edit_button = QPushButton("Открыть (Enter)")
+        self.edit_button.clicked.connect(self.on_enter_pressed)
+        button_layout.addWidget(self.edit_button)
+        
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+    
+    def load_data(self, search_text=""):
+        """Load data from database"""
+        cursor = self.db.cursor()
+        
+        # Build WHERE clause
+        where_clauses = []
+        params = []
+        
+        if search_text:
+            where_clauses.append("(e.number LIKE ? OR p.full_name LIKE ?)")
+            params.extend([f"%{search_text}%", f"%{search_text}%"])
+        
+        # Add status filter
+        status_filter = self.status_filter.currentData() if hasattr(self, 'status_filter') else None
+        if status_filter is not None:
+            where_clauses.append("dr.is_posted = ?")
+            params.append(status_filter)
+        
+        where_clause = " AND ".join(where_clauses) if where_clauses else "1=1"
+        
+        query = f"""
+            SELECT dr.id, dr.date, 
+                   e.number as estimate_number,
+                   p.full_name as foreman_name,
+                   (SELECT COUNT(*) FROM daily_report_lines WHERE report_id = dr.id) as line_count,
+                   dr.is_posted
+            FROM daily_reports dr
+            LEFT JOIN estimates e ON dr.estimate_id = e.id
+            LEFT JOIN persons p ON dr.foreman_id = p.id
+            WHERE {where_clause}
+            ORDER BY dr.date DESC
+        """
+        
+        cursor.execute(query, params)
+        
+        rows = cursor.fetchall()
+        self.table_view.setRowCount(len(rows))
+        
+        for row_idx, row in enumerate(rows):
+            is_posted = row['is_posted'] if 'is_posted' in row.keys() else 0
+            
+            # Column 0: Posted status
+            posted_item = QTableWidgetItem("✓" if is_posted else "")
+            if is_posted:
+                font = posted_item.font()
+                font.setBold(True)
+                posted_item.setFont(font)
+            self.table_view.setItem(row_idx, 0, posted_item)
+            
+            # Column 1: Date
+            date_item = QTableWidgetItem(str(row['date']) if row['date'] else "")
+            if is_posted:
+                font = date_item.font()
+                font.setBold(True)
+                date_item.setFont(font)
+            self.table_view.setItem(row_idx, 1, date_item)
+            
+            # Column 2-4: Other fields
+            self.table_view.setItem(row_idx, 2, QTableWidgetItem(row['estimate_number'] or ""))
+            self.table_view.setItem(row_idx, 3, QTableWidgetItem(row['foreman_name'] or ""))
+            self.table_view.setItem(row_idx, 4, QTableWidgetItem(str(row['line_count'])))
+            
+            # Column 5: ID (hidden)
+            self.table_view.setItem(row_idx, 5, QTableWidgetItem(str(row['id'])))
+        
+        # Hide ID column
+        self.table_view.setColumnHidden(5, True)
+    
+    def on_search_text_changed(self, text):
+        """Handle search text change"""
+        self.load_data(text)
+    
+    def on_filter_changed(self):
+        """Handle filter change"""
+        self.load_data(self.search_edit.text())
+    
+    def on_insert_pressed(self):
+        """Handle insert key - create new daily report"""
+        try:
+            form = DailyReportDocumentForm(0)
+            form.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            form.destroyed.connect(lambda: self.opened_forms.remove(form) if form in self.opened_forms else None)
+            self.opened_forms.append(form)
+            form.show()
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть форму: {str(e)}")
+    
+    def on_enter_pressed(self):
+        """Handle enter key - open selected daily report"""
+        current_row = self.table_view.currentRow()
+        if current_row >= 0:
+            id_item = self.table_view.item(current_row, 5)
+            if id_item:
+                try:
+                    report_id = int(id_item.text())
+                    form = DailyReportDocumentForm(report_id)
+                    form.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+                    form.destroyed.connect(lambda: self.opened_forms.remove(form) if form in self.opened_forms else None)
+                    self.opened_forms.append(form)
+                    form.show()
+                except Exception as e:
+                    QMessageBox.critical(self, "Ошибка", f"Не удалось открыть форму: {str(e)}")
+    
+    def on_search_activated(self):
+        """Handle search activation"""
+        self.search_edit.setFocus()
+        self.search_edit.selectAll()
+    
+    def on_context_menu(self, position):
+        """Handle context menu"""
+        current_row = self.table_view.currentRow()
+        if current_row < 0:
+            return
+        
+        menu = QMenu(self)
+        
+        # Get posting status
+        id_item = self.table_view.item(current_row, 5)
+        posted_item = self.table_view.item(current_row, 0)
+        is_posted = posted_item.text() == "✓" if posted_item else False
+        
+        # Post/Unpost actions
+        if is_posted:
+            unpost_action = QAction("Отменить проведение", self)
+            unpost_action.triggered.connect(self.on_unpost_selected)
+            menu.addAction(unpost_action)
+        else:
+            post_action = QAction("Провести", self)
+            post_action.triggered.connect(self.on_post_selected)
+            menu.addAction(post_action)
+        
+        menu.exec(self.table_view.viewport().mapToGlobal(position))
+    
+    def on_post_selected(self):
+        """Post selected daily report"""
+        current_row = self.table_view.currentRow()
+        if current_row < 0:
+            return
+        
+        id_item = self.table_view.item(current_row, 5)
+        if not id_item:
+            return
+        
+        try:
+            report_id = int(id_item.text())
+            success, error = self.posting_service.post_daily_report(report_id)
+            
+            if success:
+                QMessageBox.information(self, "Успех", "Отчет проведен")
+                self.load_data(self.search_edit.text())
+            else:
+                QMessageBox.critical(self, "Ошибка", error or "Не удалось провести отчет")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при проведении: {str(e)}")
+    
+    def on_unpost_selected(self):
+        """Unpost selected daily report"""
+        current_row = self.table_view.currentRow()
+        if current_row < 0:
+            return
+        
+        id_item = self.table_view.item(current_row, 5)
+        if not id_item:
+            return
+        
+        reply = QMessageBox.question(
+            self, "Подтверждение",
+            "Отменить проведение отчета?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        try:
+            report_id = int(id_item.text())
+            success, error = self.posting_service.unpost_daily_report(report_id)
+            
+            if success:
+                QMessageBox.information(self, "Успех", "Проведение отменено")
+                self.load_data(self.search_edit.text())
+            else:
+                QMessageBox.critical(self, "Ошибка", error or "Не удалось отменить проведение")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при отмене проведения: {str(e)}")

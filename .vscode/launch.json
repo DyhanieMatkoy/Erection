@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Main Application",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/venv/Scripts/python.exe",
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Test env.ini",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_env_ini.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/venv/Scripts/python.exe",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": true
+        }
+    ]
+}
