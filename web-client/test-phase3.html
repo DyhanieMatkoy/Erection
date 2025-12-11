@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3 Mobile Testing - Construction Time Management</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9fafb;
+            border-left: 4px solid #3b82f6;
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status.pass {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.fail {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .status.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .viewport-test {
+            margin: 15px 0;
+            padding: 15px;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+        }
+        .viewport-label {
+            font-weight: 600;
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .iframe-container {
+            margin: 20px 0;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        iframe {
+            border: none;
+            display: block;
+        }
+        .controls {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .note {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .checklist li:hover {
+            background: #f9fafb;
+        }
+        .checklist input[type="checkbox"] {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Phase 3: Mobile Optimization Testing</h1>
+        
+        <div class="note">
+            <strong>📋 Testing Instructions:</strong>
+            <p>This page helps you systematically test all Phase 3 mobile optimization features. Use the viewport controls below to test different screen sizes, and check off items as you verify them.</p>
+        </div>
+
+        <div class="controls">
+            <h3>🖥️ Viewport Controls</h3>
+            <button onclick="setViewport(375, 667, 'iPhone SE')">📱 iPhone SE (375x667)</button>
+            <button onclick="setViewport(414, 896, 'iPhone 12 Pro')">📱 iPhone 12 Pro (414x896)</button>
+            <button onclick="setViewport(360, 740, 'Samsung Galaxy S21')">📱 Galaxy S21 (360x740)</button>
+            <button onclick="setViewport(768, 1024, 'iPad')">📱 iPad (768x1024)</button>
+            <button onclick="setViewport(1024, 768, 'iPad Landscape')">📱 iPad Landscape (1024x768)</button>
+            <button onclick="setViewport(1280, 720, 'Desktop')">🖥️ Desktop (1280x720)</button>
+            <button onclick="setViewport(1920, 1080, 'Full HD')">🖥️ Full HD (1920x1080)</button>
+            <div style="margin-top: 10px;">
+                <strong>Current Viewport:</strong> <span id="current-viewport">Not set</span>
+            </div>
+        </div>
+
+        <div class="iframe-container">
+            <iframe id="test-frame" src="http://localhost:5173" width="375" height="667"></iframe>
+        </div>
+
+        <h2>Task 3.1: Mobile Navigation</h2>
+        <div class="test-section">
+            <h3>✅ Sidebar Hidden on Mobile (&lt;768px)</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t31-1"> Sidebar not visible by default on mobile viewport</li>
+                <li><input type="checkbox" id="t31-2"> Hamburger menu button visible in header</li>
+                <li><input type="checkbox" id="t31-3"> Clicking hamburger opens drawer menu</li>
+                <li><input type="checkbox" id="t31-4"> Overlay appears when drawer is open</li>
+                <li><input type="checkbox" id="t31-5"> Clicking overlay closes drawer</li>
+                <li><input type="checkbox" id="t31-6"> Clicking menu item closes drawer</li>
+            </ul>
+
+            <h3>✅ Touch-Friendly Menu Items</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t31-7"> Menu items are at least 44x44px (use DevTools to measure)</li>
+                <li><input type="checkbox" id="t31-8"> Adequate spacing between menu items</li>
+                <li><input type="checkbox" id="t31-9"> Touch targets don't overlap</li>
+                <li><input type="checkbox" id="t31-10"> Easy to tap on mobile device</li>
+            </ul>
+
+            <h3>✅ Smooth Animations</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t31-11"> Drawer slides in smoothly (no jank)</li>
+                <li><input type="checkbox" id="t31-12"> Drawer slides out smoothly</li>
+                <li><input type="checkbox" id="t31-13"> Overlay fades in/out smoothly</li>
+            </ul>
+        </div>
+
+        <h2>Task 3.2: Mobile Table Views</h2>
+        <div class="test-section">
+            <h3>✅ Card-Based Layout on Mobile</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t32-1"> DataTable shows cards instead of table on &lt;768px</li>
+                <li><input type="checkbox" id="t32-2"> Each record is a separate card</li>
+                <li><input type="checkbox" id="t32-3"> Key information visible in cards</li>
+                <li><input type="checkbox" id="t32-4"> Cards are touch-friendly (easy to tap)</li>
+                <li><input type="checkbox" id="t32-5"> Test in Counterparties list</li>
+                <li><input type="checkbox" id="t32-6"> Test in Objects list</li>
+                <li><input type="checkbox" id="t32-7"> Test in Estimates list</li>
+                <li><input type="checkbox" id="t32-8"> Test in Daily Reports list</li>
+            </ul>
+
+            <h3>✅ Tablet View (768-1024px)</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t32-9"> Table view shows on tablet (768px+)</li>
+                <li><input type="checkbox" id="t32-10"> Table is readable and usable</li>
+                <li><input type="checkbox" id="t32-11"> Horizontal scroll works if needed</li>
+            </ul>
+        </div>
+
+        <h2>Task 3.3: Mobile Form Optimization</h2>
+        <div class="test-section">
+            <h3>✅ Single Column Layout</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t33-1"> Forms use single column on mobile</li>
+                <li><input type="checkbox" id="t33-2"> Full-width inputs on mobile</li>
+                <li><input type="checkbox" id="t33-3"> Large touch targets for buttons</li>
+                <li><input type="checkbox" id="t33-4"> Test Counterparty form</li>
+                <li><input type="checkbox" id="t33-5"> Test Estimate form</li>
+                <li><input type="checkbox" id="t33-6"> Test Daily Report form</li>
+            </ul>
+
+            <h3>✅ Appropriate Input Types</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t33-7"> Number inputs show numeric keyboard</li>
+                <li><input type="checkbox" id="t33-8"> Date inputs show date picker</li>
+                <li><input type="checkbox" id="t33-9"> Text inputs show standard keyboard</li>
+            </ul>
+
+            <h3>✅ Pickers on Mobile</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t33-10"> Picker component works on mobile</li>
+                <li><input type="checkbox" id="t33-11"> Search functionality in pickers</li>
+                <li><input type="checkbox" id="t33-12"> Easy to select items</li>
+                <li><input type="checkbox" id="t33-13"> MultiPicker works on mobile</li>
+            </ul>
+
+            <h3>✅ Modals on Mobile</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t33-14"> Modals are full-width on mobile</li>
+                <li><input type="checkbox" id="t33-15"> Close button accessible</li>
+                <li><input type="checkbox" id="t33-16"> Modal content scrollable if needed</li>
+                <li><input type="checkbox" id="t33-17"> Backdrop click closes modal</li>
+            </ul>
+        </div>
+
+        <h2>Task 3.4: Touch Gestures (Optional)</h2>
+        <div class="test-section">
+            <div class="note">
+                <strong>Note:</strong> These features are optional for MVP. Mark as N/A if not implemented.
+            </div>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t34-1"> Swipe gestures (if implemented)</li>
+                <li><input type="checkbox" id="t34-2"> Pull-to-refresh (if implemented)</li>
+                <li><input type="checkbox" id="t34-3"> Long press actions (if implemented)</li>
+            </ul>
+        </div>
+
+        <h2>Task 3.5: Performance Optimization</h2>
+        <div class="test-section">
+            <h3>✅ Code Splitting & Loading</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t35-1"> Initial load time &lt;3 seconds</li>
+                <li><input type="checkbox" id="t35-2"> Routes lazy-loaded (check Network tab)</li>
+                <li><input type="checkbox" id="t35-3"> Loading states show during navigation</li>
+            </ul>
+
+            <h3>✅ Search Performance</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t35-4"> Search input is debounced (no excessive API calls)</li>
+                <li><input type="checkbox" id="t35-5"> Search works smoothly on mobile</li>
+            </ul>
+
+            <h3>✅ Scrolling Performance</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="t35-6"> Smooth scrolling on long lists</li>
+                <li><input type="checkbox" id="t35-7"> No lag or jank during scroll</li>
+                <li><input type="checkbox" id="t35-8"> Pagination works correctly</li>
+            </ul>
+        </div>
+
+        <h2>Cross-Device Testing</h2>
+        <div class="test-section">
+            <h3>📱 Mobile Devices (375px - 767px)</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="cd-1"> iPhone SE (375x667) - Portrait</li>
+                <li><input type="checkbox" id="cd-2"> iPhone 12 Pro (414x896) - Portrait</li>
+                <li><input type="checkbox" id="cd-3"> Samsung Galaxy S21 (360x740) - Portrait</li>
+                <li><input type="checkbox" id="cd-4"> Landscape orientation works</li>
+            </ul>
+
+            <h3>📱 Tablet Devices (768px - 1023px)</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="cd-5"> iPad (768x1024) - Portrait</li>
+                <li><input type="checkbox" id="cd-6"> iPad (1024x768) - Landscape</li>
+                <li><input type="checkbox" id="cd-7"> Sidebar behavior correct</li>
+            </ul>
+
+            <h3>🖥️ Desktop (1024px+)</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="cd-8"> Desktop (1280x720)</li>
+                <li><input type="checkbox" id="cd-9"> Full HD (1920x1080)</li>
+                <li><input type="checkbox" id="cd-10"> Sidebar always visible</li>
+            </ul>
+        </div>
+
+        <h2>User Flows Testing</h2>
+        <div class="test-section">
+            <h3>Flow 1: Login on Mobile</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="uf-1"> Login form displays correctly</li>
+                <li><input type="checkbox" id="uf-2"> Inputs are touch-friendly</li>
+                <li><input type="checkbox" id="uf-3"> Login button is large enough</li>
+                <li><input type="checkbox" id="uf-4"> Error messages display correctly</li>
+            </ul>
+
+            <h3>Flow 2: Create Counterparty on Mobile</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="uf-5"> Navigate to Counterparties</li>
+                <li><input type="checkbox" id="uf-6"> List shows as cards</li>
+                <li><input type="checkbox" id="uf-7"> Click "Create" button</li>
+                <li><input type="checkbox" id="uf-8"> Form opens (full-screen on mobile)</li>
+                <li><input type="checkbox" id="uf-9"> Fill form fields</li>
+                <li><input type="checkbox" id="uf-10"> Save successfully</li>
+            </ul>
+
+            <h3>Flow 3: Create Estimate on Mobile</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="uf-11"> Navigate to Estimates</li>
+                <li><input type="checkbox" id="uf-12"> Create new estimate</li>
+                <li><input type="checkbox" id="uf-13"> Pickers work correctly</li>
+                <li><input type="checkbox" id="uf-14"> Add estimate lines</li>
+                <li><input type="checkbox" id="uf-15"> Calculations work</li>
+                <li><input type="checkbox" id="uf-16"> Save successfully</li>
+            </ul>
+
+            <h3>Flow 4: Create Daily Report on Mobile</h3>
+            <ul class="checklist">
+                <li><input type="checkbox" id="uf-17"> Navigate to Daily Reports</li>
+                <li><input type="checkbox" id="uf-18"> Create new report</li>
+                <li><input type="checkbox" id="uf-19"> Select estimate (auto-fill works)</li>
+                <li><input type="checkbox" id="uf-20"> Enter actual labor</li>
+                <li><input type="checkbox" id="uf-21"> Select executors (multi-picker)</li>
+                <li><input type="checkbox" id="uf-22"> Save successfully</li>
+            </ul>
+        </div>
+
+        <div class="controls" style="margin-top: 30px;">
+            <h3>📊 Test Progress</h3>
+            <div id="progress-summary">
+                <p><strong>Total Items:</strong> <span id="total-items">0</span></p>
+                <p><strong>Checked:</strong> <span id="checked-items">0</span></p>
+                <p><strong>Progress:</strong> <span id="progress-percent">0%</span></p>
+            </div>
+            <button onclick="exportResults()">📥 Export Test Results</button>
+            <button onclick="resetChecklist()">🔄 Reset Checklist</button>
+        </div>
+    </div>
+
+    <script>
+        function setViewport(width, height, name) {
+            const iframe = document.getElementById('test-frame');
+            iframe.width = width;
+            iframe.height = height;
+            document.getElementById('current-viewport').textContent = `${name} (${width}x${height})`;
+        }
+
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('.checklist input[type="checkbox"]');
+            const total = checkboxes.length;
+            const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
+            const percent = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+            document.getElementById('total-items').textContent = total;
+            document.getElementById('checked-items').textContent = checked;
+            document.getElementById('progress-percent').textContent = percent + '%';
+        }
+
+        function exportResults() {
+            const checkboxes = document.querySelectorAll('.checklist input[type="checkbox"]');
+            const results = {
+                timestamp: new Date().toISOString(),
+                total: checkboxes.length,
+                checked: 0,
+                items: []
+            };
+
+            checkboxes.forEach(cb => {
+                const label = cb.parentElement.textContent.trim();
+                const checked = cb.checked;
+                if (checked) results.checked++;
+                results.items.push({ id: cb.id, label, checked });
+            });
+
+            const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `phase3-test-results-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetChecklist() {
+            if (confirm('Are you sure you want to reset all checkboxes?')) {
+                document.querySelectorAll('.checklist input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                });
+                updateProgress();
+            }
+        }
+
+        // Update progress on checkbox change
+        document.addEventListener('change', (e) => {
+            if (e.target.type === 'checkbox') {
+                updateProgress();
+            }
+        });
+
+        // Initial progress update
+        updateProgress();
+
+        // Auto-refresh iframe every 30 seconds (optional)
+        // setInterval(() => {
+        //     document.getElementById('test-frame').contentWindow.location.reload();
+        // }, 30000);
+    </script>
+</body>
+</html>

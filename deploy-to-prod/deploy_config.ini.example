@@ -1,0 +1,55 @@
+# Production Deployment Configuration
+# Copy this file to deploy_config.ini and edit with your settings
+
+[Database]
+# Database type: sqlite, postgresql, mssql
+type = postgresql
+
+# Source SQLite database for migration
+source_db = ../construction.db
+
+# PostgreSQL configuration (used when type=postgresql)
+postgres_host = localhost
+postgres_port = 5432
+postgres_database = construction_prod
+postgres_user = postgres
+postgres_password = your_secure_password_here
+
+# MSSQL configuration (used when type=mssql)
+# mssql_host = localhost
+# mssql_port = 1433
+# mssql_database = construction_prod
+# mssql_user = sa
+# mssql_password = your_secure_password_here
+# mssql_driver = ODBC Driver 17 for SQL Server
+
+[API]
+# API server configuration
+host = 0.0.0.0
+port = 8000
+
+# IMPORTANT: Change this to a secure random string in production!
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+jwt_secret = CHANGE_THIS_SECRET_KEY_IN_PRODUCTION
+
+# CORS origins (comma-separated)
+cors_origins = http://localhost:3000,https://yourdomain.com
+
+[WebClient]
+# Web client configuration
+api_base_url = http://servut.npksarmat.ru:65002/api
+build_output = ../web-client/dist
+
+[Desktop]
+# Desktop application configuration
+app_name = ConstructionTimeManagement
+icon_path = ../fonts/icon.ico
+output_dir = ../build/desktop
+
+[Paths]
+# Project paths (relative to deploy-to-prod folder)
+project_root = ..
+web_client_dir = ../web-client
+api_dir = ../api
+src_dir = ../src
+output_dir = ./output

@@ -19,9 +19,14 @@ class ReferencePickerDialog(QDialog):
         
         # Determine display column based on table
         self.display_column = self._get_display_column()
+        self.is_hierarchical = self._check_is_hierarchical()
         
         self.setup_ui()
         self.load_data()
+    
+    def _check_is_hierarchical(self):
+        """Check if table supports hierarchy"""
+        return self.table_name in ["works", "objects", "organizations", "counterparties", "persons", "cost_items"]
     
     def _get_display_column(self):
         """Get display column name based on table"""
@@ -111,8 +116,8 @@ class ReferencePickerDialog(QDialog):
             # When searching, show all levels
             where_clauses.append(f"{self.display_column} LIKE ?")
             params.append(f"%{search_text}%")
-        else:
-            # When not searching, show only current level
+        elif self.is_hierarchical:
+            # When not searching and hierarchical, show only current level
             if self.current_parent_id is None:
                 where_clauses.append("(parent_id IS NULL OR parent_id = 0)")
             else:
@@ -121,8 +126,10 @@ class ReferencePickerDialog(QDialog):
         
         where_clause = " AND ".join(where_clauses)
         
+        parent_col = "parent_id" if self.is_hierarchical else "NULL as parent_id"
+        
         cursor.execute(f"""
-            SELECT id, {self.display_column}, parent_id
+            SELECT id, {self.display_column}, {parent_col}
             FROM {self.table_name}
             WHERE {where_clause}
             ORDER BY {self.display_column}
@@ -135,12 +142,14 @@ class ReferencePickerDialog(QDialog):
         for row_idx, row in enumerate(rows):
             self.table_view.setItem(row_idx, 0, QTableWidgetItem(str(row['id'])))
             
-            # Check if this row has children (is a group)
-            cursor.execute(f"""
-                SELECT COUNT(*) as cnt FROM {self.table_name}
-                WHERE parent_id = ? AND marked_for_deletion = 0
-            """, (row['id'],))
-            has_children = cursor.fetchone()['cnt'] > 0
+            has_children = False
+            if self.is_hierarchical:
+                # Check if this row has children (is a group)
+                cursor.execute(f"""
+                    SELECT COUNT(*) as cnt FROM {self.table_name}
+                    WHERE parent_id = ? AND marked_for_deletion = 0
+                """, (row['id'],))
+                has_children = cursor.fetchone()['cnt'] > 0
             
             name_text = row[self.display_column]
             if has_children:
@@ -190,6 +199,9 @@ class ReferencePickerDialog(QDialog):
     
     def on_drill_down(self):
         """Drill down into selected group"""
+        if not self.is_hierarchical:
+            return
+
         current_row = self.table_view.currentRow()
         if current_row >= 0:
             id_item = self.table_view.item(current_row, 0)
@@ -216,13 +228,15 @@ class ReferencePickerDialog(QDialog):
             if id_item:
                 selected_id = int(id_item.text())
                 
-                # Check if this item has children
-                cursor = self.db.cursor()
-                cursor.execute(f"""
-                    SELECT COUNT(*) as cnt FROM {self.table_name}
-                    WHERE parent_id = ? AND marked_for_deletion = 0
-                """, (selected_id,))
-                has_children = cursor.fetchone()['cnt'] > 0
+                has_children = False
+                if self.is_hierarchical:
+                    # Check if this item has children
+                    cursor = self.db.cursor()
+                    cursor.execute(f"""
+                        SELECT COUNT(*) as cnt FROM {self.table_name}
+                        WHERE parent_id = ? AND marked_for_deletion = 0
+                    """, (selected_id,))
+                    has_children = cursor.fetchone()['cnt'] > 0
                 
                 if has_children:
                     # Drill down
@@ -236,6 +250,9 @@ class ReferencePickerDialog(QDialog):
         """Update navigation buttons and label"""
         # Enable/disable up button
         self.up_button.setEnabled(self.current_parent_id is not None)
+        self.up_button.setVisible(self.is_hierarchical)
+        self.drill_down_button.setVisible(self.is_hierarchical)
+        self.parent_label.setVisible(self.is_hierarchical)
         
         # Update parent label
         if self.current_parent_id is None:

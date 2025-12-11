@@ -1,0 +1,70 @@
+================================================================================
+  CONSTRUCTION TIME MANAGEMENT SYSTEM
+  Offline Distribution Package
+================================================================================
+
+QUICK START:
+
+1. Install Prerequisites (in order):
+   - prerequisites\python-3.11.x-amd64.exe  (Check "Add to PATH")
+   - prerequisites\node-v20.x.x-x64.msi
+   - prerequisites\VC_redist.x64.exe
+
+2. Run Installer:
+   - Double-click: create_installer.bat
+   - Follow on-screen instructions
+
+3. Launch Application:
+   - Desktop shortcut: "Construction Time Management"
+   - Or run: C:\ConstructionTimeManagement\run.bat
+
+4. Login:
+   - Username: admin
+   - Password: admin
+   - CHANGE PASSWORD AFTER FIRST LOGIN!
+
+================================================================================
+
+DOCUMENTATION:
+
+- QUICK_START.md          - 5-minute installation guide
+- INSTALLATION_GUIDE.md   - Detailed installation steps
+- TROUBLESHOOTING.md      - Common issues and solutions
+- README.md               - Package overview
+
+After installation, see:
+- docs\DATABASE_AND_CONFIG_GUIDE.md - Configuration options
+- docs\START_HERE.md                - User guide
+
+================================================================================
+
+PACKAGE CONTENTS:
+
+prerequisites\     - System requirements (Python, Node.js, etc.)
+python-packages\   - Python dependencies (offline)
+node-packages\     - Node.js dependencies (offline)
+app\               - Application files
+docs\              - Documentation
+
+================================================================================
+
+SYSTEM REQUIREMENTS:
+
+- Windows 10/11 (64-bit)
+- 4 GB RAM minimum
+- 2 GB free disk space
+- No internet required after installation
+
+================================================================================
+
+SUPPORT:
+
+For help, see TROUBLESHOOTING.md or contact your system administrator.
+
+================================================================================
+
+VERSION: 1.0.0
+PLATFORM: Windows 64-bit
+PACKAGE TYPE: Complete Offline Installer
+
+================================================================================

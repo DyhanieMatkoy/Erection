@@ -1,0 +1,106 @@
+================================================================================
+SIMPLE HASH DEPLOYMENT - STEP BY STEP
+================================================================================
+
+This deployment uses SHA256 instead of bcrypt to avoid the 72-byte error.
+This is TEMPORARY for debugging only.
+
+================================================================================
+STEP 1: STOP THE SERVER
+================================================================================
+
+On the other PC (D:\03\ct\):
+- Stop the API server
+- Close any Python processes
+- Make sure nothing is using the files
+
+================================================================================
+STEP 2: DEPLOY NEW CODE
+================================================================================
+
+Run the deployment script:
+  DEPLOY.bat
+
+This will:
+- Backup old files
+- Copy new auth_service files (with SHA256)
+- Copy utility scripts
+
+Wait for "DEPLOYMENT COMPLETE!" message.
+
+================================================================================
+STEP 3: RESET ADMIN PASSWORD
+================================================================================
+
+After deployment, navigate back to D:\03\ct\ and run:
+  python reset_admin_password.py
+
+You should see:
+  ✓ Admin password reset to 'admin'
+
+This creates a SHA256 hash (not bcrypt) for the password "admin".
+
+================================================================================
+STEP 4: VERIFY THE HASH (Optional)
+================================================================================
+
+To verify the hash was created correctly:
+  python check_admin_hash_simple.py
+
+Should show:
+  ✓ This is a SHA256 hash
+  ✓ Hash matches password 'admin'
+
+================================================================================
+STEP 5: RESTART SERVER
+================================================================================
+
+Start the API server again.
+
+================================================================================
+STEP 6: TEST LOGIN
+================================================================================
+
+Try logging in via web UI:
+  Username: admin
+  Password: admin
+
+Should work WITHOUT any bcrypt errors!
+
+================================================================================
+WHAT IF IT STILL DOESN'T WORK?
+================================================================================
+
+If you still get errors:
+
+1. Check that DEPLOY.bat completed successfully
+2. Verify files were copied:
+   - Check D:\03\ct\api\services\auth_service.py
+   - Look for "USE_SIMPLE_HASH = True" near the top
+
+3. Make sure you ran reset_admin_password.py AFTER deploying
+
+4. Check server logs for any other errors
+
+5. Try restarting the server again
+
+================================================================================
+WHAT THIS PROVES
+================================================================================
+
+If login works with SHA256:
+✓ The authentication flow is correct
+✓ The database is working
+✓ The issue was specifically with bcrypt
+
+Then we can focus on fixing bcrypt properly.
+
+================================================================================
+SECURITY WARNING
+================================================================================
+
+⚠️ SHA256 without salt is NOT secure for production!
+⚠️ This is ONLY for debugging
+⚠️ Switch back to bcrypt after fixing the issue
+
+================================================================================

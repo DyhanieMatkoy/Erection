@@ -1,0 +1,32 @@
+# Deployment configuration (contains sensitive data)
+deploy_config.ini
+env_migration_temp.ini
+
+# Build outputs
+output/
+dist/
+build/
+
+# PyInstaller files
+*.spec
+*.pyc
+__pycache__/
+
+# Logs
+deploy.log
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

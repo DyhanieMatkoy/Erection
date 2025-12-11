@@ -27,13 +27,27 @@ class BaseListForm(QWidget):
             self.on_delete_pressed()
         elif event.key() == Qt.Key.Key_F5:
             self.on_refresh_pressed()
-        elif event.matches(Qt.KeyboardModifier.ControlModifier) and event.key() == Qt.Key.Key_F:
+        elif event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_F:
             self.on_search_activated()
-        elif event.matches(Qt.KeyboardModifier.ControlModifier) and event.key() == Qt.Key.Key_D:
+        elif event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_D:
             self.on_copy_pressed()
+        elif event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_A:
+            self.on_select_all_pressed()
+        elif event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_Up:
+            self.go_up()
+        elif event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_Down:
+            self.go_down()
         else:
             super().keyPressEvent(event)
     
+    def go_up(self):
+        """Navigate up in hierarchy"""
+        pass
+
+    def go_down(self):
+        """Navigate down in hierarchy"""
+        self.on_enter_pressed()
+
     def on_insert_pressed(self):
         """Handle insert key"""
         pass
@@ -59,3 +73,8 @@ class BaseListForm(QWidget):
     def on_copy_pressed(self):
         """Handle copy"""
         pass
+    
+    def on_select_all_pressed(self):
+        """Handle select all (Ctrl+A)"""
+        if hasattr(self, 'table_view') and self.table_view:
+            self.table_view.selectAll()
