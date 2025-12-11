@@ -297,23 +297,24 @@ async def list_works(
     cursor = db.cursor()
     
     # Build query
-    where_clause = "marked_for_deletion = 0"
+    where_clause = "w.marked_for_deletion = 0"
     params = []
     
     if search:
-        where_clause += " AND name LIKE ?"
+        where_clause += " AND w.name LIKE ?"
         params.append(f"%{search}%")
     
     # Get total count
-    cursor.execute(f"SELECT COUNT(*) as count FROM works WHERE {where_clause}", params)
+    cursor.execute(f"SELECT COUNT(*) as count FROM works w WHERE {where_clause}", params)
     total = cursor.fetchone()['count']
     
     # Get items
     query = f"""
-        SELECT id, name, code, unit, price, labor_rate, is_group, parent_id, marked_for_deletion
-        FROM works
+        SELECT w.id, w.name, w.code, COALESCE(u.name, w.unit) as unit, w.unit_id, w.price, w.labor_rate, w.is_group, w.parent_id, w.marked_for_deletion
+        FROM works w
+        LEFT JOIN units u ON w.unit_id = u.id
         WHERE {where_clause}
-        ORDER BY {sort_by} {sort_order.upper()}
+        ORDER BY w.{sort_by} {sort_order.upper()}
         LIMIT ? OFFSET ?
     """
     params.extend([page_size, offset])

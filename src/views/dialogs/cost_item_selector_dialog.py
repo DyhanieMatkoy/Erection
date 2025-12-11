@@ -7,10 +7,11 @@ from ...data.repositories.cost_item_repository import CostItemRepository
 from ...data.repositories.cost_item_material_repository import CostItemMaterialRepository
 
 class CostItemSelectorDialog(QDialog):
-    def __init__(self, parent=None, work_id=None, filter_by_work=False):
+    def __init__(self, parent=None, work_id=None, filter_by_work=False, current_id=None):
         super().__init__(parent)
         self.work_id = work_id
         self.filter_by_work = filter_by_work
+        self.current_id = current_id
         self.repo = CostItemRepository()
         self.cim_repo = CostItemMaterialRepository()
         self.selected_cost_item_id = None
@@ -113,6 +114,23 @@ class CostItemSelectorDialog(QDialog):
         # Add roots
         self._add_items_recursive(None, items_by_parent, self.tree.invisibleRootItem())
         self._add_items_recursive(0, items_by_parent, self.tree.invisibleRootItem())
+        
+        # Select current item if provided
+        if self.current_id:
+            iterator = QTreeWidgetItemIterator(self.tree)
+            while iterator.value():
+                item = iterator.value()
+                item_id = item.data(0, Qt.ItemDataRole.UserRole)
+                if item_id == self.current_id:
+                    self.tree.setCurrentItem(item)
+                    self.tree.scrollToItem(item)
+                    # Expand parents
+                    parent = item.parent()
+                    while parent:
+                        parent.setExpanded(True)
+                        parent = parent.parent()
+                    break
+                iterator += 1
 
     def _add_items_recursive(self, parent_id, items_by_parent, parent_widget):
         if parent_id not in items_by_parent:

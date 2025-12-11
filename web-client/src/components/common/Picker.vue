@@ -58,10 +58,11 @@
         </div>
 
         <!-- Items -->
-        <div v-if="filteredItems.length > 0">
+        <div v-if="filteredItems.length > 0" ref="itemsContainer">
           <div
             v-for="item in filteredItems"
             :key="String(item[valueKey])"
+            :ref="(el) => setItemRef(el, item[valueKey])"
             :class="[
               'relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-gray-100',
               modelValue === item[valueKey] ? 'bg-blue-50 text-blue-900' : 'text-gray-900'
@@ -97,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 
  
 export interface PickerItem {
@@ -130,6 +131,8 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const searchQuery = ref('')
+const itemsContainer = ref<HTMLElement | null>(null)
+const itemRefs = ref<Record<string | number, HTMLElement>>({})
 
 const selectedItem = computed(() => {
   return props.items.find(item => item[props.valueKey] === props.modelValue)
@@ -147,6 +150,12 @@ const filteredItems = computed(() => {
   })
 })
 
+function setItemRef(el: any, key: string | number) {
+  if (el) {
+    itemRefs.value[key] = el as HTMLElement
+  }
+}
+
 function selectItem(item: PickerItem) {
   emit('update:modelValue', item[props.valueKey] as number | string)
   open.value = false
@@ -159,9 +168,18 @@ function clearSelection() {
   searchQuery.value = ''
 }
 
-watch(open, (newValue) => {
+watch(open, async (newValue) => {
   if (!newValue) {
     searchQuery.value = ''
+  } else {
+    // Scroll to selected item when opened
+    if (props.modelValue && itemRefs.value[props.modelValue]) {
+      await nextTick()
+      const el = itemRefs.value[props.modelValue]
+      if (el) {
+        el.scrollIntoView({ block: 'nearest' })
+      }
+    }
   }
 })
 </script>

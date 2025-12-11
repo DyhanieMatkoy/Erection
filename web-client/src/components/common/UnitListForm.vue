@@ -39,6 +39,7 @@ import type { Unit } from '@/types/models'
 interface Props {
   isOpen: boolean
   title?: string
+  currentId?: number | null
 }
 
 interface Emits {
@@ -47,7 +48,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  title: 'Select Unit'
+  title: 'Select Unit',
+  currentId: null
 })
 
 const emit = defineEmits<Emits>()
@@ -60,13 +62,38 @@ const error = ref<string | null>(null)
 
 // Watch for dialog open
 watch(() => props.isOpen, (isOpen) => {
-  if (isOpen && units.value.length === 0) {
-    loadUnits()
-  }
   if (isOpen) {
+    if (units.value.length === 0) {
+      loadUnits()
+    } else {
+      // If units are already loaded, update selectedItem based on currentId
+      updateSelectedItem()
+    }
+  } else {
     selectedItem.value = null
   }
 })
+
+// Watch for currentId changes
+watch(() => props.currentId, () => {
+  if (props.isOpen) {
+    updateSelectedItem()
+  }
+})
+
+// Update selected item from currentId
+function updateSelectedItem() {
+  if (props.currentId && units.value.length > 0) {
+    const found = units.value.find(u => u.id === props.currentId)
+    if (found) {
+      selectedItem.value = found
+    } else {
+      selectedItem.value = null
+    }
+  } else {
+    selectedItem.value = null
+  }
+}
 
 // Methods
 async function loadUnits() {
@@ -74,6 +101,7 @@ async function loadUnits() {
   error.value = null
   try {
     units.value = await unitsApi.getAll(false)
+    updateSelectedItem() // Update selection after loading
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load units'
     console.error('Error loading units:', err)

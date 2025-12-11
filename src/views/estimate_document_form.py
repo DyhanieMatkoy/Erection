@@ -495,8 +495,19 @@ class EstimateDocumentForm(BaseDocumentForm):
         # Use substring search if user typed something
         work_name_item = self.table_part.item(row, 0)
         search_text = ""
-        if work_name_item and work_name_item.text() and current_work_id is None:
-             search_text = work_name_item.text()
+        # Only use text as search if we don't have a valid ID, or if the text doesn't look like the resolved name
+        # But ReferencePickerDialog logic is: if search_text is present, it searches.
+        # If we want to position on current item, we should NOT pass search_text unless the user actually typed a search query.
+        # Here we assume if they clicked the button, they might want to see the current item selected.
+        # If they typed something and hit enter/button, they might want search.
+        # Let's try to be smart: if we have a valid ID, prioritize selection. 
+        # But the user might have edited the text to search for something else.
+        
+        if work_name_item and work_name_item.text():
+             text = work_name_item.text()
+             # If text contains code in brackets [code], it's likely a resolved name
+             if not (text.startswith("[") and "]" in text) and current_work_id is None:
+                 search_text = text
 
         dialog = ReferencePickerDialog("works", "Выбор работы", self, current_id=current_work_id)
         if search_text:

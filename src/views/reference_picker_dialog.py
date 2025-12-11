@@ -128,6 +128,15 @@ class ReferencePickerDialog(QDialog):
             where_clauses.append("owner_id = ?")
             params.append(self.owner_id)
         
+        # Determine if we need to navigate to the current item's parent first
+        # Only do this on initial load (when search is empty and we have a current_id)
+        if self.current_id and not search_text and self.is_hierarchical and self.current_parent_id is None:
+            # Find parent of current item
+            cursor.execute(f"SELECT parent_id FROM {self.table_name} WHERE id = ?", (self.current_id,))
+            row = cursor.fetchone()
+            if row:
+                self.current_parent_id = row['parent_id'] if row['parent_id'] else None
+        
         if search_text:
             # When searching, show all levels
             if self.table_name == "works":

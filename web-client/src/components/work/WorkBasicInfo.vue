@@ -172,6 +172,7 @@
     <UnitListForm
       :is-open="showUnitSelector"
       title="Select Unit"
+      :current-id="localWork.unit_id"
       @close="showUnitSelector = false"
       @select="handleUnitSelect"
     />
@@ -181,6 +182,7 @@
       :is-open="showParentSelector"
       title="Select Parent Work"
       :current-work-id="localWork.id"
+      :selected-id="localWork.parent_id"
       :groups-only="true"
       @close="showParentSelector = false"
       @select="handleParentSelect"

@@ -12,12 +12,13 @@ from ..data.models.sqlalchemy_models import Work
 
 
 class WorkListForm(BaseListForm):
-    def __init__(self):
+    def __init__(self, current_id=None):
         self.db_manager = DatabaseManager()
         self.work_repo = WorkRepository(self.db_manager)
         self.ref_repo = ReferenceRepository()
         self.show_hierarchy = True  # Default to hierarchical view
         self.current_parent_id = None  # Current parent for hierarchical navigation
+        self.current_id = current_id  # ID to select/highlight
         super().__init__()
         self.setWindowTitle("Справочник: Работы")
         self.load_data()
@@ -86,6 +87,14 @@ class WorkListForm(BaseListForm):
 
     def load_data(self, search_text=""):
         """Load data from database"""
+        
+        # If we have a current_id and this is the first load (or search is cleared),
+        # we might need to navigate to the correct parent in hierarchy mode
+        if self.current_id and not search_text and self.show_hierarchy and self.current_parent_id is None:
+            work = self.work_repo.find_by_id(self.current_id)
+            if work and work['parent_id']:
+                self.current_parent_id = work['parent_id']
+                
         if search_text:
             works = self.work_repo.search_by_name(search_text)
             self.up_button.setEnabled(False)
@@ -101,6 +110,7 @@ class WorkListForm(BaseListForm):
         
         self.table_view.setRowCount(len(works))
         
+        row_to_select = None
         for row_idx, work in enumerate(works):
             self.table_view.setItem(row_idx, 0, QTableWidgetItem(str(work['id'])))
             
@@ -123,9 +133,18 @@ class WorkListForm(BaseListForm):
             self.table_view.setItem(row_idx, 4, QTableWidgetItem(f"{work['price']:.2f}" if work['price'] is not None else ""))
             self.table_view.setItem(row_idx, 5, QTableWidgetItem(f"{work['labor_rate']:.2f}" if work['labor_rate'] is not None else ""))
             # Nomenclature column removed - feature was deprecated
+            
+            # Check if this is the row to select
+            if self.current_id and work['id'] == self.current_id:
+                row_to_select = row_idx
         
         # Hide ID column
         self.table_view.setColumnHidden(0, True)
+        
+        # Select row if found
+        if row_to_select is not None:
+            self.table_view.selectRow(row_to_select)
+            self.table_view.scrollToItem(self.table_view.item(row_to_select, 2))
 
     def on_enter_pressed(self, index=None):
         """Handle enter press or double click"""

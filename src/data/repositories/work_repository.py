@@ -5,7 +5,7 @@ import logging
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from src.data.models.sqlalchemy_models import Work
+from src.data.models.sqlalchemy_models import Work, Unit
 from src.data.database_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,10 @@ class WorkRepository:
                     Work.price,
                     Work.labor_rate,
                     Work.is_group,
-                    Work.marked_for_deletion
+                    Work.marked_for_deletion,
+                    Unit.name.label('unit_name')
                 )\
+                    .outerjoin(Unit, Work.unit_id == Unit.id)\
                     .filter(Work.marked_for_deletion == False)\
                     .order_by(Work.code, Work.name)
                 
@@ -43,7 +45,7 @@ class WorkRepository:
                         'parent_id': row.parent_id,
                         'name': row.name,
                         'code': row.code,
-                        'unit': row.unit,
+                        'unit': row.unit_name or row.unit,
                         'unit_id': row.unit_id,
                         'price': row.price,
                         'labor_rate': row.labor_rate,
@@ -69,8 +71,10 @@ class WorkRepository:
                     Work.price,
                     Work.labor_rate,
                     Work.is_group,
-                    Work.marked_for_deletion
+                    Work.marked_for_deletion,
+                    Unit.name.label('unit_name')
                 )\
+                    .outerjoin(Unit, Work.unit_id == Unit.id)\
                     .filter(Work.id == work_id)\
                     .filter(Work.marked_for_deletion == False)\
                     .first()
@@ -81,7 +85,7 @@ class WorkRepository:
                         'parent_id': result.parent_id,
                         'name': result.name,
                         'code': result.code,
-                        'unit': result.unit,
+                        'unit': result.unit_name or result.unit,
                         'unit_id': result.unit_id,
                         'price': result.price,
                         'labor_rate': result.labor_rate,
@@ -107,8 +111,10 @@ class WorkRepository:
                     Work.price,
                     Work.labor_rate,
                     Work.is_group,
-                    Work.marked_for_deletion
+                    Work.marked_for_deletion,
+                    Unit.name.label('unit_name')
                 )\
+                    .outerjoin(Unit, Work.unit_id == Unit.id)\
                     .filter(Work.is_group == True)\
                     .filter(Work.marked_for_deletion == False)\
                     .order_by(Work.code, Work.name)
@@ -120,7 +126,7 @@ class WorkRepository:
                         'parent_id': row.parent_id,
                         'name': row.name,
                         'code': row.code,
-                        'unit': row.unit,
+                        'unit': row.unit_name or row.unit,
                         'unit_id': row.unit_id,
                         'price': row.price,
                         'labor_rate': row.labor_rate,
@@ -146,8 +152,9 @@ class WorkRepository:
                     Work.price,
                     Work.labor_rate,
                     Work.is_group,
-                    Work.marked_for_deletion
-                )
+                    Work.marked_for_deletion,
+                    Unit.name.label('unit_name')
+                ).outerjoin(Unit, Work.unit_id == Unit.id)
                 
                 if parent_id is None or parent_id == 0:
                     query = query.filter((Work.parent_id.is_(None)) | (Work.parent_id == 0))
@@ -164,7 +171,7 @@ class WorkRepository:
                         'parent_id': row.parent_id,
                         'name': row.name,
                         'code': row.code,
-                        'unit': row.unit,
+                        'unit': row.unit_name or row.unit,
                         'unit_id': row.unit_id,
                         'price': row.price,
                         'labor_rate': row.labor_rate,
@@ -192,8 +199,10 @@ class WorkRepository:
                     Work.price,
                     Work.labor_rate,
                     Work.is_group,
-                    Work.marked_for_deletion
+                    Work.marked_for_deletion,
+                    Unit.name.label('unit_name')
                 )\
+                    .outerjoin(Unit, Work.unit_id == Unit.id)\
                     .filter(or_(Work.name.ilike(f'%{search_term}%'), Work.code.ilike(f'%{search_term}%')))\
                     .filter(Work.marked_for_deletion == False)\
                     .order_by(Work.code, Work.name)
@@ -205,7 +214,7 @@ class WorkRepository:
                         'parent_id': row.parent_id,
                         'name': row.name,
                         'code': row.code,
-                        'unit': row.unit,
+                        'unit': row.unit_name or row.unit,
                         'unit_id': row.unit_id,
                         'price': row.price,
                         'labor_rate': row.labor_rate,
@@ -231,8 +240,10 @@ class WorkRepository:
                     Work.price,
                     Work.labor_rate,
                     Work.is_group,
-                    Work.marked_for_deletion
+                    Work.marked_for_deletion,
+                    Unit.name.label('unit_name')
                 )\
+                    .outerjoin(Unit, Work.unit_id == Unit.id)\
                     .filter(Work.name == name)\
                     .filter(Work.marked_for_deletion == False)
                 
@@ -248,7 +259,7 @@ class WorkRepository:
                         'parent_id': result.parent_id,
                         'name': result.name,
                         'code': result.code,
-                        'unit': result.unit,
+                        'unit': result.unit_name or result.unit,
                         'unit_id': result.unit_id,
                         'price': result.price,
                         'labor_rate': result.labor_rate,

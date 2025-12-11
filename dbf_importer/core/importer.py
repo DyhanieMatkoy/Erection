@@ -87,27 +87,52 @@ class DBFImporter:
             
             # Handle duplicate unit names to avoid UNIQUE constraint violation
             if entity_type == "units":
-                name_counts = {}
+                unique_units = {}
+                filtered_data = []
                 for record in data:
                     name = record.get("name")
                     if name:
-                        if name in name_counts:
-                            name_counts[name] += 1
-                            record["name"] = f"{name} ({name_counts[name]})"
+                        # Normalize name: strip whitespace
+                        clean_name = name.strip()
+                        record["name"] = clean_name
+                        
+                        if clean_name not in unique_units:
+                            unique_units[clean_name] = record
+                            filtered_data.append(record)
                         else:
-                            name_counts[name] = 1
-                logger.info(f"Обработано имен единиц измерения: {len(data)}")
+                            # Skip duplicate unit, but we need to ensure mapping handles this
+                            # The mapping is created in _create_unit_mapping which also needs to be consistent
+                            pass
+                
+                data = filtered_data
+                logger.info(f"Обработано уникальных единиц измерения: {len(data)} (было {len(raw_data)})")
             
             
             # Map unit IDs for works using the stored mapping
             if entity_type == "nomenclature":
                 for record in data:
                     unit_id = record.get("unit_id")
+                    unit_name_ref = record.get("unit_name_ref")
+                    
+                    # Try to resolve by name reference first (stronger signal from user)
+                    if unit_name_ref:
+                        clean_ref = unit_name_ref.strip()
+                        if clean_ref in self._unit_id_mapping:
+                            record["unit_id"] = self._unit_id_mapping[clean_ref]
+                            # Clean up temporary field
+                            if "unit_name_ref" in record:
+                                del record["unit_name_ref"]
+                            continue
+
+                    # Fallback to ID if present
                     if unit_id is not None and unit_id in self._unit_id_mapping:
                         record["unit_id"] = self._unit_id_mapping[unit_id]
                     else:
-                        logger.warning(f"Не найден unit_id {unit_id} в сопоставлении для работы {record.get('name')}")
+                        logger.warning(f"Не найден unit_id {unit_id} (ref: {unit_name_ref}) в сопоставлении для работы {record.get('name')}")
                         record["unit_id"] = None
+                        if "unit_name_ref" in record:
+                            del record["unit_name_ref"]
+
                 logger.info(f"Сопоставлены unit_id для работ: {len(data)}")
             
             # Импорт данных пакетами
@@ -371,11 +396,44 @@ class DBFImporter:
             
             # Создаем сопоставление ID
             self._unit_id_mapping = {}
+            
+            # First pass: Identify canonical units (first occurrence of each name)
+            canonical_units = {} # name -> id
+            
             for record in data:
                 dbf_id = record.get("id")
-                db_id = record.get("id")  # После преобразования
+                name = record.get("name")
+                
+                if name:
+                    clean_name = name.strip()
+                    if clean_name not in canonical_units:
+                         # This is the canonical ID for this name
+                         canonical_units[clean_name] = dbf_id
+            
+            # Second pass: Build mapping
+            for record in data:
+                dbf_id = record.get("id")
+                name = record.get("name")
+                
                 if dbf_id is not None:
-                    self._unit_id_mapping[dbf_id] = db_id
+                    # Map DBF ID to itself (if it's a canonical unit) OR to the canonical ID (if duplicate)
+                    # Actually, if we skip importing duplicates, we must map their IDs to the canonical ID
+                    # But wait, we don't know if the duplicate DBF ID is used in Works.
+                    # Assuming Works use Name reference primarily now.
+                    
+                    # If we use Name reference, we just need Name -> Canonical ID
+                    pass
+
+                if name:
+                    clean_name = name.strip()
+                    canonical_id = canonical_units.get(clean_name)
+                    
+                    # Map Name -> Canonical ID
+                    self._unit_id_mapping[clean_name] = canonical_id
+                    
+                    # Map THIS DBF ID -> Canonical ID (so if a work references this specific DBF ID, it gets redirected)
+                    if dbf_id is not None:
+                        self._unit_id_mapping[dbf_id] = canonical_id
             
             logger.info(f"Создано сопоставление ID для единиц измерения: {len(self._unit_id_mapping)}")
             

@@ -17,7 +17,7 @@ class MaterialAddDialog(QDialog):
         parent = self.parent()
         
         # Allow selecting any cost item (filter_by_work=False) to enable adding new cost items via adding materials
-        cost_item_dialog = CostItemSelectorDialog(parent, work_id=self.work_id, filter_by_work=False)
+        cost_item_dialog = CostItemSelectorDialog(parent, work_id=self.work_id, filter_by_work=False, current_id=self.selected_cost_item_id)
         if cost_item_dialog.exec() != QDialog.DialogCode.Accepted:
             return QDialog.DialogCode.Rejected
             
@@ -26,7 +26,7 @@ class MaterialAddDialog(QDialog):
             return QDialog.DialogCode.Rejected
         
         # Step 2: Select Material
-        material_dialog = MaterialSelectorDialog(parent)
+        material_dialog = MaterialSelectorDialog(parent, current_id=self.selected_material_id)
         if material_dialog.exec() != QDialog.DialogCode.Accepted:
             return QDialog.DialogCode.Rejected
             

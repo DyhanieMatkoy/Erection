@@ -38,7 +38,7 @@
     </template>
 
     <template #item="{ item, highlightText }">
-      <div class="work-content" :style="{ paddingLeft: `${(item._level || 0) * 1.5}rem` }">
+      <div class="work-content" :id="`work-item-${item.id}`" :style="{ paddingLeft: `${(item._level || 0) * 1.5}rem` }">
         <!-- Expand/Collapse Button -->
         <button
           v-if="item._hasChildren"
@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import ListForm from './ListForm.vue'
 import { getWorks } from '@/api/references'
 import type { Work } from '@/types/models'
@@ -93,6 +93,7 @@ interface Props {
   title?: string
   currentWorkId?: number | null
   groupsOnly?: boolean
+  selectedId?: number | null // ID of the work to be selected/highlighted
 }
 
 interface Emits {
@@ -103,7 +104,8 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   title: 'Select Parent Work',
   currentWorkId: null,
-  groupsOnly: false
+  groupsOnly: false,
+  selectedId: null
 })
 
 const emit = defineEmits<Emits>()
@@ -115,6 +117,30 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const showGroupsOnly = ref(false)
 const expandedNodes = ref<Set<number>>(new Set())
+
+// Watch for selectedId changes
+watch(() => props.selectedId, (newId) => {
+  if (newId && works.value.length > 0) {
+    expandToItem(newId)
+    const found = works.value.find(w => w.id === newId)
+    if (found) {
+      selectedItem.value = found
+    }
+  }
+})
+
+function expandToItem(itemId: number) {
+  // Find item and its parents
+  const item = works.value.find(w => w.id === itemId)
+  if (!item) return
+  
+  let currentParentId = item.parent_id
+  while (currentParentId) {
+    expandedNodes.value.add(currentParentId)
+    const parent = works.value.find(w => w.id === currentParentId)
+    currentParentId = parent ? parent.parent_id : null
+  }
+}
 
 // Computed
 const filteredWorks = computed(() => {
@@ -200,11 +226,30 @@ watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
     selectedItem.value = null
     showGroupsOnly.value = props.groupsOnly
-    // Expand all root nodes by default
-    expandedNodes.value.clear()
-    works.value.filter(w => !w.parent_id).forEach(w => {
-      expandedNodes.value.add(w.id)
-    })
+    
+    if (props.selectedId) {
+      // If we have a selected ID, try to find and select it
+      // Wait for data load if needed
+      if (works.value.length > 0) {
+        expandToItem(props.selectedId)
+        const found = works.value.find(w => w.id === props.selectedId)
+        if (found) {
+          selectedItem.value = found
+          
+          // Scroll to item after render
+          nextTick(() => {
+             const el = document.getElementById(`work-item-${props.selectedId}`)
+             if (el) el.scrollIntoView({ block: 'center' })
+          })
+        }
+      }
+    } else {
+      // Default behavior: Expand all root nodes
+      expandedNodes.value.clear()
+      works.value.filter(w => !w.parent_id).forEach(w => {
+        expandedNodes.value.add(w.id)
+      })
+    }
   }
 })
 
@@ -215,6 +260,19 @@ async function loadWorks() {
   try {
     const response = await getWorks()
     works.value = response.data || []
+    
+    // Handle initial selection if provided
+    if (props.selectedId && props.isOpen) {
+       expandToItem(props.selectedId)
+       const found = works.value.find(w => w.id === props.selectedId)
+       if (found) {
+         selectedItem.value = found
+          nextTick(() => {
+             const el = document.getElementById(`work-item-${props.selectedId}`)
+             if (el) el.scrollIntoView({ block: 'center' })
+          })
+       }
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load works'
     console.error('Error loading works:', err)

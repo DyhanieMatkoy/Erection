@@ -44,9 +44,20 @@ class ImportThread(QThread):
         """Выполняет импорт в отдельном потоке"""
         try:
             results = {}
+            total_steps = len(self.entity_types)
+            current_step = 0
+            
+            # Ensure we have a mapping if we are going to import nomenclature
+            is_dir = Path(self.dbf_path).is_dir()
+            if is_dir:
+                self.progress_updated.emit("Создание карты единиц измерения...", 0)
+                self.importer._create_unit_mapping(self.dbf_path)
             
             for entity_type in self.entity_types:
-                self.progress_updated.emit(f"Импорт {entity_type}...", 0)
+                current_step += 1
+                progress = int((current_step / total_steps) * 100)
+                
+                self.progress_updated.emit(f"Импорт {entity_type}...", progress)
                 success = self.importer.import_entity(self.dbf_path, entity_type, self.clear_existing, self.limit)
                 results[entity_type] = success
                 
@@ -175,6 +186,11 @@ class MainWindow(QMainWindow):
         self.import_button.clicked.connect(self.start_import)
         self.import_button.setEnabled(False)
         buttons_layout.addWidget(self.import_button)
+        
+        self.clear_references_button = QPushButton("Очистить справочники")
+        self.clear_references_button.clicked.connect(self.clear_references)
+        self.clear_references_button.setEnabled(True)
+        buttons_layout.addWidget(self.clear_references_button)
         
         self.validate_button = QPushButton("Проверить структуру")
         self.validate_button.clicked.connect(self.validate_structure)
@@ -382,11 +398,54 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, "Ошибка", f"Ошибка при импорте данных:\n{error_message}")
         self.log_message(f"Ошибка: {error_message}")
     
+    def clear_references(self):
+        """Очищает справочники в базе данных"""
+        if not self.dbf_path:
+            QMessageBox.warning(self, "Предупреждение", "Выберите DBF файл или директорию для очистки справочников")
+            return
+        
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение",
+            "Вы уверены, что хотите очистить все справочники (единицы, материалы, номенклатура)?\n\nЭто действие удалит все существующие данные в справочниках!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.No:
+            return
+        
+        try:
+            from core.importer import DBFImporter
+            importer = DBFImporter()
+            
+            # Очищаем все справочники
+            tables_to_clear = ["units", "materials", "works"]
+            for table_name in tables_to_clear:
+                session = importer.db_manager.get_session()
+                try:
+                    session.execute(text(f"DELETE FROM {table_name}"))
+                    session.commit()
+                    self.log_message(f"Очищена таблица: {table_name}")
+                except Exception as e:
+                    session.rollback()
+                    self.log_message(f"Ошибка при очистке таблицы {table_name}: {e}")
+                finally:
+                    session.close()
+            
+            self.log_message("Справочники успешно очищены")
+            QMessageBox.information(self, "Успех", "Все справочники были успешно очищены")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при очистке справочников: {e}")
+            self.log_message(f"Ошибка: {e}")
+    
     def set_ui_enabled(self, enabled: bool):
         """Включает или выключает элементы UI"""
         self.browse_button.setEnabled(enabled)
         self.import_button.setEnabled(enabled and bool(self.dbf_path))
         self.validate_button.setEnabled(enabled and bool(self.dbf_path))
+        self.clear_references_button.setEnabled(enabled and bool(self.dbf_path))
         self.units_check.setEnabled(enabled)
         self.nomenclature_check.setEnabled(enabled)
         self.materials_check.setEnabled(enabled)

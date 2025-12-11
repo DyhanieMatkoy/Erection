@@ -57,7 +57,7 @@ DBF_FIELD_MAPPING = {
             "DESCR": "name",
             "PARENTID": "parent_id",
             "CODE": "code",
-            "SP17": "unit_id",  # Mapped to unit_id (Reference) instead of unit_name
+            "SP17": "unit_name_ref",  # Mapped to unit_name_ref (String) to lookup by name
             "SP15": "price",
             "SP31": "labor_rate",
             "ISMARK": "marked_for_deletion"

@@ -6,10 +6,11 @@ from PyQt6.QtCore import Qt
 from ...data.repositories.material_repository import MaterialRepository
 
 class MaterialSelectorDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, current_id=None):
         super().__init__(parent)
         self.repo = MaterialRepository()
         self.selected_material_id = None
+        self.current_id = current_id
         
         self.setup_ui()
         self.load_data()
@@ -68,6 +69,11 @@ class MaterialSelectorDialog(QDialog):
             
             # Store ID
             self.table.item(row, 0).setData(Qt.ItemDataRole.UserRole, material['id'])
+            
+            # Select current if matches
+            if self.current_id and material['id'] == self.current_id:
+                self.table.selectRow(row)
+                self.table.scrollToItem(self.table.item(row, 0))
 
     def on_search(self, text):
         for row in range(self.table.rowCount()):
