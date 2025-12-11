@@ -189,17 +189,20 @@ export interface Timesheet {
   date: string
   object_id: number
   object_name?: string
-  estimate_id: number
+  customer_name?: string
+  estimate_id: number | null
   estimate_number?: string
-  foreman_id: number
+  foreman_id: number | null
   foreman_name?: string
   month_year: string // "YYYY-MM"
   is_posted: boolean
   posted_at: string | null
   marked_for_deletion: boolean
+  author?: string
+  total_hours?: number
+  lines?: TimesheetLine[]
   created_at?: string
   modified_at?: string
-  lines?: TimesheetLine[]
 }
 
 // Register types
@@ -238,5 +241,54 @@ export interface WorkComposition {
   materials: CostItemMaterial[]
   total_cost_items_price: number
   total_materials_cost: number
+  total_cost: number
+}
+
+// ============================================================================
+// Work Specification Types
+// ============================================================================
+
+export type ComponentType = 'Material' | 'Labor' | 'Equipment' | 'Other'
+
+export interface WorkSpecification {
+  id: number
+  work_id: number
+  component_type: ComponentType
+  component_name: string
+  unit_id: number | null
+  unit_name?: string
+  consumption_rate: number
+  unit_price: number
+  total_cost: number
+  material_id?: number | null
+  created_at?: string
+  modified_at?: string
+}
+
+export interface WorkSpecificationCreate {
+  work_id: number
+  component_type: ComponentType
+  component_name: string
+  unit_id?: number | null
+  consumption_rate: number
+  unit_price: number
+  material_id?: number | null
+}
+
+export interface WorkSpecificationUpdate {
+  component_type?: ComponentType
+  component_name?: string
+  unit_id?: number | null
+  consumption_rate?: number
+  unit_price?: number
+  material_id?: number | null
+}
+
+export interface WorkSpecificationSummary {
+  work_id: number
+  work_name: string
+  work_code: string | null
+  specifications: WorkSpecification[]
+  totals_by_type: Record<ComponentType, number>
   total_cost: number
 }

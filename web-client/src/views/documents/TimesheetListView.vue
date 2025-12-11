@@ -142,12 +142,12 @@
         </template>
 
         <template #actions="{ row }">
-          <button @click.stop="handleEdit(row)" class="text-blue-600 hover:text-blue-900 mr-4">
+          <button @click.stop="handleEdit(row as Timesheet)" class="text-blue-600 hover:text-blue-900 mr-4">
             Открыть
           </button>
           <button
             v-if="!row.is_posted"
-            @click.stop="handleDelete(row)"
+            @click.stop="handleDelete(row as Timesheet)"
             class="text-red-600 hover:text-red-900"
           >
             Удалить
@@ -165,7 +165,7 @@ import { useTable } from '@/composables/useTable'
 import { useFilters } from '@/composables/useFilters'
 import { useReferencesStore } from '@/stores/references'
 import * as documentsApi from '@/api/documents'
-import type { Timesheet } from '@/types/models'
+import type { Timesheet, Estimate } from '@/types/models'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
@@ -189,7 +189,7 @@ const filters = useFilters({
 
 // Reference data
 const objects = ref<any[]>([])
-const estimates = ref<unknown[]>([])
+const estimates = ref<Estimate[]>([])
 
 const columns = [
   { key: 'number', label: 'Номер', width: '100px' },
@@ -208,7 +208,11 @@ function formatDate(dateString: string): string {
 }
 
 function formatMonthYear(monthYear: string): string {
-  const [year, month] = monthYear.split('-')
+  if (!monthYear) return ''
+  const parts = monthYear.split('-')
+  if (parts.length < 2) return monthYear
+  const year = parts[0]!
+  const month = parts[1]!
   const date = new Date(parseInt(year), parseInt(month) - 1)
   return date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' })
 }
@@ -221,9 +225,9 @@ async function loadData() {
       ...filters.getQueryParams()
     }
     const response = await documentsApi.getTimesheets(params)
-    table.data.value = response.data
+    table.data.value = response.data || []
     table.pagination.value = response.pagination
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Failed to load timesheets:', error)
     alert(error.response?.data?.detail || 'Ошибка при загрузке')
   } finally {
@@ -244,7 +248,7 @@ async function loadReferences() {
     while (hasMore) {
       const response = await documentsApi.getEstimates({ page, page_size: 100 })
       allEstimates.push(...response.data)
-      hasMore = !!(response.pagination && page < response.pagination.total_pages)
+      hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
       page++
     }
     

@@ -189,7 +189,7 @@ class DailyReportListForm(BaseListForm):
             SELECT dr.id, dr.date, 
                    e.number as estimate_number,
                    p.full_name as foreman_name,
-                   (SELECT COUNT(*) FROM daily_report_lines WHERE report_id = dr.id) as line_count,
+                   (SELECT COUNT(*) FROM daily_report_lines WHERE daily_report_id = dr.id) as line_count,
                    dr.is_posted
             FROM daily_reports dr
             LEFT JOIN estimates e ON dr.estimate_id = e.id

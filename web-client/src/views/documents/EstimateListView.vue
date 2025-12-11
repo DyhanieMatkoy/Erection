@@ -194,18 +194,18 @@
         </template>
 
         <template #actions="{ row }">
-          <button @click.stop="handleEdit(row)" class="text-blue-600 hover:text-blue-900 mr-3">
+          <button @click.stop="handleEdit(row as Estimate)" class="text-blue-600 hover:text-blue-900 mr-3">
             Открыть
           </button>
           <button
-            @click.stop="handlePrint(row, 'excel')"
+            @click.stop="handlePrint(row as Estimate, 'excel')"
             class="text-green-600 hover:text-green-900 mr-3"
             title="Печать в Excel"
           >
             Excel
           </button>
           <button
-            @click.stop="handlePrint(row, 'pdf')"
+            @click.stop="handlePrint(row as Estimate, 'pdf')"
             class="text-purple-600 hover:text-purple-900 mr-3"
             title="Печать в PDF"
           >
@@ -213,7 +213,7 @@
           </button>
           <button
             v-if="!row.is_posted"
-            @click.stop="handleDelete(row)"
+            @click.stop="handleDelete(row as Estimate)"
             class="text-red-600 hover:text-red-900"
           >
             Удалить
@@ -248,7 +248,7 @@
                 <tr
                   v-for="timesheet in timesheets"
                   :key="timesheet.id"
-                  @click="selectedTimesheetId = timesheet.id"
+                  @click="selectedTimesheetId = timesheet.id || null"
                   :class="[
                     'cursor-pointer hover:bg-gray-50',
                     selectedTimesheetId === timesheet.id ? 'bg-blue-50' : ''
@@ -258,7 +258,7 @@
                     <input
                       type="radio"
                       :checked="selectedTimesheetId === timesheet.id"
-                      @change="selectedTimesheetId = timesheet.id"
+                      @change="selectedTimesheetId = timesheet.id || null"
                       class="h-4 w-4 text-blue-600"
                     />
                   </td>
@@ -330,7 +330,7 @@ const filters = useFilters({
 
 // Reference data
 const objects = ref<any[]>([])
-const customers = ref<unknown[]>([])
+const customers = ref<any[]>([])
 
 const columns = [
   { key: 'number', label: 'Номер', width: '100px' },

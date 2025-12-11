@@ -116,7 +116,7 @@
                   :key="column.key"
                   :style="column.width ? { width: column.width } : {}"
                   :class="[
-                    'px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider',
+                    'px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider',
                     column.sortable !== false ? 'cursor-pointer hover:bg-gray-100 select-none' : ''
                   ]"
                   @click="handleSort(column.key)"
@@ -168,9 +168,9 @@
                   isRowSelected(row) ? 'bg-blue-100 hover:bg-blue-100' : ''
                 ]"
                 @click="selectable ? null : $emit('row-click', row)"
-                @dblclick="$emit('row-click', row)"
+                @dblclick="$emit('row-dblclick', row)"
               >
-                <td v-if="selectable" class="px-6 py-4 whitespace-nowrap" @click.stop>
+                <td v-if="selectable" class="px-4 py-2 whitespace-nowrap" @click.stop>
                   <input
                     type="checkbox"
                     :checked="isRowSelected(row)"
@@ -181,7 +181,7 @@
                 <td
                   v-for="column in columns"
                   :key="column.key"
-                  class="px-6 py-4 text-sm text-gray-900"
+                  class="px-4 py-2 text-sm text-gray-900"
                   :class="column.key === 'number' || column.key === 'code' ? 'whitespace-nowrap' : ''"
                 >
                   <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]">
@@ -405,6 +405,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'row-click': [row: any]
+  'row-dblclick': [row: any]
   'page-change': [page: number]
   'search': [query: string]
   'sort': [sortBy: string, sortOrder: 'asc' | 'desc']

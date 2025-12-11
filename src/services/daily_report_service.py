@@ -38,7 +38,7 @@ class DailyReportService:
             SELECT id, line_number, work_id, planned_labor, actual_labor, deviation_percent,
                    is_group, group_name, parent_group_id, is_collapsed
             FROM daily_report_lines
-            WHERE report_id = ?
+            WHERE daily_report_id = ?
             ORDER BY line_number
         """, (report_id,))
         
@@ -46,7 +46,7 @@ class DailyReportService:
         for line_row in cursor.fetchall():
             line = DailyReportLine()
             line.id = line_row['id']
-            line.report_id = report_id
+            line.daily_report_id = report_id
             line.line_number = line_row['line_number']
             line.work_id = line_row['work_id']
             
@@ -106,13 +106,13 @@ class DailyReportService:
                 """, (report.date, report.estimate_id, report.foreman_id, report.id))
                 
                 # Delete old lines and executors
-                cursor.execute("DELETE FROM daily_report_executors WHERE report_line_id IN (SELECT id FROM daily_report_lines WHERE report_id = ?)", (report.id,))
-                cursor.execute("DELETE FROM daily_report_lines WHERE report_id = ?", (report.id,))
+                cursor.execute("DELETE FROM daily_report_executors WHERE report_line_id IN (SELECT id FROM daily_report_lines WHERE daily_report_id = ?)", (report.id,))
+                cursor.execute("DELETE FROM daily_report_lines WHERE daily_report_id = ?", (report.id,))
             
             # Insert lines
             for line in report.lines:
                 cursor.execute("""
-                    INSERT INTO daily_report_lines (report_id, line_number, work_id, planned_labor, 
+                    INSERT INTO daily_report_lines (daily_report_id, line_number, work_id, planned_labor, 
                                                    actual_labor, deviation_percent, is_group, group_name,
                                                    parent_group_id, is_collapsed)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

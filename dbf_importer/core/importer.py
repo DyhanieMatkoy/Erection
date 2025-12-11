@@ -21,6 +21,7 @@ class DBFImporter:
         self.dbf_reader = DBFReader()
         self.db_manager = DatabaseManager()
         self.progress_callback = progress_callback
+        self._unit_id_mapping = {}
     
     def import_entity(self, dbf_path: str, entity_type: str, 
                      clear_existing: bool = False, limit: int = None) -> bool:
@@ -97,9 +98,17 @@ class DBFImporter:
                             name_counts[name] = 1
                 logger.info(f"Обработано имен единиц измерения: {len(data)}")
             
-            # Resolve units for Works
+            
+            # Map unit IDs for works using the stored mapping
             if entity_type == "nomenclature":
-                self._resolve_work_units(data)
+                for record in data:
+                    unit_id = record.get("unit_id")
+                    if unit_id is not None and unit_id in self._unit_id_mapping:
+                        record["unit_id"] = self._unit_id_mapping[unit_id]
+                    else:
+                        logger.warning(f"Не найден unit_id {unit_id} в сопоставлении для работы {record.get('name')}")
+                        record["unit_id"] = None
+                logger.info(f"Сопоставлены unit_id для работ: {len(data)}")
             
             # Импорт данных пакетами
             logger.info(f"Импорт данных в таблицу {table_name}")
@@ -214,7 +223,84 @@ class DBFImporter:
                 
                 final_data.append(new_record)
                 
-            # 6. Batch Import
+            # 6. Populate work_specifications (Task 14)
+            logger.info("Импорт данных в таблицу work_specifications")
+            
+            # Clear work_specifications if clear_existing
+            if clear_existing:
+                db_session = self.db_manager.get_session()
+                try:
+                    db_session.execute(text("DELETE FROM work_specifications"))
+                    db_session.commit()
+                except Exception as e:
+                    logger.error(f"Ошибка при очистке work_specifications: {e}")
+                    db_session.rollback()
+                finally:
+                    db_session.close()
+
+            # Need material details
+            db_session = self.db_manager.get_session()
+            material_map = {} # id -> {name, price, unit_id}
+            try:
+                rows = db_session.execute(text("SELECT id, description, price, unit_id FROM materials")).fetchall()
+                for row in rows:
+                    material_map[row[0]] = {
+                        'name': row[1],
+                        'price': row[2] or 0,
+                        'unit_id': row[3]
+                    }
+            except Exception as e:
+                logger.error(f"Error loading materials: {e}")
+            
+            # Cost Item details
+            cost_item_details = {} # id -> {name, price, unit_id}
+            try:
+                rows = db_session.execute(text("SELECT id, description, price, unit_id FROM cost_items")).fetchall()
+                for row in rows:
+                    cost_item_details[row[0]] = {
+                        'name': row[1],
+                        'price': row[2] or 0,
+                        'unit_id': row[3]
+                    }
+            except Exception as e:
+                logger.error(f"Error loading cost items: {e}")
+                
+            db_session.close()
+
+            spec_data = []
+            for record in final_data:
+                work_id = record['work_id']
+                material_id = record.get('material_id')
+                cost_item_id = record.get('cost_item_id')
+                qty = record.get('quantity_per_unit', 0)
+                
+                if material_id and material_id in material_map:
+                    mat = material_map[material_id]
+                    spec_data.append({
+                        'work_id': work_id,
+                        'component_type': 'Material',
+                        'component_name': mat['name'] or f"Material {material_id}",
+                        'unit_id': mat['unit_id'],
+                        'consumption_rate': qty,
+                        'unit_price': mat['price'],
+                        'material_id': material_id
+                    })
+                elif cost_item_id and cost_item_id in cost_item_details:
+                    ci = cost_item_details[cost_item_id]
+                    spec_data.append({
+                        'work_id': work_id,
+                        'component_type': 'Labor', # Defaulting to Labor for CostItems
+                        'component_name': ci['name'],
+                        'unit_id': ci['unit_id'],
+                        'consumption_rate': qty,
+                        'unit_price': ci['price']
+                    })
+
+            if spec_data:
+                if not self._import_data_in_batches(spec_data, 'work_specifications', 'work_specifications'):
+                    logger.error("Ошибка при импорте work_specifications")
+            
+            # 7. Batch Import for cost_item_materials (Backward compatibility)
             logger.info(f"Импорт данных в таблицу {table_name}")
             return self._import_data_in_batches(final_data, table_name, entity_type)
             
@@ -222,27 +308,7 @@ class DBFImporter:
             logger.error(f"Ошибка при импорте композиции: {e}")
             return False
 
-    def _resolve_work_units(self, data: List[Dict[str, Any]]):
-        """Resolves unit_name to unit_id for Works"""
-        try:
-            session = self.db_manager.get_session()
-            units = session.execute(text("SELECT id, name FROM units")).fetchall()
-            # Create map: lowercase name -> id
-            unit_map = {row[1].strip().lower(): row[0] for row in units if row[1]}
-            session.close()
-            
-            for record in data:
-                unit_name = record.pop("unit_name", None) # Remove temporary field
-                if unit_name:
-                    record["unit"] = unit_name # Keep legacy string
-                    # Lookup ID
-                    unit_id = unit_map.get(str(unit_name).strip().lower())
-                    if unit_id:
-                        record["unit_id"] = unit_id
-        except Exception as e:
-            logger.error(f"Error resolving units: {e}")
-
-    def import_all_entities(self, dbf_directory: str, 
+    def import_all_entities(self, dbf_directory: str,
                            clear_existing: bool = False, limit: int = None) -> Dict[str, bool]:
         """
         Импортирует данные всех типов сущностей из указанной директории
@@ -259,6 +325,10 @@ class DBFImporter:
         
         # Определение порядка импорта (сначала справочники, потом документы)
         import_order = ["units", "materials", "nomenclature", "composition"]
+        
+        # First, read all units data to create mapping before any imports
+        logger.info("Создание сопоставления единиц измерения...")
+        self._create_unit_mapping(dbf_directory)
         
         for entity_type in import_order:
             if entity_type not in DBF_FIELD_MAPPING:
@@ -281,6 +351,37 @@ class DBFImporter:
                 logger.error(f"Ошибка при импорте сущности: {entity_type}")
         
         return results
+    
+    def _create_unit_mapping(self, dbf_directory: str):
+        """
+        Создает сопоставление ID единиц измерения из DBF в базу данных
+        
+        Args:
+            dbf_directory: Директория с DBF файлами
+        """
+        try:
+            # Читаем данные из SC46.DBF
+            raw_data = self.dbf_reader.read_dbf_directory(dbf_directory, "units")
+            if not raw_data:
+                logger.warning("Нет данных для единиц измерения")
+                return
+            
+            # Преобразуем данные
+            data = self.dbf_reader.transform_data(raw_data, "units")
+            
+            # Создаем сопоставление ID
+            self._unit_id_mapping = {}
+            for record in data:
+                dbf_id = record.get("id")
+                db_id = record.get("id")  # После преобразования
+                if dbf_id is not None:
+                    self._unit_id_mapping[dbf_id] = db_id
+            
+            logger.info(f"Создано сопоставление ID для единиц измерения: {len(self._unit_id_mapping)}")
+            
+        except Exception as e:
+            logger.error(f"Ошибка при создании сопоставления единиц измерения: {e}")
+            self._unit_id_mapping = {}
     
     def _import_data_in_batches(self, data: List[Dict[str, Any]], 
                                 table_name: str, entity_type: str) -> bool:

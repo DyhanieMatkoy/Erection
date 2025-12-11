@@ -132,10 +132,10 @@
         </template>
 
         <template #actions="{ row }">
-          <button @click.stop="view.handleEdit(row)" class="text-blue-600 hover:text-blue-900 mr-4">
+          <button @click.stop="view.handleEdit(row as Object)" class="text-blue-600 hover:text-blue-900 mr-4">
             Изменить
           </button>
-          <button @click.stop="view.handleDelete(row)" class="text-red-600 hover:text-red-900">
+          <button @click.stop="view.handleDelete(row as Object)" class="text-red-600 hover:text-red-900">
             Удалить
           </button>
         </template>

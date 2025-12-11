@@ -4,6 +4,7 @@ Repository for Work operations
 import logging
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from src.data.models.sqlalchemy_models import Work
 from src.data.database_manager import DatabaseManager
 
@@ -193,7 +194,7 @@ class WorkRepository:
                     Work.is_group,
                     Work.marked_for_deletion
                 )\
-                    .filter(Work.name.ilike(f'%{search_term}%'))\
+                    .filter(or_(Work.name.ilike(f'%{search_term}%'), Work.code.ilike(f'%{search_term}%')))\
                     .filter(Work.marked_for_deletion == False)\
                     .order_by(Work.code, Work.name)
                 
@@ -213,8 +214,51 @@ class WorkRepository:
                     })
                 return results
         except Exception as e:
-            logger.error(f"Failed to search works by name '{search_term}': {e}")
+            logger.error(f"Failed to search works by name {search_term}: {e}")
             return []
+
+    def find_by_name(self, name: str, parent_id: Optional[int] = None) -> Optional[Dict]:
+        """Find work by exact name and parent"""
+        try:
+            with self.db_manager.session_scope() as session:
+                query = session.query(
+                    Work.id,
+                    Work.parent_id,
+                    Work.name,
+                    Work.code,
+                    Work.unit,
+                    Work.unit_id,
+                    Work.price,
+                    Work.labor_rate,
+                    Work.is_group,
+                    Work.marked_for_deletion
+                )\
+                    .filter(Work.name == name)\
+                    .filter(Work.marked_for_deletion == False)
+                
+                if parent_id is not None:
+                    query = query.filter(Work.parent_id == parent_id)
+                else:
+                    query = query.filter((Work.parent_id.is_(None)) | (Work.parent_id == 0))
+                    
+                result = query.first()
+                if result:
+                    return {
+                        'id': result.id,
+                        'parent_id': result.parent_id,
+                        'name': result.name,
+                        'code': result.code,
+                        'unit': result.unit,
+                        'unit_id': result.unit_id,
+                        'price': result.price,
+                        'labor_rate': result.labor_rate,
+                        'is_group': result.is_group,
+                        'marked_for_deletion': result.marked_for_deletion
+                    }
+                return None
+        except Exception as e:
+            logger.error(f"Failed to find work by name {name}: {e}")
+            return None
     
     def save(self, work: Work) -> Optional[int]:
         """Save work to database"""

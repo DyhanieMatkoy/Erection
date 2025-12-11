@@ -106,7 +106,7 @@
 
       <!-- Lines -->
       <EstimateLines
-        v-model="formData.lines"
+        v-model="formData.lines!"
         :works="works"
         :disabled="formData.is_posted"
         @update:totals="handleTotalsUpdate"

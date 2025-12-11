@@ -67,9 +67,7 @@
             {{ hierarchyPaths[item.id] }}
           </div>
           <div v-if="!item.is_group" class="item-metadata">
-            <span v-if="item.unit">Unit: {{ item.unit }}</span>
-            <span v-if="item.price">Price: {{ formatPrice(item.price) }}</span>
-            <span v-if="item.labor_rate">Labor: {{ formatNumber(item.labor_rate) }}</span>
+            <span v-if="item.price" class="price-info">{{ formatPrice(item.price) }}</span>
           </div>
         </div>
       </div>
@@ -408,6 +406,11 @@ function toggleExpand(workId: number, event: Event) {
   gap: 1rem;
   font-size: 0.875rem;
   color: #6c757d;
+}
+
+.price-info {
+  font-weight: 600;
+  color: #28a745;
 }
 
 .badge {

@@ -45,13 +45,16 @@
           <tr v-for="(line, index) in lines" :key="index" :class="{ 'bg-gray-50': line.is_group }">
             <td class="px-3 py-2 text-sm text-gray-900">{{ index + 1 }}</td>
             <td class="px-3 py-2">
-              <Picker
+              <div 
                 v-if="!disabled"
-                v-model="line.work_id"
-                :items="works"
-                placeholder="Выберите работу"
-                @update:model-value="handleWorkChange(index)"
-              />
+                class="relative cursor-pointer"
+                @click="openWorkSelector(index)"
+              >
+                <div class="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white flex items-center justify-between hover:border-blue-500">
+                  <span class="truncate">{{ line.work_name || 'Выберите работу' }}</span>
+                  <span class="text-gray-400 text-xs ml-2">▼</span>
+                </div>
+              </div>
               <span v-else class="text-sm text-gray-900">{{ line.work_name }}</span>
             </td>
             <td class="px-3 py-2">
@@ -129,13 +132,16 @@
         <div class="space-y-2">
           <div>
             <label class="block text-xs font-medium text-gray-500">Работа</label>
-            <Picker
+            <div 
               v-if="!disabled"
-              v-model="line.work_id"
-              :items="works"
-              placeholder="Выберите работу"
-              @update:model-value="handleWorkChange(index)"
-            />
+              class="relative cursor-pointer mt-1"
+              @click="openWorkSelector(index)"
+            >
+              <div class="w-full px-2 py-2 text-sm border border-gray-300 rounded bg-white flex items-center justify-between">
+                <span class="truncate">{{ line.work_name || 'Выберите работу' }}</span>
+                <span class="text-gray-400">▼</span>
+              </div>
+            </div>
             <span v-else class="text-sm text-gray-900">{{ line.work_name }}</span>
           </div>
 
@@ -195,13 +201,22 @@
         Нет строк
       </div>
     </div>
+    
+    <!-- Work Selector Dialog -->
+    <WorkListForm
+      :is-open="showWorkSelector"
+      title="Выберите работу"
+      :current-work-id="activeLineIndex !== null ? lines[activeLineIndex]?.work_id : null"
+      @close="closeWorkSelector"
+      @select="handleWorkSelect"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { EstimateLine, Work } from '@/types/models'
-import Picker from '@/components/common/Picker.vue'
+import WorkListForm from '@/components/common/WorkListForm.vue'
 
 const props = defineProps<{
   modelValue: EstimateLine[]
@@ -218,6 +233,9 @@ const lines = computed({
   get: () => props.modelValue || [],
   set: (value) => emit('update:modelValue', value),
 })
+
+const showWorkSelector = ref(false)
+const activeLineIndex = ref<number | null>(null)
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('ru-RU', {
@@ -245,15 +263,36 @@ function handleRemoveLine(index: number) {
   calculateTotals()
 }
 
-function handleWorkChange(index: number) {
+function openWorkSelector(index: number) {
+  activeLineIndex.value = index
+  showWorkSelector.value = true
+}
+
+function closeWorkSelector() {
+  showWorkSelector.value = false
+  activeLineIndex.value = null
+}
+
+function handleWorkSelect(work: Work) {
+  if (activeLineIndex.value === null) return
+  
+  const index = activeLineIndex.value
   const line = lines.value[index]
-  if (!line) return
-  const work = props.works.find((w) => w.id === line.work_id)
-  if (work) {
+  if (line) {
+    line.work_id = work.id
     line.work_name = work.name
     line.unit = work.unit
+    line.price = work.price || 0
+    line.labor_rate = work.labor_rate || 0
+    
+    // Default quantity to 1 if 0
+    if (line.quantity === 0) {
+      line.quantity = 1
+    }
+    
+    handleLineChange(index)
   }
-  handleLineChange(index)
+  closeWorkSelector()
 }
 
 function handleLineChange(index: number) {

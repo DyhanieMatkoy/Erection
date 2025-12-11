@@ -254,9 +254,8 @@ function handleDeleteMaterial(id: number) {
   
   const index = materials.value.findIndex(m => m.id === id)
   if (index !== -1) {
-    const material = materials.value[index]
-    const materialName = material.material?.description || 'Unknown'
-    materials.value.splice(index, 1)
+    const material = materials.value.splice(index, 1)[0]
+    const materialName = material?.material?.description || 'Unknown'
     alert(`Material "${materialName}" deleted`)
   }
 }

@@ -4,6 +4,7 @@
 
 import os
 import logging
+import zlib
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dbfread import DBF
@@ -128,8 +129,9 @@ class DBFReader:
                                     else:
                                         transformed_record[db_field] = None
                                 except (ValueError, TypeError):
-                                    # Если не удалось преобразовать, используем хеш
-                                    transformed_record[db_field] = hash(clean_value) & 0x7FFFFFFF
+                                    # Если не удалось преобразовать, используем детерминированный хеш (CRC32)
+                                    # hash() в Python рандомизирован, что ломает ссылки между запусками
+                                    transformed_record[db_field] = zlib.crc32(clean_value.encode(self.encoding, errors='ignore')) & 0x7FFFFFFF
                             else:
                                 transformed_record[db_field] = value
                         # Преобразование логических значений

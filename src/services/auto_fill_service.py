@@ -70,7 +70,7 @@ class AutoFillService:
             cursor.execute("""
                 SELECT drl.id, drl.actual_labor
                 FROM daily_report_lines drl
-                WHERE drl.report_id = ?
+                WHERE drl.daily_report_id = ?
                   AND drl.is_group = 0
                   AND drl.actual_labor > 0
             """, (report_id,))

@@ -106,13 +106,13 @@
 
         <template #actions="{ row }">
           <button
-            @click.stop="handleEdit(row)"
+            @click.stop="handleEdit(row as Counterparty)"
             class="text-blue-600 hover:text-blue-900 mr-4"
           >
             Изменить
           </button>
           <button
-            @click.stop="handleDelete(row)"
+            @click.stop="handleDelete(row as Counterparty)"
             class="text-red-600 hover:text-red-900"
           >
             Удалить
@@ -363,9 +363,8 @@ async function handleBulkDelete() {
     
     tableRef.value?.clearSelection()
     await loadData()
-  } catch (error: unknown) {
-    const apiError = error as { response?: { data?: { detail?: string } } }
-    alert(apiError.response?.data?.detail || 'Ошибка при групповом удалении')
+  } catch (error: any) {
+    alert(error.response?.data?.detail || 'Ошибка при групповом удалении')
   }
 }
 

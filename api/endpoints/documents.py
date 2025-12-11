@@ -493,7 +493,7 @@ def get_daily_report_lines_with_joins(db, report_id: int) -> List[dict]:
             w.name as work_name
         FROM daily_report_lines drl
         LEFT JOIN works w ON drl.work_id = w.id
-        WHERE drl.report_id = ?
+        WHERE drl.daily_report_id = ?
         ORDER BY drl.line_number
     """, (report_id,))
     
@@ -502,7 +502,9 @@ def get_daily_report_lines_with_joins(db, report_id: int) -> List[dict]:
         line = dict(row)
         
         # Map deviation_percent to deviation for frontend compatibility
-        if 'deviation_percent' in line:
+        if 'labor_deviation_percent' in line:
+            line['deviation'] = line['labor_deviation_percent']
+        elif 'deviation_percent' in line:
             line['deviation'] = line['deviation_percent']
         
         # Get executor names for this line
@@ -690,8 +692,8 @@ async def create_daily_report(
             
             cursor.execute("""
                 INSERT INTO daily_report_lines (
-                    report_id, line_number, work_id, planned_labor, actual_labor,
-                    deviation_percent, is_group, group_name, parent_group_id, is_collapsed
+                    daily_report_id, line_number, work_id, planned_labor, actual_labor,
+                    labor_deviation_percent, is_group, group_name, parent_group_id, is_collapsed
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
@@ -775,10 +777,10 @@ async def update_daily_report(
             cursor.execute("""
                 DELETE FROM daily_report_executors 
                 WHERE report_line_id IN (
-                    SELECT id FROM daily_report_lines WHERE report_id = ?
+                    SELECT id FROM daily_report_lines WHERE daily_report_id = ?
                 )
             """, (report_id,))
-            cursor.execute("DELETE FROM daily_report_lines WHERE report_id = ?", (report_id,))
+            cursor.execute("DELETE FROM daily_report_lines WHERE daily_report_id = ?", (report_id,))
             
             # Insert new lines
             for line in data.lines:
@@ -789,8 +791,8 @@ async def update_daily_report(
                 
                 cursor.execute("""
                     INSERT INTO daily_report_lines (
-                        report_id, line_number, work_id, planned_labor, actual_labor,
-                        deviation_percent, is_group, group_name, parent_group_id, is_collapsed
+                        daily_report_id, line_number, work_id, planned_labor, actual_labor,
+                        labor_deviation_percent, is_group, group_name, parent_group_id, is_collapsed
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (

@@ -74,12 +74,12 @@
         </template>
 
         <template #actions="{ row }">
-          <button @click.stop="handleEdit(row)" class="text-blue-600 hover:text-blue-900 mr-4">
+          <button @click.stop="handleEdit(row as DailyReport)" class="text-blue-600 hover:text-blue-900 mr-4">
             Открыть
           </button>
           <button
             v-if="!row.is_posted"
-            @click.stop="handleDelete(row)"
+            @click.stop="handleDelete(row as DailyReport)"
             class="text-red-600 hover:text-red-900"
           >
             Удалить

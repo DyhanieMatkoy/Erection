@@ -254,7 +254,10 @@ function formatDate(dateString: string): string {
 
 function formatMonthYear(monthYear: string): string {
   if (!monthYear) return ''
-  const [year, month] = monthYear.split('-')
+  const parts = monthYear.split('-')
+  if (parts.length < 2) return monthYear
+  const year = parts[0]!
+  const month = parts[1]!
   const date = new Date(parseInt(year), parseInt(month) - 1)
   return date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' })
 }
@@ -414,7 +417,7 @@ onMounted(async () => {
       allEstimates.push(...response.data)
       
       // Check if there are more pages
-      hasMore = !!(response.pagination && page < response.pagination.total_pages)
+      hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
       page++
     }
     

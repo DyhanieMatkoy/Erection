@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <div class="space-y-6">
+    <div class="space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-2xl font-bold text-gray-900">Работы</h2>
@@ -48,7 +48,7 @@
         :pagination="paginationInfo"
         :selectable="true"
         :has-filters="true"
-        @row-click="handleEditWork"
+        @row-dblclick="handleEditWork"
         @page-change="handlePageChange"
         @search="view.handleSearch"
         @sort="view.handleSort"
@@ -162,34 +162,72 @@
         </template>
         <template #header-actions>
           <button
-            v-if="hasDeletedItems"
-            @click="handlePermanentDelete"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-700 hover:bg-red-800 mr-2"
-            title="Удалить помеченные элементы навсегда"
-          >
-            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Удалить помеченные
-          </button>
-          <button
-            @click="showImportModal = true"
-            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 mr-2"
-          >
-            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            Импорт CSV
-          </button>
-          <button
             @click="view.handleCreate"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 mr-2"
           >
             <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             Создать
           </button>
+          
+          <!-- More Actions Menu -->
+          <div class="relative inline-block text-left">
+            <button
+              @click="showMoreMenu = !showMoreMenu"
+              class="inline-flex items-center px-2 py-2 border border-gray-300 rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              title="Дополнительные действия"
+            >
+              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+              </svg>
+            </button>
+
+            <!-- Dropdown menu -->
+            <div
+              v-if="showMoreMenu"
+              class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
+              @click.away="showMoreMenu = false"
+            >
+              <div class="py-1" role="menu" aria-orientation="vertical">
+                <button
+                  @click="showImportModal = true; showMoreMenu = false"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  role="menuitem"
+                >
+                  <svg class="h-4 w-4 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Импорт CSV
+                </button>
+                <button
+                  v-if="hasDeletedItems"
+                  @click="handlePermanentDelete; showMoreMenu = false"
+                  class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-gray-100 flex items-center"
+                  role="menuitem"
+                >
+                  <svg class="h-4 w-4 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Удалить помеченные
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template #cell-price="{ value }">
+          {{ formatNumber(value) }}
+        </template>
+
+        <template #cell-code="{ row, value }">
+          <a
+            href="#"
+            class="text-blue-600 hover:text-blue-800 hover:underline"
+            @click.prevent.stop="handleEditWork(row)"
+          >
+            {{ value && value !== '—' ? value : (row.code || '—') }}
+          </a>
         </template>
 
         <template #cell-name="{ row, value }">
@@ -197,12 +235,12 @@
             <!-- Кнопка раскрытия/скрытия для групп -->
             <button
               v-if="row._hasChildren && viewMode === 'hierarchy'"
-              @click.stop="toggleExpand(row.id)"
+              @click.stop="toggleExpand(row.id as number)"
               class="mr-2 p-0.5 hover:bg-gray-100 rounded"
             >
               <svg
                 class="w-4 h-4 transition-transform"
-                :class="{ 'transform rotate-90': expandedNodes.has(row.id) }"
+                :class="{ 'transform rotate-90': expandedNodes.has(row.id as number) }"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -229,7 +267,13 @@
             >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span :class="{ 'font-semibold': row._hasChildren }">{{ value }}</span>
+            <span
+              :class="{ 'font-semibold': row._hasChildren }"
+              class="cursor-pointer hover:text-blue-600"
+              @click.stop="handleEditWork(row)"
+            >
+              {{ value }}
+            </span>
           </div>
         </template>
 
@@ -415,66 +459,21 @@
         </template>
       </Modal>
 
-      <Modal
-        :open="view.modalOpen.value"
-        :title="view.editingItem.value ? 'Редактирование работы' : 'Создание работы'"
-        size="md"
-        @close="view.handleCloseModal"
-      >
-        <form @submit.prevent="view.handleSubmit" class="space-y-4">
-          <FormField
-            v-model="view.formData.value.name"
-            label="Наименование"
-            type="text"
-            required
-            :error="view.errors.value.name"
-          />
-
-          <FormField
-            v-model="view.formData.value.unit"
-            label="Единица измерения"
-            type="text"
-            :error="view.errors.value.unit"
-          />
-
-          <FormField
-            v-model.number="view.formData.value.price"
-            label="Цена (Стоимость)"
-            type="number"
-            step="0.01"
-            :error="view.errors.value.price"
-          />
-
-          <Picker
-            v-model="view.formData.value.parent_id"
-            label="Родительский элемент"
-            :items="view.parentItems.value"
-            :error="view.errors.value.parent_id"
-          />
-
-          <div v-if="view.submitError.value" class="rounded-md bg-red-50 p-4">
-            <p class="text-sm text-red-800">{{ view.submitError.value }}</p>
-          </div>
-        </form>
-
-        <template #footer>
-          <button
-            @click="view.handleCloseModal"
-            type="button"
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Отмена
-          </button>
-          <button
-            @click="view.handleSubmit"
-            type="button"
-            :disabled="view.submitting.value"
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-          >
-            {{ view.submitting.value ? 'Сохранение...' : 'Сохранить' }}
-          </button>
-        </template>
-      </Modal>
+      <!-- Create/Edit Modal -->
+    <Modal
+      :open="view.modalOpen.value"
+      :title="view.editingItem.value ? 'Редактирование работы' : 'Создание работы'"
+      size="xl"
+      @close="view.handleCloseModal"
+    >
+      <WorkForm
+        v-if="view.modalOpen.value"
+        :work-id="view.editingItem.value?.id"
+        :is-modal="true"
+        @saved="handleSaved"
+        @cancelled="view.handleCloseModal"
+      />
+    </Modal>
     </div>
   </AppLayout>
 </template>
@@ -492,6 +491,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import Modal from '@/components/common/Modal.vue'
 import FormField from '@/components/common/FormField.vue'
+import WorkForm from '@/components/work/WorkForm.vue'
 import Picker from '@/components/common/Picker.vue'
 
 const router = useRouter()
@@ -515,6 +515,7 @@ const showMoveGroupModal = ref(false)
 const moveToGroupId = ref<number | null>(null)
 const moving = ref(false)
 const moveError = ref<string | null>(null)
+const showMoreMenu = ref(false) // State for the "more" dropdown menu
 
 // View mode: flat or hierarchy
 const viewMode = ref<'flat' | 'hierarchy'>('hierarchy')
@@ -536,22 +537,18 @@ const view = useReferenceView<Work>(
     create: referencesApi.createWork,
     update: referencesApi.updateWork,
     delete: referencesApi.deleteWork,
-  },
-  () => referencesStore.fetchWorks(true)
+  }
 )
 
 const columns = [
   { key: 'code', label: 'Код', width: '100px' },
   { key: 'name', label: 'Наименование', width: '400px' },
   { key: 'unit', label: 'Ед. изм.', width: '100px' },
-  { key: 'category', label: 'Категория', width: '150px' },
-  { key: 'standard_price', label: 'Норм. стоимость', width: '120px' },
-  { key: 'is_deleted', label: '', width: '40px', sortable: false },
+  { key: 'price', label: 'Цена', width: '120px' },
 ]
 
-// Custom handler to navigate to work composition view instead of modal
 function handleEditWork(work: Work) {
-  router.push({ name: 'work-composition', params: { id: work.id } })
+  view.handleEdit(work)
 }
 
 function handleSelectionChange(items: Work[]) {
@@ -630,19 +627,23 @@ function getCategoryLabel(category: string): string {
   return labels[category] || category
 }
 
-function formatNumber(value: number): string {
+function formatNumber(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '—'
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) return '—'
   return new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value)
+  }).format(num)
 }
 
 // Extended Work type with hierarchy properties
 interface WorkWithHierarchy {
   id: number
+  code?: string
   name: string
-  unit: string
+  unit?: string
+  price?: number
   parent_id: number | null
   is_deleted: boolean
   marked_for_deletion?: boolean
@@ -660,7 +661,15 @@ function buildHierarchy(items: Work[]): WorkWithHierarchy[] {
   
   // Создаем карту всех элементов
   items.forEach(item => {
-    itemMap.set(item.id!, { ...item, _children: [], _level: 0, _hasChildren: false })
+    // Explicitly copy all properties including code and price
+    itemMap.set(item.id!, { 
+      ...item, 
+      code: item.code,
+      price: item.price,
+      _children: [], 
+      _level: 0, 
+      _hasChildren: false 
+    })
   })
   
   // Строим дерево
@@ -742,64 +751,64 @@ const paginationInfo = computed(() => {
 })
 
 // Загрузка данных с учетом размера страницы
-async function loadData() {
-  view.table.loading.value = true
-  try {
-    // В иерархическом режиме загружаем все данные с пагинацией
-    if (viewMode.value === 'hierarchy') {
-      const allWorks = []
-      let page = 1
-      let hasMore = true
-      
-      while (hasMore) {
-        const params = {
-          page,
-          page_size: 100,
-          search: view.table.queryParams.value.search,
-          sort_by: view.table.queryParams.value.sort_by,
-          sort_order: view.table.queryParams.value.sort_order,
-          ...filters.getQueryParams()
+    async function loadData() {
+      view.table.loading.value = true
+      try {
+        // В иерархическом режиме загружаем все данные с пагинацией
+        if (viewMode.value === 'hierarchy') {
+          const allWorks = []
+          let page = 1
+          let hasMore = true
+          
+          while (hasMore) {
+            const params = {
+              page,
+              page_size: 100,
+              search: view.table.queryParams.value.search,
+              sort_by: view.table.queryParams.value.sort_by,
+              sort_order: view.table.queryParams.value.sort_order,
+              ...filters.getQueryParams()
+            }
+            
+            const response = await referencesApi.getWorks(params)
+            allWorks.push(...response.data)
+            hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
+            page++
+          }
+          
+          view.table.data.value = allWorks
+          view.table.pagination.value = {
+            page: 1,
+            page_size: allWorks.length,
+            total_items: allWorks.length,
+            total_pages: 1
+          }
+        } else {
+          // В обычном режиме загружаем с пагинацией
+          const params = {
+            page: view.table.pagination.value?.page || 1,
+            page_size: pageSize.value,
+            search: view.table.queryParams.value.search,
+            sort_by: view.table.queryParams.value.sort_by,
+            sort_order: view.table.queryParams.value.sort_order,
+            ...filters.getQueryParams()
+          }
+          
+          const response = await referencesApi.getWorks(params)
+          view.table.data.value = response.data
+          view.table.pagination.value = response.pagination
         }
         
-        const response = await referencesApi.getWorks(params)
-        allWorks.push(...response.data)
-        hasMore = !!(response.pagination && page < response.pagination.total_pages)
-        page++
+        // Обновляем кэш
+        await referencesStore.fetchWorks(true)
+      } catch (error: unknown) {
+        console.error('Failed to load works:', error)
+        const apiError = error as { response?: { data?: { detail?: string } } }
+        alert(apiError.response?.data?.detail || 'Ошибка при загрузке данных')
+      } finally {
+        view.table.loading.value = false
       }
-      
-      view.table.data.value = allWorks
-      view.table.pagination.value = {
-        page: 1,
-        page_size: allWorks.length,
-        total_items: allWorks.length,
-        total_pages: 1
-      }
-    } else {
-      // В обычном режиме загружаем с пагинацией
-      const params = {
-        page: view.table.pagination.value?.page || 1,
-        page_size: pageSize.value,
-        search: view.table.queryParams.value.search,
-        sort_by: view.table.queryParams.value.sort_by,
-        sort_order: view.table.queryParams.value.sort_order,
-        ...filters.getQueryParams()
-      }
-      
-      const response = await referencesApi.getWorks(params)
-      view.table.data.value = response.data
-      view.table.pagination.value = response.pagination
     }
-    
-    // Обновляем кэш
-    await referencesStore.fetchWorks(true)
-  } catch (error: unknown) {
-    console.error('Failed to load works:', error)
-    const apiError = error as { response?: { data?: { detail?: string } } }
-    alert(apiError.response?.data?.detail || 'Ошибка при загрузке данных')
-  } finally {
-    view.table.loading.value = false
-  }
-}
 
 function handlePageChange(page: number) {
   view.table.setPage(page)
@@ -909,6 +918,11 @@ function closeMoveGroupModal() {
   moveError.value = null
 }
 
+function handleSaved() {
+  loadData()
+  view.handleCloseModal()
+}
+
 // Перезагрузка при смене режима
 watch(viewMode, () => {
   loadData()
@@ -918,3 +932,13 @@ onMounted(() => {
   loadData()
 })
 </script>
+
+<style scoped>
+/* Fix cursor behavior */
+:deep(tr) {
+  cursor: default !important;
+}
+:deep(a), :deep(.cursor-pointer), :deep(button) {
+  cursor: pointer !important;
+}
+</style>

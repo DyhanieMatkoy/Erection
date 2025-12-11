@@ -263,7 +263,7 @@ class DailyReportDocumentForm(BaseDocumentForm):
             SELECT id, line_number, work_id, planned_labor, actual_labor, deviation_percent,
                    is_group, group_name
             FROM daily_report_lines
-            WHERE report_id = ?
+            WHERE daily_report_id = ?
             ORDER BY line_number
         """, (self.report_id,))
         

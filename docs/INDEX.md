@@ -2,6 +2,12 @@
 
 ## 📋 Содержание
 
+### 🔄 История изменений
+- [CHANGELOG_2025_12_11.md](changelogs/CHANGELOG_2025_12_11.md) - Обновление от 11.12.2025 (Web/Desktop)
+- [CHANGELOG_WEB_IMPORT_PRINT.md](changelogs/CHANGELOG_WEB_IMPORT_PRINT.md) - Импорт смет и печать (01.12.2025)
+- [CHANGELOG_CTM_BULK_OPS.md](changelogs/CHANGELOG_CTM_BULK_OPS.md) - Групповые операции (30.11.2025)
+- [VERSIONS.md](misc/VERSIONS.md) - История версий
+
 ### 🚀 Начало работы
 - [START_HERE.md](START_HERE.md) - С чего начать
 - [QUICKSTART.md](QUICKSTART.md) - Быстрый старт

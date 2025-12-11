@@ -31,7 +31,7 @@ echo.
 
 REM Start Backend
 echo Starting Backend Server (Port 8000)...
-start "Backend Server" cmd /k "cd /d %~dp0 && .venv\Scripts\activate && python main.py"
+start "Backend Server" cmd /k "cd /d %~dp0 && .venv\Scripts\activate && uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
 
 REM Wait a bit for backend to initialize
 timeout /t 3 /nobreak >nul

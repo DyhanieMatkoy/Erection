@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     JWT_EXPIRATION_HOURS: int = 8
     
     # CORS - Use string that will be parsed manually
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:8000"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:8000,http://127.0.0.1:8000"
     
     # API
     API_PREFIX: str = "/api"

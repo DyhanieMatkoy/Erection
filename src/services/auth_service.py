@@ -253,7 +253,7 @@ class AuthService:
                 SELECT COUNT(*) as count
                 FROM daily_report_lines drl
                 INNER JOIN daily_report_executors dre ON drl.id = dre.report_line_id
-                WHERE drl.report_id = ? AND dre.executor_id = ?
+                WHERE drl.daily_report_id = ? AND dre.executor_id = ?
             """, (report_id, self._current_person_id))
             row = cursor.fetchone()
             if row and row['count'] > 0:

@@ -7,7 +7,7 @@ SQLite, PostgreSQL, and Microsoft SQL Server backends.
 
 from sqlalchemy import (
     Column, Integer, String, Float, Date, DateTime, Boolean,
-    ForeignKey, Text, UniqueConstraint, Index
+    ForeignKey, Text, UniqueConstraint, Index, DECIMAL, Computed
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -165,6 +165,8 @@ class Work(Base):
     work_execution_entries = relationship("WorkExecutionRegister", back_populates="work")
     cost_item_materials = relationship("CostItemMaterial", back_populates="work", 
                                       cascade="all, delete, delete-orphan")
+    specifications = relationship("WorkSpecification", back_populates="work", 
+                                 cascade="all, delete, delete-orphan")
     
     def __repr__(self):
         return f"<Work(id={self.id}, name='{self.name}')>"
@@ -270,7 +272,7 @@ class DailyReportLine(Base):
     __tablename__ = 'daily_report_lines'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    report_id = Column(Integer, ForeignKey('daily_reports.id', ondelete='CASCADE'), nullable=False, index=True)
+    daily_report_id = Column(Integer, ForeignKey('daily_reports.id', ondelete='CASCADE'), nullable=False, index=True)
     line_number = Column(Integer, nullable=False)
     work_id = Column(Integer, ForeignKey('works.id'))
     planned_labor = Column(Float, default=0.0)
@@ -293,7 +295,7 @@ class DailyReportLine(Base):
     material = relationship("Material", back_populates="daily_report_lines")
     
     def __repr__(self):
-        return f"<DailyReportLine(id={self.id}, report_id={self.report_id}, line_number={self.line_number})>"
+        return f"<DailyReportLine(id={self.id}, daily_report_id={self.daily_report_id}, line_number={self.line_number})>"
 
 
 class DailyReportExecutor(Base):
@@ -548,7 +550,6 @@ class Material(Base):
 
 
 
-
 class Unit(Base):
     """Unit model (Единицы измерения)"""
     __tablename__ = 'units'
@@ -594,3 +595,35 @@ class CostItemMaterial(Base):
     
     def __repr__(self):
         return f"<CostItemMaterial(id={self.id}, work_id={self.work_id}, cost_item_id={self.cost_item_id}, material_id={self.material_id})>"
+
+
+class WorkSpecification(Base):
+    """Work specification model (components required for work execution)"""
+    __tablename__ = 'work_specifications'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    work_id = Column(Integer, ForeignKey('works.id', ondelete='CASCADE'), nullable=False)
+    component_type = Column(String(20), nullable=False) # 'Material', 'Labor', 'Equipment', 'Other'
+    component_name = Column(String(500), nullable=False)
+    unit_id = Column(Integer, ForeignKey('units.id'))
+    material_id = Column(Integer, ForeignKey('materials.id'))
+    consumption_rate = Column(DECIMAL(15,6), nullable=False, default=0)
+    unit_price = Column(DECIMAL(15,2), nullable=False, default=0)
+    total_cost = Column(DECIMAL(15,2), Computed('consumption_rate * unit_price', persisted=True))
+    created_at = Column(DateTime, default=func.now())
+    modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    marked_for_deletion = Column(Boolean, default=False)
+    
+    # Relationships
+    work = relationship("Work", back_populates="specifications")
+    unit_ref = relationship("Unit")
+    material_ref = relationship("Material")
+    
+    __table_args__ = (
+        Index('idx_work_specifications_work_id', 'work_id'),
+        Index('idx_work_specifications_component_type', 'component_type'),
+        Index('idx_work_specifications_material_id', 'material_id'),
+    )
+    
+    def __repr__(self):
+        return f"<WorkSpecification(id={self.id}, work_id={self.work_id}, name='{self.component_name}')>"

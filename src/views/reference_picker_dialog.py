@@ -1,6 +1,7 @@
 """Reference picker dialog"""
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTableWidget,
-                              QTableWidgetItem, QHeaderView, QPushButton, QLineEdit, QLabel)
+                              QTableWidgetItem, QHeaderView, QPushButton, QLineEdit, QLabel, QMenu)
+from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
 from ..data.database_manager import DatabaseManager
 
@@ -37,6 +38,16 @@ class ReferencePickerDialog(QDialog):
         else:
             return "name"
     
+    def on_context_menu(self, position):
+        """Handle context menu"""
+        menu = QMenu()
+        
+        edit_action = QAction("Изменить", self)
+        edit_action.triggered.connect(self.on_edit)
+        menu.addAction(edit_action)
+        
+        menu.exec(self.table_view.viewport().mapToGlobal(position))
+
     def setup_ui(self):
         """Setup UI"""
         self.setWindowTitle(self.title)
@@ -73,6 +84,11 @@ class ReferencePickerDialog(QDialog):
         self.table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table_view.doubleClicked.connect(self.on_row_double_clicked)
+        
+        # Context menu
+        self.table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table_view.customContextMenuRequested.connect(self.on_context_menu)
+        
         layout.addWidget(self.table_view)
         
         # Buttons
@@ -114,8 +130,13 @@ class ReferencePickerDialog(QDialog):
         
         if search_text:
             # When searching, show all levels
-            where_clauses.append(f"{self.display_column} LIKE ?")
-            params.append(f"%{search_text}%")
+            if self.table_name == "works":
+                where_clauses.append(f"(name LIKE ? OR code LIKE ?)")
+                params.append(f"%{search_text}%")
+                params.append(f"%{search_text}%")
+            else:
+                where_clauses.append(f"{self.display_column} LIKE ?")
+                params.append(f"%{search_text}%")
         elif self.is_hierarchical:
             # When not searching and hierarchical, show only current level
             if self.current_parent_id is None:
@@ -300,26 +321,44 @@ class ReferencePickerDialog(QDialog):
                 selected_id = int(id_item.text())
                 
                 # Open appropriate form based on table
+                form = None
                 if self.table_name == "works":
                     from .work_form import WorkForm
                     form = WorkForm(selected_id)
-                    form.show()
                 elif self.table_name == "counterparties":
                     from .counterparty_form import CounterpartyForm
                     form = CounterpartyForm(selected_id)
-                    form.show()
                 elif self.table_name == "objects":
                     from .object_form import ObjectForm
                     form = ObjectForm(selected_id)
-                    form.show()
                 elif self.table_name == "organizations":
                     from .organization_form import OrganizationForm
                     form = OrganizationForm(selected_id)
-                    form.show()
                 elif self.table_name == "persons":
                     from .person_form import PersonForm
                     form = PersonForm(selected_id)
+                
+                if form:
+                    # Use exec() if it's a dialog to block until closed, then refresh
+                    # But WorkForm is QWidget/BaseDocumentForm, usually shown with show()
+                    # If we use show(), this dialog might close if it's modal and we don't handle it right?
+                    # The user says "new form immediately closes". This happens if we don't keep a reference to it
+                    # or if we are in a modal loop that somehow interferes.
+                    # BaseDocumentForm usually inherits from QWidget (or QDialog?). Let's check BaseDocumentForm.
+                    # If it's a widget, we need to keep a reference.
+                    
+                    # Store reference to prevent garbage collection
+                    self._edit_form = form
                     form.show()
+                    
+                    # If we want to refresh after edit, we might need to connect to a signal
+                    # For now, just showing it without closing this dialog is the fix for "closes immediately"
+                    # Wait, if this dialog is modal, opening another non-modal window might be an issue?
+                    # Usually QDialog.exec() starts a loop. Opening another window on top is fine.
+                    # BUT if `form` is a local variable, it gets GC'd immediately after this function returns!
+                    # That's why it closes immediately.
+                    
+                    pass
     
     def keyPressEvent(self, event):
         """Handle key press events"""

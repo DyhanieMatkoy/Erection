@@ -1,96 +1,49 @@
 <template>
   <div class="work-basic-info">
-    <h3 class="section-title">Basic Information</h3>
+    <!-- Removed Caption -->
     
-    <div class="form-grid">
-      <!-- Code -->
-      <div class="form-group">
-        <label for="work-code" class="form-label">Code</label>
+    <!-- Main Fields -->
+    <div class="compact-form grid-layout">
+      <!-- Row 1: Code, Unit, Price, Labor -->
+      <div class="form-row grid-col-code">
+        <label for="work-code" class="form-label">Код:</label>
         <input
           id="work-code"
           v-model="localWork.code"
           type="text"
           class="form-control"
-          placeholder="Enter work code"
+          placeholder="Код"
           maxlength="50"
           @input="handleInput"
         />
       </div>
 
-      <!-- Name -->
-      <div class="form-group full-width">
-        <label for="work-name" class="form-label required">Name</label>
-        <input
-          id="work-name"
-          v-model="localWork.name"
-          type="text"
-          class="form-control"
-          :class="{ 'is-invalid': errors.name }"
-          placeholder="Enter work name"
-          maxlength="500"
-          required
-          @input="handleInput"
-        />
-        <div v-if="errors.name" class="invalid-feedback">
-          {{ errors.name }}
-        </div>
-      </div>
-
-      <!-- Unit -->
-      <div class="form-group">
-        <label for="work-unit" class="form-label">Unit</label>
+      <div class="form-row grid-col-unit">
+        <label for="work-unit" class="form-label">Ед. изм.:</label>
         <div class="input-with-button">
           <input
             id="work-unit"
             v-model="selectedUnitName"
             type="text"
             class="form-control"
-            placeholder="Select unit..."
+            placeholder=""
             readonly
             @click="showUnitSelector = true"
+            style="min-width: 0;" 
           />
           <button
             type="button"
-            class="btn btn-outline-secondary"
+            class="btn btn-outline-secondary btn-icon-only"
             @click="showUnitSelector = true"
-            title="Select unit"
+            title="Выбрать"
           >
-            <span class="icon">📋</span>
-          </button>
-          <button
-            v-if="localWork.unit_id"
-            type="button"
-            class="btn btn-outline-danger"
-            @click="clearUnit"
-            title="Clear unit"
-          >
-            <span class="icon">✕</span>
+            ...
           </button>
         </div>
       </div>
 
-      <!-- Is Group Checkbox -->
-      <div class="form-group checkbox-group">
-        <div class="form-check">
-          <input
-            id="work-is-group"
-            v-model="localWork.is_group"
-            type="checkbox"
-            class="form-check-input"
-            @change="handleGroupChange"
-          />
-          <label for="work-is-group" class="form-check-label">
-            Is Group
-          </label>
-        </div>
-        <small class="form-text text-muted">
-          Groups organize works hierarchically and cannot have price or labor rate
-        </small>
-      </div>
-
-      <!-- Price -->
-      <div class="form-group">
-        <label for="work-price" class="form-label">Price</label>
+      <div class="form-row grid-col-price">
+        <label for="work-price" class="form-label">Цена:</label>
         <input
           id="work-price"
           v-model.number="localWork.price"
@@ -103,14 +56,10 @@
           :disabled="localWork.is_group"
           @input="handleInput"
         />
-        <div v-if="errors.price" class="invalid-feedback">
-          {{ errors.price }}
-        </div>
       </div>
 
-      <!-- Labor Rate -->
-      <div class="form-group">
-        <label for="work-labor-rate" class="form-label">Labor Rate</label>
+      <div class="form-row grid-col-labor">
+        <label for="work-labor-rate" class="form-label">Трудозатраты:</label>
         <input
           id="work-labor-rate"
           v-model.number="localWork.labor_rate"
@@ -123,51 +72,101 @@
           :disabled="localWork.is_group"
           @input="handleInput"
         />
-        <div v-if="errors.labor_rate" class="invalid-feedback">
-          {{ errors.labor_rate }}
-        </div>
       </div>
 
-      <!-- Parent Work -->
-      <div class="form-group full-width">
-        <label for="work-parent" class="form-label">Parent Work</label>
-        <div class="input-with-button">
-          <input
-            id="work-parent"
-            v-model="selectedParentName"
-            type="text"
-            class="form-control"
-            :class="{ 'is-invalid': errors.parent_id }"
-            placeholder="Select parent work..."
-            readonly
-            @click="showParentSelector = true"
-          />
-          <button
-            type="button"
-            class="btn btn-outline-secondary"
-            @click="showParentSelector = true"
-            title="Select parent work"
-          >
-            <span class="icon">📁</span>
-          </button>
-          <button
-            v-if="localWork.parent_id"
-            type="button"
-            class="btn btn-outline-danger"
-            @click="clearParent"
-            title="Clear parent"
-          >
-            <span class="icon">✕</span>
-          </button>
+      <!-- Row 2: Name (Full Width) -->
+      <div class="form-row grid-col-full">
+        <label for="work-name" class="form-label required">Наименование:</label>
+        <input
+          id="work-name"
+          v-model="localWork.name"
+          type="text"
+          class="form-control"
+          :class="{ 'is-invalid': errors.name }"
+          placeholder="Введите наименование работы"
+          maxlength="500"
+          required
+          @input="handleInput"
+        />
+        <div v-if="errors.name" class="invalid-feedback">
+          {{ errors.name }}
         </div>
-        <div v-if="errors.parent_id" class="invalid-feedback d-block">
-          {{ errors.parent_id }}
-        </div>
-        <small v-if="hierarchyPath" class="form-text text-muted">
-          Path: {{ hierarchyPath }}
-        </small>
       </div>
     </div>
+
+    <!-- Collapsible Advanced Section -->
+    <details class="advanced-section">
+      <summary class="advanced-toggle">
+        <span class="toggle-icon">▶</span>
+        Дополнительные параметры
+      </summary>
+      
+      <div class="advanced-content">
+        <!-- Is Group Checkbox -->
+        <div class="form-row">
+          <label class="form-label">Тип:</label>
+          <div class="checkbox-container">
+            <div class="form-check">
+              <input
+                id="work-is-group"
+                v-model="localWork.is_group"
+                type="checkbox"
+                class="form-check-input"
+                @change="handleGroupChange"
+              />
+              <label for="work-is-group" class="form-check-label">
+                Это группа работ
+              </label>
+            </div>
+            <small class="form-text text-muted">
+              Группы организуют работы иерархически и не могут иметь цену или трудозатраты
+            </small>
+          </div>
+        </div>
+
+        <!-- Parent Work -->
+        <div class="form-row">
+          <label for="work-parent" class="form-label">Родитель:</label>
+          <div class="parent-container">
+            <div class="input-with-button">
+              <input
+                id="work-parent"
+                v-model="selectedParentName"
+                type="text"
+                class="form-control"
+                :class="{ 'is-invalid': errors.parent_id }"
+                placeholder="Выберите родительскую группу..."
+                readonly
+                @click="showParentSelector = true"
+              />
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                @click="showParentSelector = true"
+                title="Выбрать родителя"
+              >
+                📁
+              </button>
+              <button
+                v-if="localWork.parent_id"
+                type="button"
+                class="btn btn-outline-danger"
+                @click="clearParent"
+                title="Очистить"
+              >
+                ✕
+              </button>
+            </div>
+            <div v-if="errors.parent_id" class="invalid-feedback d-block">
+              {{ errors.parent_id }}
+            </div>
+            <small v-if="hierarchyPath" class="form-text text-muted">
+              Путь: {{ hierarchyPath }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </details>
 
     <!-- Unit Selector Dialog -->
     <UnitListForm
@@ -326,7 +325,7 @@ function validateFields() {
     }
   }
   
-  emit('validate')
+  // emit('validate') // REMOVED to prevent infinite recursion
   return Object.keys(errors.value).length === 0
 }
 
@@ -352,7 +351,7 @@ defineExpose({
 .work-basic-info {
   background: white;
   border-radius: 0.5rem;
-  padding: 1.5rem;
+  padding: 0.1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -360,37 +359,58 @@ defineExpose({
   font-size: 1.25rem;
   font-weight: 600;
   color: #212529;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
   border-bottom: 2px solid #e9ecef;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+.compact-form {
+  /* Default column layout for mobile/fallback */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.form-group {
+.grid-layout {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.form-row {
   display: flex;
   flex-direction: column;
 }
 
-.form-group.full-width {
-  grid-column: 1 / -1;
+.grid-col-code { grid-column: span 3; }
+.grid-col-unit { grid-column: span 2; }
+.grid-col-price { grid-column: span 3; }
+.grid-col-labor { grid-column: span 4; }
+.grid-col-full { grid-column: 1 / -1; }
+
+.input-with-button {
+  display: flex;
+  gap: 0.25rem;
 }
 
-.form-group.checkbox-group {
-  grid-column: 1 / -1;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 0.25rem;
+.btn-icon-only {
+  padding: 0.25rem 0.5rem;
+  min-width: 2rem;
+}
+
+@media (max-width: 768px) {
+  .grid-layout {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .form-label {
   font-weight: 500;
   color: #495057;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   font-size: 0.875rem;
 }
 
@@ -400,7 +420,7 @@ defineExpose({
 }
 
 .form-control {
-  padding: 0.5rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   border: 1px solid #ced4da;
   border-radius: 0.25rem;
   font-size: 0.875rem;

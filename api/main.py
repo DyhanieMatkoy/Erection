@@ -46,6 +46,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Custom exception handlers
@@ -107,12 +108,13 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 # Include routers
-from api.endpoints import references, documents, registers, costs_materials
+from api.endpoints import references, documents, registers, costs_materials, work_specifications
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(references.router, prefix=settings.API_PREFIX)
 app.include_router(documents.router, prefix=settings.API_PREFIX)
 app.include_router(registers.router, prefix=settings.API_PREFIX)
 app.include_router(costs_materials.router, prefix=settings.API_PREFIX, tags=["costs-materials"])
+app.include_router(work_specifications.router, prefix=settings.API_PREFIX)
 
 
 @app.get("/")

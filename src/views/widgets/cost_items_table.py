@@ -1,15 +1,23 @@
 
-from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QMenu
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QAction
 
 class CostItemsTable(QTableWidget):
     quantityChanged = pyqtSignal(int, float) # row, new_quantity
+    addCostItemRequested = pyqtSignal()
+    createNewCostItemRequested = pyqtSignal()
+    deleteCostItemRequested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setup_table()
         self.itemChanged.connect(self.on_item_changed)
         self._updating = False
+        
+        # Enable context menu
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
         
     def setup_table(self):
         self.setColumnCount(6)
@@ -83,3 +91,31 @@ class CostItemsTable(QTableWidget):
         if current_row >= 0:
             return self.item(current_row, 0).data(Qt.ItemDataRole.UserRole)
         return None
+    
+    def show_context_menu(self, position):
+        """Show context menu for cost items"""
+        menu = QMenu(self)
+        
+        # Add existing cost item action
+        add_action = QAction("Добавить статью затрат", self)
+        add_action.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_FileIcon))
+        add_action.triggered.connect(self.addCostItemRequested.emit)
+        menu.addAction(add_action)
+        
+        # Create new cost item action
+        create_action = QAction("Создать новую статью затрат", self)
+        create_action.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_FileDialogNewFolder))
+        create_action.triggered.connect(lambda: self.createNewCostItemRequested.emit())
+        menu.addAction(create_action)
+        
+        # Delete cost item action (only if row is selected)
+        current_row = self.currentRow()
+        if current_row >= 0:
+            menu.addSeparator()
+            delete_action = QAction("Удалить статью затрат", self)
+            delete_action.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_TrashIcon))
+            delete_action.triggered.connect(self.deleteCostItemRequested.emit)
+            menu.addAction(delete_action)
+        
+        # Show menu at cursor position
+        menu.exec(self.mapToGlobal(position))

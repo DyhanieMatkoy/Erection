@@ -110,7 +110,7 @@ class DailyReportPrintForm(PrintFormGenerator):
                 0 as quantity
             FROM daily_report_lines drl
             LEFT JOIN works w ON drl.work_id = w.id
-            WHERE drl.report_id = ?
+            WHERE drl.daily_report_id = ?
             ORDER BY drl.line_number
         """, (report_id,))
         

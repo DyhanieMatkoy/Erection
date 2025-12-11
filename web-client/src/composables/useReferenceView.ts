@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { useTable } from './useTable'
 import { useReferencesStore } from '@/stores/references'
+import type { PaginationParams, PaginationInfo } from '@/types/api'
 
 interface ReferenceItem {
   id?: number
@@ -12,7 +13,7 @@ interface ReferenceItem {
 }
 
 interface ReferenceApi<T> {
-  getAll: (params?: unknown) => Promise<{ data: T[]; pagination?: unknown }>
+  getAll: (params?: PaginationParams) => Promise<{ data: T[]; pagination?: PaginationInfo }>
   create: (data: Partial<T>) => Promise<T>
   update: (id: number, data: Partial<T>) => Promise<T>
   delete: (id: number) => Promise<void>
@@ -20,7 +21,7 @@ interface ReferenceApi<T> {
 
 export function useReferenceView<T extends ReferenceItem>(
   api: ReferenceApi<T>,
-  cacheUpdater?: () => Promise<void>
+  cacheUpdater?: () => Promise<any>
 ) {
   const referencesStore = useReferencesStore()
   const table = useTable()
@@ -53,8 +54,8 @@ export function useReferenceView<T extends ReferenceItem>(
     table.loading.value = true
     try {
       const response = await api.getAll(table.queryParams.value)
-      table.data.value = response.data as unknown[]
-      table.pagination.value = response.pagination as any
+      table.data.value = response.data
+      table.pagination.value = response.pagination
       
       // Update cache if provided
       if (cacheUpdater) {

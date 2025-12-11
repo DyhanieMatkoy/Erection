@@ -310,7 +310,7 @@ async def list_works(
     
     # Get items
     query = f"""
-        SELECT id, name, unit, parent_id, marked_for_deletion
+        SELECT id, name, code, unit, price, labor_rate, is_group, parent_id, marked_for_deletion
         FROM works
         WHERE {where_clause}
         ORDER BY {sort_by} {sort_order.upper()}

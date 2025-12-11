@@ -67,7 +67,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.import_thread: Optional[ImportThread] = None
-        self.dbf_path = ""
+        from config.settings import DBF_DEFAULT_PATH
+        self.dbf_path = DBF_DEFAULT_PATH
         self.init_ui()
     
     def init_ui(self):
@@ -94,8 +95,9 @@ class MainWindow(QMainWindow):
         # Установка пропорций разделителя
         splitter.setSizes([400, 200])
         
-        # Изначально блокируем кнопку импорта
-        self.import_button.setEnabled(False)
+        # Изначально блокируем кнопку импорта, если путь не задан
+        from config.settings import DBF_DEFAULT_PATH
+        self.import_button.setEnabled(bool(DBF_DEFAULT_PATH))
     
     def create_top_panel(self) -> QWidget:
         """Создает верхнюю панель с настройками"""
@@ -106,7 +108,8 @@ class MainWindow(QMainWindow):
         file_group = QGroupBox("Выбор DBF файла или директории")
         file_layout = QHBoxLayout(file_group)
         
-        self.path_label = QLabel("Путь не выбран")
+        from config.settings import DBF_DEFAULT_PATH
+        self.path_label = QLabel(f"Путь: {DBF_DEFAULT_PATH}")
         self.path_label.setWordWrap(True)
         file_layout.addWidget(self.path_label)
         

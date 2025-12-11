@@ -14,7 +14,7 @@ DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 # Настройки DBF
 DBF_ENCODING = "cp1251"  # Кодировка для DBF файлов 1С
-DBF_DEFAULT_PATH = ""  # Путь к DBF файлам по умолчанию
+DBF_DEFAULT_PATH = "F:\\traeRepo\\Vibe1Co\\Erection\\8-NSM320-1Cv7"  # Путь к DBF файлам по умолчанию
 
 # Настройки импорта
 BATCH_SIZE = 100  # Размер пакета для импорта данных
@@ -57,7 +57,7 @@ DBF_FIELD_MAPPING = {
             "DESCR": "name",
             "PARENTID": "parent_id",
             "CODE": "code",
-            "SP17": "unit_name",  # Temporary field for lookup
+            "SP17": "unit_id",  # Mapped to unit_id (Reference) instead of unit_name
             "SP15": "price",
             "SP31": "labor_rate",
             "ISMARK": "marked_for_deletion"

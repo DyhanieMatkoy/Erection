@@ -492,7 +492,16 @@ class EstimateDocumentForm(BaseDocumentForm):
         work_id_item = self.table_part.item(row, 7)
         current_work_id = int(work_id_item.text()) if work_id_item and work_id_item.text() and work_id_item.text() not in ["0", "-1"] else None
         
+        # Use substring search if user typed something
+        work_name_item = self.table_part.item(row, 0)
+        search_text = ""
+        if work_name_item and work_name_item.text() and current_work_id is None:
+             search_text = work_name_item.text()
+
         dialog = ReferencePickerDialog("works", "Выбор работы", self, current_id=current_work_id)
+        if search_text:
+            dialog.search_edit.setText(search_text)
+            
         if dialog.exec():
             selected_id, selected_name = dialog.get_selected()
             
@@ -507,6 +516,12 @@ class EstimateDocumentForm(BaseDocumentForm):
                 
                 self.table_part.blockSignals(True)
                 self.table_part.setItem(row, 0, QTableWidgetItem(display_name))
+                
+                # Default quantity to 1 if empty
+                quantity_item = self.table_part.item(row, 1)
+                if not quantity_item or not quantity_item.text() or quantity_item.text() == "0":
+                    self.table_part.setItem(row, 1, QTableWidgetItem("1.0"))
+                
                 self.table_part.setItem(row, 2, QTableWidgetItem(work_row['unit'] or ""))
                 self.table_part.setItem(row, 3, QTableWidgetItem(str(work_row['price'] or 0)))
                 self.table_part.setItem(row, 4, QTableWidgetItem(str(work_row['labor_rate'] or 0)))

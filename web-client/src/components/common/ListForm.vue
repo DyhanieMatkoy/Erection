@@ -116,7 +116,7 @@
 import { ref, computed, watch, shallowRef } from 'vue'
 import { debounce } from '@/utils/debounce'
 
-export interface Props {
+export interface Props<T> {
   isOpen: boolean
   title?: string
   searchPlaceholder?: string
@@ -137,14 +137,14 @@ export interface Props {
   highlightMatches?: boolean
 }
 
-interface Emits {
+interface Emits<T> {
   (e: 'close'): void
   (e: 'select', item: T): void
   (e: 'retry'): void
   (e: 'search', query: string): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props<T>>(), {
   title: 'Select Item',
   searchPlaceholder: 'Search...',
   loadingMessage: 'Loading...',
@@ -157,13 +157,13 @@ const props = withDefaults(defineProps<Props>(), {
   showPagination: false,
   itemsPerPage: 20,
   getItemKey: (item: any) => item.id,
-  getItemCode: (item: unknown) => item.code || '-',
-  getItemDescription: (item: unknown) => item.description || item.name || '',
+  getItemCode: (item: any) => item.code || '-',
+  getItemDescription: (item: any) => item.description || item.name || '',
   isItemDisabled: () => false,
   highlightMatches: true
 })
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits<T>>()
 
 // Local state
 const searchQuery = ref('')

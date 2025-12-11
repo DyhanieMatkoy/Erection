@@ -1,5 +1,49 @@
 <template>
   <div class="work-form">
+    <!-- Fixed Top Actions Toolbar -->
+    <div class="fixed-actions-toolbar">
+      <div class="toolbar-content">
+        <h3 class="toolbar-title">{{ localWork.name || (workId ? 'Редактирование' : 'Создание') }}</h3>
+        <div class="action-buttons">
+          <!-- 3-Dots Menu -->
+          <div class="menu-container">
+            <button
+              @click="showMenu = !showMenu"
+              class="action-btn btn-menu"
+              title="Дополнительно"
+            >
+              ⋮
+            </button>
+            <div v-if="showMenu" class="dropdown-menu">
+              <button @click="handleImport" class="dropdown-item">Import from Excel</button>
+              <button @click="handleExport" class="dropdown-item">Export to Excel</button>
+              <button @click="handleCopy" class="dropdown-item">Copy from Work</button>
+            </div>
+            <!-- Backdrop for menu -->
+            <div v-if="showMenu" class="menu-backdrop" @click="showMenu = false"></div>
+          </div>
+
+          <button
+            @click="handleSave"
+            class="action-btn btn-save"
+            :disabled="saving || !isFormValid"
+            :title="!isFormValid ? 'Исправьте ошибки' : 'Сохранить'"
+          >
+            <span v-if="saving" class="spinner-small"></span>
+            <span v-else>✓</span>
+          </button>
+          <button
+            @click="handleCancel"
+            class="action-btn btn-cancel"
+            :disabled="saving"
+            title="Отмена"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading State with Skeleton -->
     <div v-if="loading" class="loading-overlay">
       <LoadingSkeleton type="form" :rows="5" />
@@ -30,66 +74,13 @@
         @validate="validateForm"
       />
 
-      <!-- Cost Items Section -->
-      <div class="section">
-        <CostItemsTable
-          :cost-items="costItems"
-          :has-materials="costItemHasMaterials"
-          @add-cost-item="handleAddCostItem"
-          @delete-cost-item="handleDeleteCostItem"
-        />
-      </div>
-
-      <!-- Materials Section -->
-      <div class="section">
-        <MaterialsTable
-          :materials="materials"
-          :cost-items="costItems"
-          @add-material="handleAddMaterial"
-          @update-quantity="handleUpdateQuantity"
-          @change-cost-item="handleChangeCostItem"
-          @delete-material="handleDeleteMaterial"
-        />
-      </div>
-
-      <!-- Total Cost Display -->
-      <div class="total-cost-section">
-        <div class="total-cost-card">
-          <div class="total-cost-label">Total Work Cost</div>
-          <div class="total-cost-value">{{ formatCurrency(totalCost) }}</div>
-          <div class="total-cost-breakdown">
-            <div class="breakdown-item">
-              <span class="breakdown-label">Cost Items:</span>
-              <span class="breakdown-value">{{ formatCurrency(costItemsTotal) }}</span>
-            </div>
-            <div class="breakdown-item">
-              <span class="breakdown-label">Materials:</span>
-              <span class="breakdown-value">{{ formatCurrency(materialsTotal) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Form Actions -->
-      <div class="form-actions">
-        <button
-          @click="handleCancel"
-          class="btn btn-secondary"
-          :disabled="saving"
-          title="Cancel and discard changes"
-        >
-          Cancel
-        </button>
-        <button
-          @click="handleSave"
-          class="btn btn-primary"
-          :disabled="saving || !isFormValid"
-          :title="!isFormValid ? 'Please fix validation errors before saving' : 'Save work and all associations'"
-        >
-          <span v-if="saving" class="spinner-small"></span>
-          <span v-else>Save</span>
-        </button>
-      </div>
+      <!-- Work Specification Panel -->
+      <WorkSpecificationPanel
+        ref="specPanelRef"
+        :work-id="workId"
+        :work="localWork"
+        :units="units"
+      />
     </div>
   </div>
 </template>
@@ -97,6 +88,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import WorkBasicInfo from './WorkBasicInfo.vue'
+import WorkSpecificationPanel from './WorkSpecificationPanel.vue'
 import CostItemsTable from './CostItemsTable.vue'
 import MaterialsTable from './MaterialsTable.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
@@ -149,6 +141,8 @@ const saving = ref(false)
 const error = ref<string | null>(null)
 const isFormValid = ref(true)
 const basicInfoRef = ref<InstanceType<typeof WorkBasicInfo> | null>(null)
+const specPanelRef = ref<InstanceType<typeof WorkSpecificationPanel> | null>(null)
+const showMenu = ref(false)
 const loadingReferenceData = ref(false)
 
 // Computed
@@ -183,6 +177,21 @@ watch(composableError, (newError) => {
 })
 
 // Methods
+function handleImport() {
+  specPanelRef.value?.openImport()
+  showMenu.value = false
+}
+
+function handleExport() {
+  specPanelRef.value?.handleExport()
+  showMenu.value = false
+}
+
+function handleCopy() {
+  specPanelRef.value?.openCopyFromWork()
+  showMenu.value = false
+}
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -453,10 +462,149 @@ onMounted(async () => {
 
 <style scoped>
 .work-form {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
+  /* Removed max-width to use full screen */
+  width: 100%;
+  margin: 0;
+  padding: 4.1rem 0 0 0; /* Top padding for fixed header only */
   position: relative;
+}
+
+/* Fixed Actions Toolbar */
+.fixed-actions-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4rem;
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  /* Ensure it spans full width */
+  width: 100%;
+}
+
+.toolbar-content {
+  width: 100%;
+  /* Removed max-width constraint */
+  padding: 0 0.1rem; /* Reduced padding */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.menu-container {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 60;
+  min-width: 12rem;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #374151;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background-color: #f3f4f6;
+}
+
+.menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 55;
+  background: transparent;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px; /* Circle */
+  border: 1px solid transparent;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.btn-menu {
+  background-color: transparent;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-menu:hover {
+  background-color: #f9fafb;
+  color: #111827;
+}
+
+.btn-save {
+  background-color: #10b981; /* Green */
+  color: white;
+}
+
+.btn-save:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.btn-save:disabled {
+  background-color: #a7f3d0;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background-color: #ef4444; /* Red */
+  color: white;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.btn-cancel:disabled {
+  background-color: #fca5a5;
+  cursor: not-allowed;
 }
 
 /* Loading State */

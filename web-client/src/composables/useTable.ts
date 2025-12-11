@@ -19,7 +19,7 @@ export function useTable(initialPageSize = 50) {
   })
 
   const loading = ref(false)
-  const data = ref<unknown[]>([])
+  const data = ref<any[]>([])
   const pagination = ref<PaginationInfo | undefined>()
 
   function setPage(page: number) {

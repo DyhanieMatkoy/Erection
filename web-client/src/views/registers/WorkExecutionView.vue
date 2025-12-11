@@ -442,7 +442,7 @@ onMounted(async () => {
 
   // Load estimates for filter
   try {
-    const { default: documentsApi } = await import("@/api/documents")
+    const documentsApi = await import("@/api/documents")
     
     // Load all estimates with pagination
     const allEstimates = []
@@ -452,7 +452,7 @@ onMounted(async () => {
     while (hasMore) {
       const response = await documentsApi.getEstimates({ page, page_size: 100 })
       allEstimates.push(...response.data)
-      hasMore = !!(response.pagination && page < response.pagination.total_pages)
+      hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
       page++
     }
     

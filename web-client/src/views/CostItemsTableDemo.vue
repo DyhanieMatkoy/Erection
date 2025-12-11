@@ -44,7 +44,9 @@ const costItems = ref<CostItemMaterial[]>([
       unit_id: 1,
       unit_name: 'hour',
       labor_coefficient: 2.5,
-      marked_for_deletion: false
+      marked_for_deletion: false,
+      created_at: new Date().toISOString(),
+      modified_at: new Date().toISOString()
     }
   },
   {
@@ -63,7 +65,9 @@ const costItems = ref<CostItemMaterial[]>([
       unit_id: 1,
       unit_name: 'hour',
       labor_coefficient: 0.5,
-      marked_for_deletion: false
+      marked_for_deletion: false,
+      created_at: new Date().toISOString(),
+      modified_at: new Date().toISOString()
     }
   },
   {
@@ -82,7 +86,9 @@ const costItems = ref<CostItemMaterial[]>([
       unit_id: 2,
       unit_name: 'km',
       labor_coefficient: 0.0,
-      marked_for_deletion: false
+      marked_for_deletion: false,
+      created_at: new Date().toISOString(),
+      modified_at: new Date().toISOString()
     }
   }
 ])
@@ -118,7 +124,7 @@ function handleDeleteCostItem(costItemId: number) {
   const index = costItems.value.findIndex(item => item.cost_item_id === costItemId)
   if (index !== -1) {
     const deleted = costItems.value.splice(index, 1)[0]
-    alert(`Deleted cost item: ${deleted.cost_item?.description}`)
+    alert(`Deleted cost item: ${deleted?.cost_item?.description}`)
   }
 }
 

@@ -8,7 +8,7 @@ from .base_model import BaseModel
 @dataclass
 class DailyReportLine:
     id: int = 0
-    report_id: int = 0
+    daily_report_id: int = 0
     line_number: int = 0
     work_id: int = 0
     planned_labor: float = 0.0

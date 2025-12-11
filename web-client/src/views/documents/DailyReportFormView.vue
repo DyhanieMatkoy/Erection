@@ -36,7 +36,7 @@
             label="Дата"
             type="date"
             required
-            :disabled="formData.is_posted"
+            :disabled="!!formData.is_posted"
             :error="errors.date"
           />
 
@@ -45,7 +45,7 @@
             label="Смета"
             :items="estimates"
             required
-            :disabled="formData.is_posted"
+            :disabled="!!formData.is_posted"
             :error="errors.estimate_id"
             @update:model-value="handleEstimateChange"
           />
@@ -56,7 +56,7 @@
             :items="persons"
             display-key="full_name"
             required
-            :disabled="formData.is_posted"
+            :disabled="!!formData.is_posted"
             :error="errors.foreman_id"
           />
         </div>
@@ -66,7 +66,7 @@
       <DailyReportLines
         v-model="formData.lines!"
         :persons="persons"
-        :disabled="formData.is_posted"
+        :disabled="!!formData.is_posted"
       />
 
       <!-- Actions -->
@@ -323,7 +323,7 @@ onMounted(async () => {
     while (hasMore) {
       const response = await documentsApi.getEstimates({ page, page_size: 100 })
       allEstimates.push(...response.data)
-      hasMore = !!(response.pagination && page < response.pagination.total_pages)
+      hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
       page++
     }
     

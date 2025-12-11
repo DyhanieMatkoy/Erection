@@ -63,7 +63,7 @@ export const useReferencesStore = defineStore('references', () => {
       while (hasMore) {
         const response = await referencesApi.getObjects({ page, page_size: 100 })
         allData.push(...response.data)
-        hasMore = !!(response.pagination && page < response.pagination.total_pages)
+        hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
         page++
       }
       
@@ -90,7 +90,7 @@ export const useReferencesStore = defineStore('references', () => {
       while (hasMore) {
         const response = await referencesApi.getWorks({ page, page_size: 100 })
         allData.push(...response.data)
-        hasMore = !!(response.pagination && page < response.pagination.total_pages)
+        hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
         page++
       }
       
@@ -117,7 +117,7 @@ export const useReferencesStore = defineStore('references', () => {
       while (hasMore) {
         const response = await referencesApi.getPersons({ page, page_size: 100 })
         allData.push(...response.data)
-        hasMore = !!(response.pagination && page < response.pagination.total_pages)
+        hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
         page++
       }
       
@@ -144,7 +144,7 @@ export const useReferencesStore = defineStore('references', () => {
       while (hasMore) {
         const response = await referencesApi.getOrganizations({ page, page_size: 100 })
         allData.push(...response.data)
-        hasMore = !!(response.pagination && page < response.pagination.total_pages)
+        hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
         page++
       }
       
