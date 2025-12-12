@@ -115,7 +115,7 @@ import { debounce } from '@/utils/debounce'
 import { useVirtualScroll } from '@/composables/useVirtualScroll'
 import LoadingSkeleton from './LoadingSkeleton.vue'
 
-export interface Props {
+export interface Props<T> {
   isOpen: boolean
   title?: string
   searchPlaceholder?: string
@@ -136,14 +136,14 @@ export interface Props {
   highlightMatches?: boolean
 }
 
-interface Emits {
+interface Emits<T> {
   (e: 'close'): void
   (e: 'select', item: T): void
   (e: 'retry'): void
   (e: 'search', query: string): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props<T>>(), {
   title: 'Select Item',
   searchPlaceholder: 'Search...',
   loadingMessage: 'Loading...',
@@ -157,12 +157,12 @@ const props = withDefaults(defineProps<Props>(), {
   containerHeight: 400,
   getItemKey: (item: any) => item.id,
   getItemCode: (item: any) => item.code || '-',
-  getItemDescription: (item: unknown) => item.description || item.name || '',
+  getItemDescription: (item: any) => item.description || item.name || '',
   isItemDisabled: () => false,
   highlightMatches: true
 })
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits<T>>()
 
 // Local state
 const searchQuery = ref('')
@@ -237,7 +237,7 @@ function handleSearch() {
 function handleEnterKey() {
   if (displayedItems.value.length > 0) {
     const firstItem = displayedItems.value[0]
-    if (!isDisabled(firstItem)) {
+    if (firstItem && !isDisabled(firstItem)) {
       selectItem(firstItem)
       confirm()
     }

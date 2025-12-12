@@ -185,7 +185,7 @@ async function loadData() {
       
       const response = await registersApi.getWorkExecutionMovements(params)
       allMovements.push(...response.data)
-      hasMore = !!(response.pagination && page < response.pagination.total_pages)
+      hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
       page++
     }
     

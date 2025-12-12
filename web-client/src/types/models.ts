@@ -114,6 +114,7 @@ export interface EstimateLine {
   price: number
   sum: number
   labor: number
+  labor_rate?: number
   parent_id: number | null
   is_group: boolean
   order_num: number

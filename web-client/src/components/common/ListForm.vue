@@ -248,7 +248,7 @@ function handleEnterKey() {
   // Select first item if available and not disabled
   if (displayedItems.value.length > 0) {
     const firstItem = displayedItems.value[0]
-    if (!isDisabled(firstItem)) {
+    if (firstItem && !isDisabled(firstItem)) {
       selectItem(firstItem)
       confirm()
     }

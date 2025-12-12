@@ -38,15 +38,15 @@
     </template>
 
     <template #item="{ item, highlightText }">
-      <div class="work-content" :id="`work-item-${item.id}`" :style="{ paddingLeft: `${(item._level || 0) * 1.5}rem` }">
+      <div class="work-content" :id="`work-item-${item.id}`" :style="{ paddingLeft: `${((item as any)._level || 0) * 1.5}rem` }">
         <!-- Expand/Collapse Button -->
         <button
-          v-if="item._hasChildren"
+          v-if="(item as any)._hasChildren"
           class="expand-btn"
           @click="toggleExpand(item.id, $event)"
-          :aria-label="item._isExpanded ? 'Collapse' : 'Expand'"
+          :aria-label="(item as any)._isExpanded ? 'Collapse' : 'Expand'"
         >
-          {{ item._isExpanded ? '▼' : '▶' }}
+          {{ (item as any)._isExpanded ? '▼' : '▶' }}
         </button>
         <div v-else class="expand-spacer"></div>
         
@@ -78,7 +78,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import ListForm from './ListForm.vue'
-import { getWorks } from '@/api/references'
+import { useReferencesStore } from '@/stores/references'
 import type { Work } from '@/types/models'
 
 // Extended Work type with hierarchy metadata
@@ -109,9 +109,10 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<Emits>()
+const referencesStore = useReferencesStore()
 
 // State
-const works = ref<Work[]>([])
+const works = computed(() => referencesStore.works)
 const selectedItem = ref<Work | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -143,6 +144,12 @@ function expandToItem(itemId: number) {
 }
 
 // Computed
+const workMap = computed(() => {
+  const map = new Map<number, Work>()
+  works.value.forEach(w => map.set(w.id, w))
+  return map
+})
+
 const filteredWorks = computed(() => {
   let filtered = works.value
 
@@ -174,13 +181,13 @@ function buildHierarchicalList(worksList: Work[]): Work[] {
   
   function addWorkAndChildren(work: Work, level: number = 0) {
     // Add metadata for rendering
-    const workWithMeta = {
+    const workWithMeta: WorkWithMeta = {
       ...work,
       _level: level,
       _hasChildren: childrenMap.has(work.id),
       _isExpanded: expandedNodes.value.has(work.id)
     }
-    result.push(workWithMeta as unknown)
+    result.push(workWithMeta as unknown as Work)
     
     // Add children if expanded
     if (expandedNodes.value.has(work.id) && childrenMap.has(work.id)) {
@@ -232,7 +239,7 @@ watch(() => props.isOpen, (isOpen) => {
       // Wait for data load if needed
       if (works.value.length > 0) {
         expandToItem(props.selectedId)
-        const found = works.value.find(w => w.id === props.selectedId)
+        const found = workMap.value.get(props.selectedId)
         if (found) {
           selectedItem.value = found
           
@@ -258,13 +265,12 @@ async function loadWorks() {
   loading.value = true
   error.value = null
   try {
-    const response = await getWorks()
-    works.value = response.data || []
+    await referencesStore.fetchWorks()
     
     // Handle initial selection if provided
     if (props.selectedId && props.isOpen) {
        expandToItem(props.selectedId)
-       const found = works.value.find(w => w.id === props.selectedId)
+       const found = workMap.value.get(props.selectedId)
        if (found) {
          selectedItem.value = found
           nextTick(() => {
@@ -287,7 +293,7 @@ function buildHierarchyPath(workId: number, visited = new Set<number>()): string
     return '[Circular]'
   }
   
-  const work = works.value.find(w => w.id === workId)
+  const work = workMap.value.get(workId)
   if (!work) return ''
   
   if (!work.parent_id) {

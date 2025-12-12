@@ -106,16 +106,13 @@
 
         <template #actions="{ row }">
           <button
-            @click.stop="handleEdit(row as Counterparty)"
-            class="text-blue-600 hover:text-blue-900 mr-4"
-          >
-            Изменить
-          </button>
-          <button
             @click.stop="handleDelete(row as Counterparty)"
-            class="text-red-600 hover:text-red-900"
+            class="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
+            title="Удалить"
           >
-            Удалить
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
           </button>
         </template>
       </DataTable>
@@ -201,7 +198,6 @@ const columns = [
   { key: 'phone', label: 'Телефон', width: '150px' },
   { key: 'email', label: 'Email', width: '200px' },
   { key: 'type', label: 'Тип', width: '100px' },
-  { key: 'is_deleted', label: 'Статус', width: '40px', sortable: false },
 ]
 
 const modalOpen = ref(false)
@@ -241,7 +237,7 @@ async function loadData() {
     
     // Update cache
     await referencesStore.fetchCounterparties(true)
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Failed to load counterparties:', error)
     alert(error.response?.data?.detail || 'Ошибка при загрузке')
   } finally {

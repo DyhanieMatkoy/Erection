@@ -59,8 +59,10 @@ export function measure(
   if (import.meta.env.DEV && performance.measure) {
     try {
       performance.measure(name, startMark, endMark)
-      const measure = performance.getEntriesByName(name)[0]
-      console.log(`[Performance] ${name}: ${measure.duration.toFixed(2)}ms`)
+      const measures = performance.getEntriesByName(name)
+      if (measures.length > 0 && measures[0]) {
+        console.log(`[Performance] ${name}: ${measures[0].duration.toFixed(2)}ms`)
+      }
     } catch (e) {
       console.warn(`Failed to measure ${name}:`, e)
     }

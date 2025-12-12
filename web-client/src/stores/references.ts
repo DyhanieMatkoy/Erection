@@ -36,7 +36,7 @@ export const useReferencesStore = defineStore('references', () => {
       while (hasMore) {
         const response = await referencesApi.getCounterparties({ page, page_size: 100 })
         allData.push(...response.data)
-        hasMore = !!(response.pagination && page < response.pagination.total_pages)
+        hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
         page++
       }
       
@@ -82,20 +82,10 @@ export const useReferencesStore = defineStore('references', () => {
 
     loading.value.works = true
     try {
-      // Load all works with pagination
-      const allData = []
-      let page = 1
-      let hasMore = true
-      
-      while (hasMore) {
-        const response = await referencesApi.getWorks({ page, page_size: 100 })
-        allData.push(...response.data)
-        hasMore = !!(response.pagination && response.pagination.total_pages && page < response.pagination.total_pages)
-        page++
-      }
-      
-      works.value = allData
-      return allData
+      // Load all works in a single request (limit increased on backend)
+      const response = await referencesApi.getWorks({ page: 1, page_size: 10000 })
+      works.value = response.data
+      return works.value
     } finally {
       loading.value.works = false
     }

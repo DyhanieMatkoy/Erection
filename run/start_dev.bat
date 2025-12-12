@@ -5,13 +5,18 @@ echo Starting Development Environment
 echo ========================================
 
 REM Check if virtual environment exists
-if not exist ".venv\Scripts\activate.bat" (
+if exist .venv\Scripts\activate.bat (
+    call .venv\Scripts\activate.bat
+) else if exist venv\Scripts\activate.bat (
+    call venv\Scripts\activate.bat
+) else (
     echo Virtual environment not found. Running setup...
     call setup.bat
     if errorlevel 1 (
         echo Setup failed
         exit /b 1
     )
+    call .venv\Scripts\activate.bat
 )
 
 echo.
@@ -26,8 +31,8 @@ echo ========================================
 echo.
 
 REM Start both servers in separate windows
-start "API Server" cmd /k ".venv\Scripts\activate.bat && python api/main.py"
-timeout /t 2 /nobreak >nul
+start "API Server" cmd /k "python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
+timeout /t 3 /nobreak >nul
 start "Web Dev Server" cmd /k "cd web-client && npm run dev"
 
 echo.

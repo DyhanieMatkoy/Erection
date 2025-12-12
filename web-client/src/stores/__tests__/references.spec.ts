@@ -151,13 +151,13 @@ describe('useReferencesStore', () => {
   describe('fetchWorks', () => {
     it('should fetch and cache works', async () => {
       const mockData = [
-        { id: 1, name: 'Work 1', unit: 'м2', marked_for_deletion: false },
-        { id: 2, name: 'Work 2', unit: 'м3', marked_for_deletion: false },
+        { id: 1, name: 'Work 1', unit: 'м2', is_deleted: false, parent_id: null, is_group: false, created_at: "", updated_at: "" },
+        { id: 2, name: 'Work 2', unit: 'м3', is_deleted: false, parent_id: null, is_group: false, created_at: "", updated_at: "" },
       ]
       
       vi.mocked(referencesApi.getWorks).mockResolvedValue({
         success: true,
-        data: mockData,
+        data: mockData as any,
         pagination: { page: 1, page_size: 1000, total_items: 2, total_pages: 1 },
       })
       
@@ -172,13 +172,13 @@ describe('useReferencesStore', () => {
   describe('fetchPersons', () => {
     it('should fetch and cache persons', async () => {
       const mockData = [
-        { id: 1, name: 'Person 1', parent_id: null, is_deleted: false, created_at: "", updated_at: "" },
-        { id: 2, name: 'Person 2', parent_id: null, is_deleted: false, created_at: "", updated_at: "" },
+        { id: 1, full_name: 'Person 1', position: 'Manager', parent_id: null, is_deleted: false, created_at: "", updated_at: "" },
+        { id: 2, full_name: 'Person 2', position: 'Worker', parent_id: null, is_deleted: false, created_at: "", updated_at: "" },
       ]
       
       vi.mocked(referencesApi.getPersons).mockResolvedValue({
         success: true,
-        data: mockData,
+        data: mockData as any,
         pagination: { page: 1, page_size: 1000, total_items: 2, total_pages: 1 },
       })
       

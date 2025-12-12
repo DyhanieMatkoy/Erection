@@ -285,7 +285,7 @@ async def delete_object(
 @router.get("/works")
 async def list_works(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=1000),
+    page_size: int = Query(50, ge=1, le=10000),
     search: Optional[str] = None,
     sort_by: str = Query("name", regex="^(name|id)$"),
     sort_order: str = Query("asc", regex="^(asc|desc)$"),

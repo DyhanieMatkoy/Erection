@@ -48,7 +48,7 @@
         :pagination="paginationInfo"
         :selectable="true"
         :has-filters="true"
-        @row-dblclick="handleEditWork"
+        @row-click="handleEditWork"
         @page-change="handlePageChange"
         @search="view.handleSearch"
         @sort="view.handleSort"
@@ -468,7 +468,7 @@
     >
       <WorkForm
         v-if="view.modalOpen.value"
-        :work-id="view.editingItem.value?.id"
+        :work-id="view.editingItem.value?.id || 0"
         :is-modal="true"
         @saved="handleSaved"
         @cancelled="view.handleCloseModal"
@@ -547,8 +547,8 @@ const columns = [
   { key: 'price', label: 'Цена', width: '120px' },
 ]
 
-function handleEditWork(work: Work) {
-  view.handleEdit(work)
+function handleEditWork(work: Work | any) {
+  view.handleEdit(work as Work)
 }
 
 function handleSelectionChange(items: Work[]) {

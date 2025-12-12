@@ -7,7 +7,7 @@
 
     <div v-else-if="error" class="error-state">
       <p class="error-message">{{ error }}</p>
-      <button @click="loadComposition" class="btn btn-primary">Retry</button>
+      <button @click="loadWork" class="btn btn-primary">Retry</button>
     </div>
 
     <div v-else>

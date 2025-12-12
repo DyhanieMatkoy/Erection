@@ -183,7 +183,7 @@ describe('useWorkComposition', () => {
   describe('addCostItem', () => {
     it('should add cost item successfully', async () => {
       const newAssociation = mockComposition.cost_items[0]
-      vi.mocked(workCompositionApi.addCostItem).mockResolvedValue(newAssociation)
+      vi.mocked(workCompositionApi.addCostItem).mockResolvedValue(newAssociation as any)
 
       const { addCostItem, costItems } = useWorkComposition(mockWorkId)
 
@@ -224,7 +224,7 @@ describe('useWorkComposition', () => {
   describe('addMaterial', () => {
     it('should add material successfully', async () => {
       const newMaterial = mockComposition.materials[0]
-      vi.mocked(workCompositionApi.addMaterial).mockResolvedValue(newMaterial)
+      vi.mocked(workCompositionApi.addMaterial).mockResolvedValue(newMaterial as any)
 
       const { addMaterial, materials } = useWorkComposition(mockWorkId)
 
@@ -243,7 +243,7 @@ describe('useWorkComposition', () => {
   describe('updateMaterialQuantity', () => {
     it('should update material quantity successfully', async () => {
       const updatedMaterial = { ...mockComposition.materials[0], quantity_per_unit: 1.5 }
-      vi.mocked(workCompositionApi.updateMaterialQuantity).mockResolvedValue(updatedMaterial)
+      vi.mocked(workCompositionApi.updateMaterialQuantity).mockResolvedValue(updatedMaterial as any)
 
       const { updateMaterialQuantity, materials } = useWorkComposition(mockWorkId)
       materials.value = [...mockComposition.materials]
@@ -252,14 +252,14 @@ describe('useWorkComposition', () => {
 
       expect(result).toBe(true)
       expect(workCompositionApi.updateMaterialQuantity).toHaveBeenCalledWith(mockWorkId, 2, 1.5)
-      expect(materials.value[0].quantity_per_unit).toBe(1.5)
+      expect(materials.value[0]!.quantity_per_unit).toBe(1.5)
     })
   })
 
   describe('changeMaterialCostItem', () => {
     it('should change material cost item successfully', async () => {
       const updatedMaterial = { ...mockComposition.materials[0], cost_item_id: 15 }
-      vi.mocked(workCompositionApi.changeMaterialCostItem).mockResolvedValue(updatedMaterial)
+      vi.mocked(workCompositionApi.changeMaterialCostItem).mockResolvedValue(updatedMaterial as any)
 
       const { changeMaterialCostItem, materials } = useWorkComposition(mockWorkId)
       materials.value = [...mockComposition.materials]
@@ -268,7 +268,7 @@ describe('useWorkComposition', () => {
 
       expect(result).toBe(true)
       expect(workCompositionApi.changeMaterialCostItem).toHaveBeenCalledWith(mockWorkId, 2, 15)
-      expect(materials.value[0].cost_item_id).toBe(15)
+      expect(materials.value[0]!.cost_item_id).toBe(15)
     })
   })
 
@@ -320,7 +320,7 @@ describe('useWorkComposition', () => {
       const { calculateMaterialTotal } = useWorkComposition(mockWorkId)
 
       const material = mockComposition.materials[0]
-      const total = calculateMaterialTotal(material)
+      const total = calculateMaterialTotal(material as any)
 
       expect(total).toBe(50) // 100 * 0.5
     })
@@ -329,7 +329,7 @@ describe('useWorkComposition', () => {
       const { calculateMaterialTotal } = useWorkComposition(mockWorkId)
 
       const material = { ...mockComposition.materials[0], material: undefined }
-      const total = calculateMaterialTotal(material)
+      const total = calculateMaterialTotal(material as any)
 
       expect(total).toBe(0)
     })

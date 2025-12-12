@@ -37,7 +37,7 @@ export function useWorkComposition(workId: number) {
     const costItemsLength = costItems.value.length
     for (let i = 0; i < costItemsLength; i++) {
       const item = costItems.value[i]
-      if (item.cost_item?.price) {
+      if (item && item.cost_item?.price) {
         total += item.cost_item.price
       }
     }
@@ -46,7 +46,7 @@ export function useWorkComposition(workId: number) {
     const materialsLength = materials.value.length
     for (let i = 0; i < materialsLength; i++) {
       const material = materials.value[i]
-      if (material.material?.price) {
+      if (material && material.material?.price) {
         total += material.material.price * (material.quantity_per_unit || 0)
       }
     }
@@ -255,7 +255,8 @@ export function useWorkComposition(workId: number) {
     // Early return for better performance
     const materialsLength = materials.value.length
     for (let i = 0; i < materialsLength; i++) {
-      if (materials.value[i].cost_item_id === costItemId) {
+      const material = materials.value[i]
+      if (material && material.cost_item_id === costItemId) {
         return true
       }
     }

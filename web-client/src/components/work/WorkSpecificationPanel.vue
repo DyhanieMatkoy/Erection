@@ -179,8 +179,9 @@ function openImport() {
 
 async function handleFileChange(event: Event) {
   const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    await importFromExcel(target.files[0])
+  const file = target.files?.[0]
+  if (file) {
+    await importFromExcel(file)
     target.value = ''
   }
 }

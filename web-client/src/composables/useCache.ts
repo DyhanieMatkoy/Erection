@@ -2,7 +2,7 @@
  * Composable for caching frequently accessed data
  * Reduces API calls and improves performance
  */
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 
 interface CacheEntry<T> {
   data: T
@@ -17,7 +17,7 @@ const DEFAULT_TTL = 5 * 60 * 1000 // 5 minutes
 
 export function useCache<T>(key: string, options: CacheOptions = {}) {
   const ttl = options.ttl || DEFAULT_TTL
-  const cache = ref<Map<string, CacheEntry<T>>>(new Map())
+  const cache = shallowRef<Map<string, CacheEntry<T>>>(new Map())
 
   /**
    * Get cached data if available and not expired

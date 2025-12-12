@@ -26,9 +26,9 @@ describe('ListForm - Substring Entry Feature', () => {
         isOpen: true,
         title: 'Test List',
         items: testItems,
-        getItemKey: (item: TestItem) => item.id,
-        getItemCode: (item: TestItem) => item.code,
-        getItemDescription: (item: TestItem) => item.description,
+        getItemKey: (item: any) => item.id,
+        getItemCode: (item: any) => item.code,
+        getItemDescription: (item: any) => item.description,
         highlightMatches: true
       }
     })

@@ -31,10 +31,17 @@ describe('useDocumentsStore', () => {
         id: 1,
         number: 'EST-001',
         date: '2024-01-01',
+        customer_id: 1,
+        object_id: 1,
+        contractor_id: 1,
+        responsible_id: 1,
         total_sum: 100000,
         total_labor: 500,
         is_posted: false,
+        posted_at: null,
         created_at: '2024-01-01T00:00:00',
+        updated_at: '2024-01-01T00:00:00',
+        is_deleted: false,
         lines: [],
       }
       
@@ -49,10 +56,17 @@ describe('useDocumentsStore', () => {
         id: 1,
         number: 'EST-001',
         date: '2024-01-01',
+        customer_id: 1,
+        object_id: 1,
+        contractor_id: 1,
+        responsible_id: 1,
         total_sum: 100000,
         total_labor: 500,
         is_posted: false,
+        posted_at: null,
         created_at: '2024-01-01T00:00:00',
+        updated_at: '2024-01-01T00:00:00',
+        is_deleted: false,
         lines: [],
       }
       
@@ -72,7 +86,10 @@ describe('useDocumentsStore', () => {
         estimate_id: 1,
         foreman_id: 1,
         is_posted: false,
+        posted_at: null,
         created_at: '2024-01-01T00:00:00',
+        updated_at: '2024-01-01T00:00:00',
+        is_deleted: false,
         lines: [],
       }
       
@@ -89,7 +106,10 @@ describe('useDocumentsStore', () => {
         estimate_id: 1,
         foreman_id: 1,
         is_posted: false,
+        posted_at: null,
         created_at: '2024-01-01T00:00:00',
+        updated_at: '2024-01-01T00:00:00',
+        is_deleted: false,
         lines: [],
       }
       
@@ -107,10 +127,17 @@ describe('useDocumentsStore', () => {
         id: 1,
         number: 'EST-001',
         date: '2024-01-01',
+        customer_id: 1,
+        object_id: 1,
+        contractor_id: 1,
+        responsible_id: 1,
         total_sum: 100000,
         total_labor: 500,
         is_posted: false,
+        posted_at: null,
         created_at: '2024-01-01T00:00:00',
+        updated_at: '2024-01-01T00:00:00',
+        is_deleted: false,
         lines: [],
       }
       const mockReport: DailyReport = {
@@ -119,7 +146,10 @@ describe('useDocumentsStore', () => {
         estimate_id: 1,
         foreman_id: 1,
         is_posted: false,
+        posted_at: null,
         created_at: '2024-01-01T00:00:00',
+        updated_at: '2024-01-01T00:00:00',
+        is_deleted: false,
         lines: [],
       }
       
