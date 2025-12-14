@@ -274,6 +274,126 @@ async def import_estimate_from_excel(
         )
 
 
+@router.post("/daily-reports/import-excel", status_code=status.HTTP_201_CREATED)
+async def import_daily_report_from_excel(
+    file: UploadFile = File(...),
+    current_user: UserInfo = Depends(get_current_user),
+    db = Depends(get_db_connection)
+):
+    """Import daily report from Excel file"""
+    # Check file extension
+    if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Файл должен быть в формате Excel (.xlsx или .xls)"
+        )
+    
+    # Save uploaded file to temp location
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+        
+        # Import daily report using service
+        from src.services.excel_daily_report_import_service import ExcelDailyReportImportService
+        
+        import_service = ExcelDailyReportImportService()
+        daily_report, error = import_service.import_daily_report(tmp_file_path)
+        
+        # Clean up temp file
+        os_module.unlink(tmp_file_path)
+        
+        if not daily_report:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error or "Не удалось импортировать ежедневный отчет"
+            )
+        
+        # Generate number if not set
+        if not daily_report.number:
+            cursor = db.cursor()
+            cursor.execute("SELECT COUNT(*) as count FROM daily_reports WHERE date = ?", (daily_report.date.isoformat(),))
+            count = cursor.fetchone()['count']
+            daily_report.number = f"ЕО-{daily_report.date.strftime('%Y%m%d')}-{count + 1:03d}"
+        
+        # Save daily report to database
+        cursor = db.cursor()
+        
+        cursor.execute("""
+            INSERT INTO daily_reports (
+                number, date, estimate_id, foreman_id
+            )
+            VALUES (?, ?, ?, ?)
+        """, (
+            daily_report.number, daily_report.date.isoformat(), 
+            daily_report.estimate_id, daily_report.foreman_id
+        ))
+        
+        report_id = cursor.lastrowid
+        
+        # Insert lines
+        for line in daily_report.lines:
+            cursor.execute("""
+                INSERT INTO daily_report_lines (
+                    daily_report_id, line_number, work_id, planned_labor, actual_labor, deviation_percent
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                report_id, line.line_number, line.work_id, 
+                line.planned_labor, line.actual_labor, line.deviation_percent
+            ))
+        
+        db.commit()
+        
+        # Get created daily report with joins
+        cursor.execute("""
+            SELECT 
+                dr.id, dr.number, dr.date, dr.estimate_id, dr.foreman_id, dr.is_posted,
+                e.number as estimate_number,
+                p.full_name as foreman_name
+            FROM daily_reports dr
+            LEFT JOIN estimates e ON dr.estimate_id = e.id
+            LEFT JOIN persons p ON dr.foreman_id = p.id
+            WHERE dr.id = ?
+        """, (report_id,))
+        
+        report_data = cursor.fetchone()
+        if report_data:
+            report_dict = dict(report_data)
+            
+            # Get lines
+            cursor.execute("""
+                SELECT 
+                    drl.id, drl.line_number, drl.work_id, drl.planned_labor, 
+                    drl.actual_labor, drl.deviation_percent,
+                    w.name as work_name, w.code as work_code
+                FROM daily_report_lines drl
+                LEFT JOIN works w ON drl.work_id = w.id
+                WHERE drl.daily_report_id = ?
+                ORDER BY drl.line_number
+            """, (report_id,))
+            
+            report_dict['lines'] = [dict(row) for row in cursor.fetchall()]
+        
+        return {"success": True, "data": report_dict, "message": "Ежедневный отчет успешно импортирован"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        # Clean up temp file if it exists
+        if 'tmp_file_path' in locals():
+            try:
+                os_module.unlink(tmp_file_path)
+            except:
+                pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при импорте: {str(e)}"
+        )
+
+
 @router.post("/estimates", status_code=status.HTTP_201_CREATED)
 async def create_estimate(
     data: EstimateCreate,

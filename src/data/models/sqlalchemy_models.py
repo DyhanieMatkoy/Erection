@@ -12,6 +12,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime, date
+import uuid
 
 from ..sqlalchemy_base import Base
 
@@ -29,6 +30,11 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    
+    # TODO: Add synchronization fields after migration
+    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    # is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     person = relationship("Person", back_populates="user", uselist=False)
@@ -55,6 +61,11 @@ class Person(Base):
     parent_id = Column(Integer, ForeignKey('persons.id'))
     is_group = Column(Boolean, default=False)
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
+    
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     user = relationship("User", back_populates="person")
@@ -85,6 +96,11 @@ class Organization(Base):
     is_group = Column(Boolean, default=False)
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    
     # Relationships
     default_responsible = relationship("Person", foreign_keys=[default_responsible_id])
     parent = relationship("Organization", remote_side=[id], backref="children")
@@ -107,6 +123,11 @@ class Counterparty(Base):
     is_group = Column(Boolean, default=False)
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    
     # Relationships
     parent = relationship("Counterparty", remote_side=[id], backref="children")
     estimates = relationship("Estimate", back_populates="customer")
@@ -127,6 +148,11 @@ class Object(Base):
     parent_id = Column(Integer, ForeignKey('objects.id'))
     is_group = Column(Boolean, default=False)
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
+    
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     owner = relationship("Counterparty", back_populates="objects")
@@ -157,15 +183,20 @@ class Work(Base):
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    
     # Relationships
     parent = relationship("Work", remote_side=[id], backref="children")
     unit_ref = relationship("Unit", foreign_keys=[unit_id], overlaps="works")
     estimate_lines = relationship("EstimateLine", back_populates="work")
     daily_report_lines = relationship("DailyReportLine", back_populates="work")
     work_execution_entries = relationship("WorkExecutionRegister", back_populates="work")
-    cost_item_materials = relationship("CostItemMaterial", back_populates="work", 
+    cost_item_materials = relationship("CostItemMaterial", back_populates="work",
                                       cascade="all, delete, delete-orphan")
-    specifications = relationship("WorkSpecification", back_populates="work", 
+    specifications = relationship("WorkSpecification", back_populates="work",
                                  cascade="all, delete, delete-orphan")
     
     def __repr__(self):
@@ -194,6 +225,11 @@ class Estimate(Base):
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     customer = relationship("Counterparty", back_populates="estimates")
@@ -233,6 +269,11 @@ class EstimateLine(Base):
     material_price = Column(Float, default=0.0)
     material_sum = Column(Float, default=0.0)
     
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    
     # Relationships
     estimate = relationship("Estimate", back_populates="lines")
     work = relationship("Work", back_populates="estimate_lines")
@@ -257,6 +298,11 @@ class DailyReport(Base):
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     estimate = relationship("Estimate", back_populates="daily_reports")
@@ -286,6 +332,11 @@ class DailyReportLine(Base):
     planned_material_quantity = Column(Float, default=0.0)
     actual_material_quantity = Column(Float, default=0.0)
     material_deviation_percent = Column(Float, default=0.0)
+    
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     report = relationship("DailyReport", back_populates="lines")
@@ -329,6 +380,11 @@ class Timesheet(Base):
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     object = relationship("Object", back_populates="timesheets")
@@ -385,6 +441,11 @@ class TimesheetLine(Base):
     
     total_hours = Column(Float, default=0.0)
     total_amount = Column(Float, default=0.0)
+    
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     timesheet = relationship("Timesheet", back_populates="lines")
@@ -516,6 +577,11 @@ class CostItem(Base):
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
+    # TODO: Add synchronization fields after migration
+    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    # is_deleted = Column(Boolean, nullable=False, default=False)
+    
     # Relationships
     parent = relationship("CostItem", remote_side=[id], backref="children")
     materials = relationship("Material", secondary="cost_item_materials", backref="cost_items")
@@ -539,6 +605,11 @@ class Material(Base):
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
+    # TODO: Add synchronization fields after migration
+    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    # is_deleted = Column(Boolean, nullable=False, default=False)
+    
     # Relationships
     estimate_lines = relationship("EstimateLine", back_populates="material")
     daily_report_lines = relationship("DailyReportLine", back_populates="material")
@@ -546,8 +617,6 @@ class Material(Base):
     
     def __repr__(self):
         return f"<Material(id={self.id}, code='{self.code}', description='{self.description}')>"
-
-
 
 
 class Unit(Base):
@@ -560,6 +629,11 @@ class Unit(Base):
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # TODO: Add synchronization fields after migration
+    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    # is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     materials = relationship("Material", back_populates="unit_ref")
@@ -613,6 +687,11 @@ class WorkSpecification(Base):
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     marked_for_deletion = Column(Boolean, default=False)
+    
+    # TODO: Add synchronization fields after migration
+    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    # is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     work = relationship("Work", back_populates="specifications")

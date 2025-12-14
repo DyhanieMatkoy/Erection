@@ -246,6 +246,8 @@ class PrintFormGenerator:
     
     def format_number(self, value: float, decimals: int = 2) -> str:
         """Format number with specified decimal places"""
+        if value is None:
+            return "0." + "0" * decimals
         return f"{value:.{decimals}f}"
     
     def format_date(self, date_obj) -> str:

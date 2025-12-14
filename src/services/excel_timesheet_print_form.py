@@ -170,24 +170,24 @@ class ExcelTimesheetPrintForm(ExcelPrintFormGenerator):
             self.set_cell_value(sheet, current_row, 2, line['employee_name'])
             
             # Hourly rate
-            self.set_cell_value(sheet, current_row, 3, float(line['hourly_rate']))
+            self.set_cell_value(sheet, current_row, 3, self.safe_float(line['hourly_rate'] or 0))
             
             # Day columns
             for day in range(1, days_in_month + 1):
                 col = 3 + day
                 hours = line['days'].get(day, 0)
                 if hours > 0:
-                    self.set_cell_value(sheet, current_row, col, float(hours))
+                    self.set_cell_value(sheet, current_row, col, self.safe_float(hours or 0))
                 else:
                     self.set_cell_value(sheet, current_row, col, "")
             
             # Total hours
             total_col = 3 + days_in_month + 1
-            self.set_cell_value(sheet, current_row, total_col, float(line['total_hours']))
+            self.set_cell_value(sheet, current_row, total_col, self.safe_float(line['total_hours'] or 0))
             
             # Total amount
             amount_col = 3 + days_in_month + 2
-            self.set_cell_value(sheet, current_row, amount_col, float(line['total_amount']))
+            self.set_cell_value(sheet, current_row, amount_col, self.safe_float(line['total_amount'] or 0))
             
             current_row += 1
     
@@ -282,7 +282,7 @@ class ExcelTimesheetPrintForm(ExcelPrintFormGenerator):
             self.set_cell_style(sheet, current_row, 2, **data_style)
             
             # Hourly rate
-            self.set_cell_value(sheet, current_row, 3, float(line['hourly_rate']))
+            self.set_cell_value(sheet, current_row, 3, self.safe_float(line['hourly_rate'] or 0))
             self.set_cell_style(sheet, current_row, 3, **number_style)
             
             # Day columns
@@ -290,19 +290,19 @@ class ExcelTimesheetPrintForm(ExcelPrintFormGenerator):
                 col = 3 + day
                 hours = line['days'].get(day, 0)
                 if hours > 0:
-                    self.set_cell_value(sheet, current_row, col, float(hours))
+                    self.set_cell_value(sheet, current_row, col, self.safe_float(hours or 0))
                 else:
                     self.set_cell_value(sheet, current_row, col, "")
                 self.set_cell_style(sheet, current_row, col, **number_style)
             
             # Total hours
             total_col = 3 + days_in_month + 1
-            self.set_cell_value(sheet, current_row, total_col, float(line['total_hours']))
+            self.set_cell_value(sheet, current_row, total_col, self.safe_float(line['total_hours'] or 0))
             self.set_cell_style(sheet, current_row, total_col, **number_style)
             
             # Total amount
             amount_col = 3 + days_in_month + 2
-            self.set_cell_value(sheet, current_row, amount_col, float(line['total_amount']))
+            self.set_cell_value(sheet, current_row, amount_col, self.safe_float(line['total_amount'] or 0))
             self.set_cell_style(sheet, current_row, amount_col, **number_style)
             
             current_row += 1
@@ -320,7 +320,7 @@ class ExcelTimesheetPrintForm(ExcelPrintFormGenerator):
         total_col = 3 + days_in_month + 1
         amount_col = 3 + days_in_month + 2
         
-        self.set_cell_value(sheet, current_row, total_col, float(total_hours))
+        self.set_cell_value(sheet, current_row, total_col, self.safe_float(total_hours or 0))
         self.set_cell_style(sheet, current_row, total_col, 
                            font=Font(bold=True, size=11),
                            alignment=Alignment(horizontal='right', vertical='center'),
@@ -331,7 +331,7 @@ class ExcelTimesheetPrintForm(ExcelPrintFormGenerator):
                                bottom=Side(style='thin')
                            ))
         
-        self.set_cell_value(sheet, current_row, amount_col, float(total_amount))
+        self.set_cell_value(sheet, current_row, amount_col, self.safe_float(total_amount or 0))
         self.set_cell_style(sheet, current_row, amount_col,
                            font=Font(bold=True, size=11),
                            alignment=Alignment(horizontal='right', vertical='center'),

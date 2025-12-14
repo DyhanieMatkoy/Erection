@@ -157,6 +157,11 @@ class DailyReportDocumentForm(BaseDocumentForm):
         self.fill_button = QPushButton("Заполнить из сметы")
         self.fill_button.clicked.connect(self.on_fill_from_estimate)
         fill_button_layout.addWidget(self.fill_button)
+        
+        self.import_button = QPushButton("Загрузить из Excel")
+        self.import_button.clicked.connect(self.on_import_from_excel)
+        fill_button_layout.addWidget(self.import_button)
+        
         fill_button_layout.addStretch()
         table_layout.addLayout(fill_button_layout)
         
@@ -428,9 +433,9 @@ class DailyReportDocumentForm(BaseDocumentForm):
                 executor_names = [row['full_name'] for row in cursor.fetchall()]
             
             self.table_part.setItem(row, 0, QTableWidgetItem(work_name))
-            self.table_part.setItem(row, 1, QTableWidgetItem(f"{line.planned_labor:.2f}" if not line.is_group else ""))
-            self.table_part.setItem(row, 2, QTableWidgetItem(f"{line.actual_labor:.2f}" if not line.is_group else ""))
-            self.table_part.setItem(row, 3, QTableWidgetItem(f"{line.deviation_percent:.2f}" if not line.is_group else ""))
+            self.table_part.setItem(row, 1, QTableWidgetItem(f"{line.planned_labor or 0:.2f}" if not line.is_group else ""))
+            self.table_part.setItem(row, 2, QTableWidgetItem(f"{line.actual_labor or 0:.2f}" if not line.is_group else ""))
+            self.table_part.setItem(row, 3, QTableWidgetItem(f"{line.deviation_percent or 0:.2f}" if not line.is_group else ""))
             self.table_part.setItem(row, 4, QTableWidgetItem(", ".join(executor_names)))
             self.table_part.setItem(row, 5, QTableWidgetItem(str(line.work_id or 0)))
             self.table_part.setItem(row, 6, QTableWidgetItem(",".join(map(str, line.executor_ids))))
@@ -749,6 +754,7 @@ class DailyReportDocumentForm(BaseDocumentForm):
         self.foreman_button.setEnabled(is_editable)
         self.table_part.setEnabled(is_editable)
         self.fill_button.setEnabled(is_editable)
+        self.import_button.setEnabled(is_editable)
         
         # Update buttons
         self.save_button.setEnabled(is_editable)
@@ -760,3 +766,62 @@ class DailyReportDocumentForm(BaseDocumentForm):
         status = " [ПРОВЕДЕН]" if self.is_posted else ""
         date_str = self.date_edit.date().toString("dd.MM.yyyy")
         self.setWindowTitle(f"Ежедневный отчет от {date_str}{status}")
+    def on_import_from_excel(self):
+        """Import daily report from Excel file"""
+        from PyQt6.QtWidgets import QFileDialog
+        from ..services.excel_daily_report_import_service import ExcelDailyReportImportService
+        
+        # Check if document is posted
+        if self.is_posted:
+            QMessageBox.warning(self, "Предупреждение", "Нельзя изменять проведенный документ")
+            return
+        
+        # Select file
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Выберите файл Excel",
+            "",
+            "Excel files (*.xlsx *.xls)"
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            # Import using service
+            import_service = ExcelDailyReportImportService()
+            daily_report, error = import_service.import_daily_report(file_path)
+            
+            if not daily_report:
+                QMessageBox.critical(self, "Ошибка импорта", error)
+                return
+            
+            # Clear existing data
+            self.table_part.setRowCount(0)
+            
+            # Fill form with imported data
+            if daily_report.date:
+                self.date_edit.setDate(QDate(daily_report.date.year, daily_report.date.month, daily_report.date.day))
+            
+            if daily_report.estimate_id:
+                self.load_estimate(daily_report.estimate_id)
+            
+            if daily_report.foreman_id:
+                self.load_foreman(daily_report.foreman_id)
+            
+            # Add imported lines to table
+            for line in daily_report.lines:
+                self.add_table_row(line)
+            
+            self.modified = True
+            
+            # Show success message
+            QMessageBox.information(
+                self, 
+                "Импорт завершен", 
+                f"Импортировано {len(daily_report.lines)} строк.\n"
+                f"Работы без найденных ссылок отображаются как пустые строки."
+            )
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при импорте: {str(e)}")

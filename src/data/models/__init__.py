@@ -38,6 +38,14 @@ from .sqlalchemy_models import (
     Constant
 )
 
+# Synchronization models
+from .sync_models import (
+    SyncNode,
+    SyncChange,
+    ObjectVersionHistory,
+    SyncOperation
+)
+
 __all__ = [
     # SQLAlchemy Base
     'Base',
@@ -60,6 +68,12 @@ __all__ = [
     'PayrollRegister',
     'UserSetting',
     'Constant',
+    
+    # Synchronization Models
+    'SyncNode',
+    'SyncChange',
+    'ObjectVersionHistory',
+    'SyncOperation',
     
     # Dataclass Models (for backward compatibility)
     'UserDataclass',

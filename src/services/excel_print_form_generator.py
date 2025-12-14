@@ -75,7 +75,18 @@ class ExcelPrintFormGenerator:
     
     def format_number(self, value: float, decimals: int = 2) -> str:
         """Format number with specified decimal places"""
+        if value is None:
+            return "0." + "0" * decimals
         return f"{value:.{decimals}f}"
+    
+    def safe_float(self, value) -> float:
+        """Safely convert value to float, returning 0.0 for None values"""
+        if value is None:
+            return 0.0
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return 0.0
     
     def set_cell_value(self, sheet, row: int, col: int, value: Any):
         """Set cell value"""

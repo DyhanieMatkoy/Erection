@@ -95,6 +95,22 @@ export async function unpostDailyReport(id: number): Promise<DailyReport> {
   return response.data.data
 }
 
+export async function importDailyReportFromExcel(file: File): Promise<DailyReport> {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  const response = await apiClient.post<{ success: boolean; data: DailyReport; message: string }>(
+    '/documents/daily-reports/import-excel',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  )
+  return response.data.data
+}
+
 // Timesheets
 export async function getTimesheets(params?: PaginationParams): Promise<ApiResponse<Timesheet[]>> {
   const response = await apiClient.get<ApiResponse<Timesheet[]>>('/documents/timesheets', {

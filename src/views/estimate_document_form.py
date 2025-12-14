@@ -308,7 +308,7 @@ class EstimateDocumentForm(BaseDocumentForm):
                 self.table_part.setItem(row, 3, QTableWidgetItem(str(line.price)))
                 self.table_part.setItem(row, 4, QTableWidgetItem(str(line.labor_rate)))
                 self.table_part.setItem(row, 5, QTableWidgetItem(f"{line.sum:.2f}"))
-                self.table_part.setItem(row, 6, QTableWidgetItem(f"{line.planned_labor:.2f}"))
+                self.table_part.setItem(row, 6, QTableWidgetItem(f"{line.planned_labor or 0:.2f}"))
                 self.table_part.setItem(row, 7, QTableWidgetItem(str(line.work_id)))
         else:
             for col in range(7):

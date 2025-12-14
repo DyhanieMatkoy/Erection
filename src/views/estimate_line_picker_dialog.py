@@ -97,7 +97,7 @@ class EstimateLinePickerDialog(QDialog):
             self.table.setItem(row, 2, QTableWidgetItem(str(row_data['quantity']) if not row_data['is_group'] else ""))
             self.table.setItem(row, 3, QTableWidgetItem(row_data['unit'] or ""))
             self.table.setItem(row, 4, QTableWidgetItem(str(row_data['price']) if not row_data['is_group'] else ""))
-            self.table.setItem(row, 5, QTableWidgetItem(f"{row_data['planned_labor']:.2f}" if not row_data['is_group'] else ""))
+            self.table.setItem(row, 5, QTableWidgetItem(f"{row_data['planned_labor'] or 0:.2f}" if not row_data['is_group'] else ""))
             self.table.setItem(row, 6, QTableWidgetItem(str(row_data['id'])))
             
             # Make all cells read-only except checkbox

@@ -103,7 +103,49 @@ class DatabaseManager:
         try:
             session = self.get_session()
             for record in records:
-                # Проверка существования записи
+                # Special handling for cost_item_materials table with unique constraint
+                if table_name == "cost_item_materials":
+                    # Check for existing record by unique constraint (work_id, cost_item_id, material_id)
+                    work_id = record.get("work_id")
+                    cost_item_id = record.get("cost_item_id")
+                    material_id = record.get("material_id")
+                    
+                    if work_id and cost_item_id:
+                        # Build check query based on available fields
+                        if material_id:
+                            check_query = """
+                                SELECT id FROM cost_item_materials 
+                                WHERE work_id = :work_id AND cost_item_id = :cost_item_id AND material_id = :material_id
+                            """
+                            check_params = {"work_id": work_id, "cost_item_id": cost_item_id, "material_id": material_id}
+                        else:
+                            check_query = """
+                                SELECT id FROM cost_item_materials 
+                                WHERE work_id = :work_id AND cost_item_id = :cost_item_id AND material_id IS NULL
+                            """
+                            check_params = {"work_id": work_id, "cost_item_id": cost_item_id}
+                        
+                        result = session.execute(text(check_query), check_params)
+                        existing_row = result.fetchone()
+                        
+                        if existing_row:
+                            # Update existing record
+                            existing_id = existing_row[0]
+                            set_clause = ", ".join([f"{key} = :{key}" for key in record.keys() if key != "id"])
+                            update_query = f"UPDATE {table_name} SET {set_clause} WHERE id = :existing_id"
+                            update_params = record.copy()
+                            update_params["existing_id"] = existing_id
+                            session.execute(text(update_query), update_params)
+                            continue
+                        else:
+                            # Insert new record
+                            columns = ", ".join(record.keys())
+                            placeholders = ", ".join([f":{key}" for key in record.keys()])
+                            insert_query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+                            session.execute(text(insert_query), record)
+                            continue
+                
+                # Default handling for other tables
                 if id_field in record and record[id_field] is not None:
                     # Проверяем, существует ли запись с таким ID
                     check_query = f"SELECT COUNT(*) FROM {table_name} WHERE {id_field} = :id"
