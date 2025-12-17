@@ -2,7 +2,8 @@
 from PyQt6.QtWidgets import (QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit, QDateEdit,
                               QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
                               QMessageBox, QLabel, QWidget, QGroupBox, QComboBox, QDialog,
-                              QListWidget, QListWidgetItem)
+                              QListWidget, QListWidgetItem, QMenu)
+from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt, QDate, QTimer
 from datetime import date
 from .base_document_form import BaseDocumentForm
@@ -179,6 +180,11 @@ class DailyReportDocumentForm(BaseDocumentForm):
         self.table_part.setColumnHidden(6, True)  # Hide executor_ids column
         self.table_part.cellChanged.connect(self.on_cell_changed)
         self.table_part.itemDoubleClicked.connect(self.on_cell_double_clicked)
+        
+        # Context menu
+        self.table_part.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table_part.customContextMenuRequested.connect(self.on_table_context_menu)
+        
         table_layout.addWidget(self.table_part)
         
         table_group.setLayout(table_layout)
@@ -463,6 +469,16 @@ class DailyReportDocumentForm(BaseDocumentForm):
         if col == 2:  # Actual labor
             self.schedule_recalculation()
             self.modified = True
+    
+    def on_table_context_menu(self, position):
+        """Handle table context menu"""
+        menu = QMenu()
+        
+        add_row_action = QAction("Добавить строку", self)
+        add_row_action.triggered.connect(lambda: self.add_table_row())
+        menu.addAction(add_row_action)
+        
+        menu.exec(self.table_part.viewport().mapToGlobal(position))
     
     def on_move_row_up(self):
         """Move current row up"""

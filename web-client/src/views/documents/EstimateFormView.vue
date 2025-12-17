@@ -108,6 +108,7 @@
       <EstimateLines
         v-model="formData.lines!"
         :works="works"
+        :units="units"
         :disabled="formData.is_posted"
         @update:totals="handleTotalsUpdate"
       />
@@ -216,6 +217,7 @@ const objects = computed(() => referencesStore.objects.filter((o) => !o.is_delet
 const organizations = computed(() => referencesStore.organizations.filter((o) => !o.is_deleted))
 const persons = computed(() => referencesStore.persons.filter((p) => !p.is_deleted))
 const works = computed(() => referencesStore.works.filter((w) => !w.is_deleted))
+const units = computed(() => referencesStore.units.filter((u) => !u.marked_for_deletion))
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('ru-RU', {
@@ -364,6 +366,7 @@ onMounted(async () => {
     referencesStore.fetchOrganizations(),
     referencesStore.fetchPersons(),
     referencesStore.fetchWorks(),
+    referencesStore.fetchUnits(),
   ])
 
   // Load estimate if editing

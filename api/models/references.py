@@ -88,7 +88,8 @@ class Object(ObjectBase):
 # Work models
 class WorkBase(ReferenceBase):
     """Base model for work"""
-    unit: Optional[str] = None
+    unit: Optional[str] = None  # Deprecated, for backward compatibility
+    unit_id: Optional[int] = None
     price: Optional[float] = 0.0
     labor_rate: Optional[float] = 0.0
     is_group: bool = False
@@ -162,6 +163,34 @@ class OrganizationUpdate(OrganizationBase):
 class Organization(Reference):
     """Model for organization with ID"""
     pass
+
+
+# Unit models
+class UnitBase(BaseModel):
+    """Base model for unit"""
+    name: str = Field(..., min_length=1, max_length=50)
+    description: Optional[str] = None
+    marked_for_deletion: bool = False
+
+
+class UnitCreate(UnitBase):
+    """Model for creating unit"""
+    pass
+
+
+class UnitUpdate(UnitBase):
+    """Model for updating unit"""
+    pass
+
+
+class Unit(UnitBase):
+    """Model for unit with ID"""
+    id: int
+    created_at: Optional[datetime] = None
+    modified_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
 
 
 # Pagination models

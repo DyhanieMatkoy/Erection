@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import and_, or_, desc
 from sqlalchemy.event import listen
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.dialects.mssql import insert as mssql_insert
+from sqlalchemy import insert as standard_insert
 
 from .models import (
     SyncNode, SyncChange, ObjectVersionHistory, SyncOperation,
@@ -67,8 +67,12 @@ class SyncManager:
         
     def _setup_session_factory(self):
         """Setup SQLAlchemy session factory"""
-        if self.db_manager.engine:
-            self._session_factory = sessionmaker(bind=self.db_manager.engine)
+        try:
+            engine = self.db_manager.get_engine()
+            self._session_factory = sessionmaker(bind=engine)
+        except Exception:
+            # Fallback for legacy database manager
+            self._session_factory = None
     
     def get_session(self) -> Session:
         """Get a database session"""

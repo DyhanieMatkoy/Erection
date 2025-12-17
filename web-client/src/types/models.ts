@@ -25,6 +25,7 @@ export interface Work {
   code?: string
   unit?: string
   unit_id?: number
+  unit_name?: string
   price?: number
   labor_rate?: number
   parent_id: number | null

@@ -13,6 +13,7 @@ from api.models.references import (
     Work, WorkCreate, WorkUpdate,
     Person, PersonCreate, PersonUpdate,
     Organization, OrganizationCreate, OrganizationUpdate,
+    Unit, UnitCreate, UnitUpdate,
     PaginationInfo
 )
 from api.models.auth import UserInfo
@@ -310,7 +311,7 @@ async def list_works(
     
     # Get items
     query = f"""
-        SELECT w.id, w.name, w.code, COALESCE(u.name, w.unit) as unit, w.unit_id, w.price, w.labor_rate, w.is_group, w.parent_id, w.marked_for_deletion
+        SELECT w.id, w.name, w.code, COALESCE(u.name, w.unit) as unit, w.unit_id, u.name as unit_name, w.price, w.labor_rate, w.is_group, w.parent_id, w.marked_for_deletion
         FROM works w
         LEFT JOIN units u ON w.unit_id = u.id
         WHERE {where_clause}
@@ -353,8 +354,8 @@ async def create_work(
     
     cursor = db.cursor()
     cursor.execute(
-        "INSERT INTO works (name, unit, price, labor_rate, is_group, parent_id) VALUES (?, ?, ?, ?, ?, ?)",
-        (data.name, data.unit, data.price or 0.0, data.labor_rate or 0.0, data.is_group, data.parent_id)
+        "INSERT INTO works (name, unit, unit_id, price, labor_rate, is_group, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (data.name, data.unit, data.unit_id, data.price or 0.0, data.labor_rate or 0.0, data.is_group, data.parent_id)
     )
     db.commit()
     
@@ -373,7 +374,12 @@ async def get_work(
 ):
     """Get work by ID"""
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM works WHERE id = ? AND marked_for_deletion = 0", (item_id,))
+    cursor.execute("""
+        SELECT w.*, COALESCE(u.name, w.unit) as unit, u.name as unit_name
+        FROM works w
+        LEFT JOIN units u ON w.unit_id = u.id
+        WHERE w.id = ? AND w.marked_for_deletion = 0
+    """, (item_id,))
     row = cursor.fetchone()
     
     if not row:
@@ -407,8 +413,8 @@ async def update_work(
     
     cursor = db.cursor()
     cursor.execute(
-        "UPDATE works SET name = ?, unit = ?, price = ?, labor_rate = ?, is_group = ?, parent_id = ? WHERE id = ?",
-        (data.name, data.unit, data.price or 0.0, data.labor_rate or 0.0, data.is_group, data.parent_id, item_id)
+        "UPDATE works SET name = ?, unit = ?, unit_id = ?, price = ?, labor_rate = ?, is_group = ?, parent_id = ? WHERE id = ?",
+        (data.name, data.unit, data.unit_id, data.price or 0.0, data.labor_rate or 0.0, data.is_group, data.parent_id, item_id)
     )
     db.commit()
     
@@ -670,6 +676,126 @@ async def delete_organization(
     db.commit()
     
     return {"success": True, "message": "Organization marked as deleted"}
+
+
+# Units endpoints
+@router.get("/units")
+async def list_units(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=1000),
+    search: Optional[str] = Query(None),
+    sort_by: str = Query("name"),
+    sort_order: str = Query("asc"),
+    current_user: UserInfo = Depends(get_current_user),
+    db = Depends(get_db_connection)
+):
+    """Get list of units"""
+    offset = (page - 1) * page_size
+    
+    # Build WHERE clause
+    where_clause = "marked_for_deletion = 0"
+    params = []
+    
+    if search:
+        where_clause += " AND name LIKE ?"
+        params.append(f"%{search}%")
+    
+    # Get total count
+    cursor = db.cursor()
+    cursor.execute(f"SELECT COUNT(*) as count FROM units WHERE {where_clause}", params)
+    total = cursor.fetchone()['count']
+    
+    # Get items
+    query = f"""
+        SELECT id, name, description, marked_for_deletion, created_at, modified_at
+        FROM units
+        WHERE {where_clause}
+        ORDER BY {sort_by} {sort_order.upper()}
+        LIMIT ? OFFSET ?
+    """
+    params.extend([page_size, offset])
+    cursor.execute(query, params)
+    
+    items = [dict(row) for row in cursor.fetchall()]
+    
+    return {
+        "success": True,
+        "data": items,
+        "pagination": create_pagination_info(page, page_size, total)
+    }
+
+
+@router.post("/units", status_code=status.HTTP_201_CREATED)
+async def create_unit(
+    data: UnitCreate,
+    current_user: UserInfo = Depends(get_current_user),
+    db = Depends(get_db_connection)
+):
+    """Create new unit"""
+    cursor = db.cursor()
+    cursor.execute(
+        "INSERT INTO units (name, description, marked_for_deletion) VALUES (?, ?, ?)",
+        (data.name, data.description, data.marked_for_deletion)
+    )
+    db.commit()
+    
+    item_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM units WHERE id = ?", (item_id,))
+    item = dict(cursor.fetchone())
+    
+    return {"success": True, "data": item}
+
+
+@router.get("/units/{item_id}")
+async def get_unit(
+    item_id: int,
+    current_user: UserInfo = Depends(get_current_user),
+    db = Depends(get_db_connection)
+):
+    """Get unit by ID"""
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM units WHERE id = ? AND marked_for_deletion = 0", (item_id,))
+    row = cursor.fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    
+    return {"success": True, "data": dict(row)}
+
+
+@router.put("/units/{item_id}")
+async def update_unit(
+    item_id: int,
+    data: UnitUpdate,
+    current_user: UserInfo = Depends(get_current_user),
+    db = Depends(get_db_connection)
+):
+    """Update unit"""
+    cursor = db.cursor()
+    cursor.execute(
+        "UPDATE units SET name = ?, description = ?, marked_for_deletion = ? WHERE id = ?",
+        (data.name, data.description, data.marked_for_deletion, item_id)
+    )
+    db.commit()
+    
+    cursor.execute("SELECT * FROM units WHERE id = ?", (item_id,))
+    item = dict(cursor.fetchone())
+    
+    return {"success": True, "data": item}
+
+
+@router.delete("/units/{item_id}")
+async def delete_unit(
+    item_id: int,
+    current_user: UserInfo = Depends(get_current_user),
+    db = Depends(get_db_connection)
+):
+    """Mark unit as deleted"""
+    cursor = db.cursor()
+    cursor.execute("UPDATE units SET marked_for_deletion = 1 WHERE id = ?", (item_id,))
+    db.commit()
+    
+    return {"success": True, "message": "Unit marked as deleted"}
 
 
 # ============================================================================

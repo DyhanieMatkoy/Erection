@@ -7,15 +7,15 @@ in the desktop client application.
 import logging
 from typing import Optional
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLineEdit, QSpinBox, QPushButton, QLabel, QGroupBox,
     QCheckBox, QTextEdit, QTabWidget, QWidget, QMessageBox,
     QProgressBar, QTableWidget, QTableWidgetItem, QHeaderView,
     QFileDialog, QDialogButtonBox
 )
-from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtGui import QFont, QIcon
+from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtGui import QFont, QIcon
 
 from ..services.sync_service import SyncService
 
@@ -60,11 +60,11 @@ class SyncSettingsDialog(QDialog):
         
         # Dialog buttons
         button_box = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Apply
         )
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
-        button_box.button(QDialogButtonBox.Apply).clicked.connect(self._apply_settings)
+        button_box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._apply_settings)
         layout.addWidget(button_box)
     
     def _setup_connection_tab(self):
@@ -214,11 +214,11 @@ class SyncSettingsDialog(QDialog):
         
         # Configure table
         header = self.conflicts_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         
         layout.addWidget(self.conflicts_table)
         

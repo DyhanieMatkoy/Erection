@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional, Callable
 from uuid import UUID
 
 import requests
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 
 from ..data.database_manager import DatabaseManager
 from ..data.sync_manager import get_sync_manager

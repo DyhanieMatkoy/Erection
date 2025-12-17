@@ -215,12 +215,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { EstimateLine, Work } from '@/types/models'
+import type { EstimateLine, Work, Unit } from '@/types/models'
 import WorkListForm from '@/components/common/WorkListForm.vue'
 
 const props = defineProps<{
   modelValue: EstimateLine[]
   works: Work[]
+  units?: Unit[]
   disabled?: boolean
 }>()
 
@@ -281,7 +282,21 @@ function handleWorkSelect(work: Work) {
   if (line) {
     line.work_id = work.id
     line.work_name = work.name
-    line.unit = work.unit
+    // Get unit name - prefer unit_name from API, then try local units lookup, then fallback to unit field
+    let unitName = ''
+    if (work.unit_name) {
+      // API already resolved the unit name via JOIN
+      unitName = work.unit_name
+    } else if (work.unit_id && props.units) {
+      // Try to find in local units cache
+      const unit = props.units.find(u => u.id === work.unit_id)
+      unitName = unit?.name || ''
+    }
+    // Final fallback to legacy unit field
+    if (!unitName) {
+      unitName = work.unit || ''
+    }
+    line.unit = unitName
     line.price = work.price || 0
     line.labor_rate = work.labor_rate || 0
     

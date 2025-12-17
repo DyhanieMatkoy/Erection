@@ -1,6 +1,6 @@
 import apiClient from './client'
 import type { ApiResponse, PaginationParams } from '@/types/api'
-import type { Counterparty, Object, Work, Person, Organization } from '@/types/models'
+import type { Counterparty, Object, Work, Person, Organization, Unit } from '@/types/models'
 
 // Generic reference API functions
 async function getReferences<T>(
@@ -74,6 +74,18 @@ export const updateWork = (id: number, data: Partial<Work>) =>
   updateReference<Work>('works', id, data)
 
 export const deleteWork = (id: number) => deleteReference('works', id)
+
+// Units
+export const getUnits = (params?: PaginationParams) => getReferences<Unit>('units', params)
+
+export const getUnit = (id: number) => getReference<Unit>('units', id)
+
+export const createUnit = (data: Partial<Unit>) => createReference<Unit>('units', data)
+
+export const updateUnit = (id: number, data: Partial<Unit>) =>
+  updateReference<Unit>('units', id, data)
+
+export const deleteUnit = (id: number) => deleteReference('units', id)
 
 // Persons
 export const getPersons = (params?: PaginationParams) => getReferences<Person>('persons', params)

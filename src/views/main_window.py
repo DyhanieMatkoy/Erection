@@ -29,6 +29,7 @@ class QuickNavigationDialog(QDialog):
             ("Элементы затрат", "open_cost_items"),
             ("Материалы", "open_materials"),
             ("Выполнение работ", "open_work_execution_report"),
+            ("Настройки синхронизации", "open_sync_settings"),
         ]
         
         self.populate_list()
@@ -101,10 +102,23 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         from ..services.auth_service import AuthService
+        from ..services.sync_service import SyncService
+        from ..data.database_manager import DatabaseManager
+        
         self.auth_service = AuthService()
+        
+        # Initialize sync service with default parameters
+        db_manager = DatabaseManager()
+        self.sync_service = SyncService(
+            db_manager=db_manager,
+            server_url="http://localhost:8000",  # Default, can be changed in settings
+            node_code="DESKTOP-CLIENT"  # Default, can be changed in settings
+        )
+        
         self.recent_forms = deque(maxlen=10)  # Track recently opened forms
         self.setup_ui()
         self.setup_shortcuts()
+        self.setup_sync_status()
         
         # Show quick navigation on startup
         QTimer.singleShot(100, self.show_quick_navigation)
@@ -265,6 +279,12 @@ class MainWindow(QMainWindow):
         settings_menu.addAction(settings_action)
         self.settings_action = settings_action
         
+        sync_settings_action = QAction("Настройки синхронизации", self)
+        sync_settings_action.triggered.connect(self.open_sync_settings)
+        sync_settings_action.setEnabled(self.auth_service.can_manage_settings())
+        settings_menu.addAction(sync_settings_action)
+        self.sync_settings_action = sync_settings_action
+        
         print_settings_action = QAction("Настройки печати", self)
         print_settings_action.triggered.connect(self.open_print_settings)
         settings_menu.addAction(print_settings_action)
@@ -280,6 +300,11 @@ class MainWindow(QMainWindow):
         # Create status bar
         statusbar = self.statusBar()
         statusbar.showMessage("Готов")
+        
+        # Add sync status to status bar
+        self.sync_status_label = QLabel("Синхронизация: Не настроена")
+        self.sync_status_label.setStyleSheet("color: gray; margin-left: 10px;")
+        statusbar.addPermanentWidget(self.sync_status_label)
     
     def setup_shortcuts(self):
         """Setup keyboard shortcuts"""
@@ -573,3 +598,41 @@ class MainWindow(QMainWindow):
         from .delete_marked_dialog import DeleteMarkedDialog
         dialog = DeleteMarkedDialog(self)
         dialog.exec()
+    
+    def open_sync_settings(self):
+        """Open synchronization settings dialog"""
+        from .sync_settings_dialog import SyncSettingsDialog
+        
+        dialog = SyncSettingsDialog(self.sync_service, self)
+        dialog.exec()
+    
+    def setup_sync_status(self):
+        """Setup synchronization status monitoring"""
+        # Connect to sync service signals
+        self.sync_service.status_changed.connect(self.update_sync_status)
+        
+        # Update initial status
+        self.update_sync_status()
+    
+    def update_sync_status(self):
+        """Update sync status in status bar"""
+        try:
+            status = self.sync_service.get_sync_status()
+            status_text = status.get('status', 'Unknown').title()
+            
+            if status.get('is_registered', False):
+                if status_text == 'Online':
+                    self.sync_status_label.setText("Синхронизация: Онлайн")
+                    self.sync_status_label.setStyleSheet("color: green; margin-left: 10px;")
+                elif status_text == 'Syncing':
+                    self.sync_status_label.setText("Синхронизация: Выполняется")
+                    self.sync_status_label.setStyleSheet("color: blue; margin-left: 10px;")
+                else:
+                    self.sync_status_label.setText("Синхронизация: Офлайн")
+                    self.sync_status_label.setStyleSheet("color: orange; margin-left: 10px;")
+            else:
+                self.sync_status_label.setText("Синхронизация: Не настроена")
+                self.sync_status_label.setStyleSheet("color: gray; margin-left: 10px;")
+        except Exception as e:
+            self.sync_status_label.setText("Синхронизация: Ошибка")
+            self.sync_status_label.setStyleSheet("color: red; margin-left: 10px;")

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Counterparty, Object, Work, Person, Organization } from '@/types/models'
+import type { Counterparty, Object, Work, Person, Organization, Unit } from '@/types/models'
 import * as referencesApi from '@/api/references'
 
 export const useReferencesStore = defineStore('references', () => {
@@ -10,6 +10,7 @@ export const useReferencesStore = defineStore('references', () => {
   const works = ref<Work[]>([])
   const persons = ref<Person[]>([])
   const organizations = ref<Organization[]>([])
+  const units = ref<Unit[]>([])
 
   // Loading states
   const loading = ref({
@@ -18,6 +19,7 @@ export const useReferencesStore = defineStore('references', () => {
     works: false,
     persons: false,
     organizations: false,
+    units: false,
   })
 
   // Fetch counterparties
@@ -91,6 +93,23 @@ export const useReferencesStore = defineStore('references', () => {
     }
   }
 
+  // Fetch units
+  async function fetchUnits(force = false) {
+    if (units.value.length > 0 && !force) {
+      return units.value
+    }
+
+    loading.value.units = true
+    try {
+      // Load all units in a single request
+      const response = await referencesApi.getUnits({ page: 1, page_size: 1000 })
+      units.value = response.data
+      return units.value
+    } finally {
+      loading.value.units = false
+    }
+  }
+
   // Fetch persons
   async function fetchPersons(force = false) {
     if (persons.value.length > 0 && !force) {
@@ -152,6 +171,7 @@ export const useReferencesStore = defineStore('references', () => {
     works.value = []
     persons.value = []
     organizations.value = []
+    units.value = []
   }
 
   return {
@@ -161,11 +181,13 @@ export const useReferencesStore = defineStore('references', () => {
     works,
     persons,
     organizations,
+    units,
     loading,
     // Actions
     fetchCounterparties,
     fetchObjects,
     fetchWorks,
+    fetchUnits,
     fetchPersons,
     fetchOrganizations,
     clearCache,

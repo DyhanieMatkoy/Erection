@@ -42,6 +42,12 @@ class ReferencePickerDialog(QDialog):
         """Handle context menu"""
         menu = QMenu()
         
+        add_action = QAction("Добавить", self)
+        add_action.triggered.connect(self.on_add)
+        menu.addAction(add_action)
+        
+        menu.addSeparator()
+        
         edit_action = QAction("Изменить", self)
         edit_action.triggered.connect(self.on_edit)
         menu.addAction(edit_action)
@@ -51,8 +57,8 @@ class ReferencePickerDialog(QDialog):
     def setup_ui(self):
         """Setup UI"""
         self.setWindowTitle(self.title)
-        self.setModal(True)
-        self.resize(600, 400)
+        self.setModal(False)  # Make non-modal
+        self.resize(800, 500)  # Increase size for additional columns
         
         layout = QVBoxLayout()
         
@@ -78,9 +84,21 @@ class ReferencePickerDialog(QDialog):
         
         # Table
         self.table_view = QTableWidget()
-        self.table_view.setColumnCount(3)
-        self.table_view.setHorizontalHeaderLabels(["ID", "Наименование", "parent_id"])
-        self.table_view.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        
+        # Set columns based on table type
+        if self.table_name == "works":
+            self.table_view.setColumnCount(6)
+            self.table_view.setHorizontalHeaderLabels(["ID", "Наименование", "Код", "Ед.изм.", "Цена", "parent_id"])
+            # Set column widths for works
+            self.table_view.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            self.table_view.setColumnWidth(2, 100)  # Code
+            self.table_view.setColumnWidth(3, 80)   # Unit
+            self.table_view.setColumnWidth(4, 100)  # Price
+        else:
+            self.table_view.setColumnCount(3)
+            self.table_view.setHorizontalHeaderLabels(["ID", "Наименование", "parent_id"])
+            self.table_view.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        
         self.table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table_view.doubleClicked.connect(self.on_row_double_clicked)
@@ -97,6 +115,10 @@ class ReferencePickerDialog(QDialog):
         self.drill_down_button = QPushButton("Открыть группу (Enter)")
         self.drill_down_button.clicked.connect(self.on_drill_down)
         button_layout.addWidget(self.drill_down_button)
+        
+        self.add_button = QPushButton("Добавить (Ins)")
+        self.add_button.clicked.connect(self.on_add)
+        button_layout.addWidget(self.add_button)
         
         self.edit_button = QPushButton("Изменить (F4)")
         self.edit_button.clicked.connect(self.on_edit)
@@ -158,9 +180,21 @@ class ReferencePickerDialog(QDialog):
         
         parent_col = "parent_id" if self.is_hierarchical else "NULL as parent_id"
         
+        # Build SELECT clause based on table type
+        if self.table_name == "works":
+            select_clause = f"""
+                SELECT w.id, w.{self.display_column}, w.code, COALESCE(u.name, w.unit) as unit, w.price, {parent_col}
+                FROM {self.table_name} w
+                LEFT JOIN units u ON w.unit_id = u.id
+            """
+        else:
+            select_clause = f"""
+                SELECT id, {self.display_column}, {parent_col}
+                FROM {self.table_name}
+            """
+        
         cursor.execute(f"""
-            SELECT id, {self.display_column}, {parent_col}
-            FROM {self.table_name}
+            {select_clause}
             WHERE {where_clause}
             ORDER BY {self.display_column}
         """, params)
@@ -186,7 +220,15 @@ class ReferencePickerDialog(QDialog):
                 name_text = "📁 " + name_text
             
             self.table_view.setItem(row_idx, 1, QTableWidgetItem(name_text))
-            self.table_view.setItem(row_idx, 2, QTableWidgetItem(str(row['parent_id']) if row['parent_id'] else ""))
+            
+            if self.table_name == "works":
+                # Fill additional columns for works
+                self.table_view.setItem(row_idx, 2, QTableWidgetItem(row.get('code', '') or ''))
+                self.table_view.setItem(row_idx, 3, QTableWidgetItem(row.get('unit', '') or ''))
+                self.table_view.setItem(row_idx, 4, QTableWidgetItem(str(row.get('price', 0) or 0)))
+                self.table_view.setItem(row_idx, 5, QTableWidgetItem(str(row['parent_id']) if row['parent_id'] else ""))
+            else:
+                self.table_view.setItem(row_idx, 2, QTableWidgetItem(str(row['parent_id']) if row['parent_id'] else ""))
             
             # Remember row to select if it matches current_id
             if self.current_id and row['id'] == self.current_id:
@@ -194,6 +236,10 @@ class ReferencePickerDialog(QDialog):
         
         # Hide ID and parent_id columns
         self.table_view.setColumnHidden(0, True)
+        if self.table_name == "works":
+            self.table_view.setColumnHidden(5, True)  # Hide parent_id for works
+        else:
+            self.table_view.setColumnHidden(2, True)  # Hide parent_id for other tables
         self.table_view.setColumnHidden(2, True)
         
         # Position cursor on current value
@@ -348,26 +394,70 @@ class ReferencePickerDialog(QDialog):
                     form = PersonForm(selected_id)
                 
                 if form:
-                    # Use exec() if it's a dialog to block until closed, then refresh
-                    # But WorkForm is QWidget/BaseDocumentForm, usually shown with show()
-                    # If we use show(), this dialog might close if it's modal and we don't handle it right?
-                    # The user says "new form immediately closes". This happens if we don't keep a reference to it
-                    # or if we are in a modal loop that somehow interferes.
-                    # BaseDocumentForm usually inherits from QWidget (or QDialog?). Let's check BaseDocumentForm.
-                    # If it's a widget, we need to keep a reference.
-                    
                     # Store reference to prevent garbage collection
                     self._edit_form = form
+                    
+                    # Connect to form closed signal to refresh data
+                    if hasattr(form, 'finished'):
+                        # If it's a dialog
+                        form.finished.connect(self._on_edit_form_closed)
+                    elif hasattr(form, 'destroyed'):
+                        # If it's a widget
+                        form.destroyed.connect(self._on_edit_form_closed)
+                    
                     form.show()
                     
-                    # If we want to refresh after edit, we might need to connect to a signal
-                    # For now, just showing it without closing this dialog is the fix for "closes immediately"
-                    # Wait, if this dialog is modal, opening another non-modal window might be an issue?
-                    # Usually QDialog.exec() starts a loop. Opening another window on top is fine.
-                    # BUT if `form` is a local variable, it gets GC'd immediately after this function returns!
-                    # That's why it closes immediately.
-                    
-                    pass
+                    # Bring form to front
+                    form.raise_()
+                    form.activateWindow()
+    
+    def _on_edit_form_closed(self):
+        """Handle edit form closed - refresh data"""
+        self.load_data()
+        self._edit_form = None
+    
+    def on_add(self):
+        """Handle add button - open form for creating new item"""
+        # Open appropriate form based on table
+        form = None
+        if self.table_name == "works":
+            from .work_form import WorkForm
+            form = WorkForm(0)  # 0 for new item
+        elif self.table_name == "counterparties":
+            from .counterparty_form import CounterpartyForm
+            form = CounterpartyForm(0)
+        elif self.table_name == "objects":
+            from .object_form import ObjectForm
+            form = ObjectForm(0)
+        elif self.table_name == "organizations":
+            from .organization_form import OrganizationForm
+            form = OrganizationForm(0)
+        elif self.table_name == "persons":
+            from .person_form import PersonForm
+            form = PersonForm(0)
+        
+        if form:
+            # Store reference to prevent garbage collection
+            self._add_form = form
+            
+            # Connect to form closed signal to refresh data
+            if hasattr(form, 'finished'):
+                # If it's a dialog
+                form.finished.connect(self._on_add_form_closed)
+            elif hasattr(form, 'destroyed'):
+                # If it's a widget
+                form.destroyed.connect(self._on_add_form_closed)
+            
+            form.show()
+            
+            # Bring form to front
+            form.raise_()
+            form.activateWindow()
+    
+    def _on_add_form_closed(self):
+        """Handle add form closed - refresh data"""
+        self.load_data()
+        self._add_form = None
     
     def keyPressEvent(self, event):
         """Handle key press events"""
@@ -398,6 +488,9 @@ class ReferencePickerDialog(QDialog):
         elif event.key() == Qt.Key.Key_F4:
             # F4 - edit
             self.on_edit()
+        elif event.key() == Qt.Key.Key_Insert:
+            # Insert - add new
+            self.on_add()
         elif event.key() == Qt.Key.Key_Backspace:
             # Backspace - navigate up
             if self.current_parent_id is not None:

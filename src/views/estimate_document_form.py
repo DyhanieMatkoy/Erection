@@ -1,7 +1,8 @@
 """Estimate document form"""
 from PyQt6.QtWidgets import (QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit, QDateEdit,
                               QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
-                              QMessageBox, QLabel, QWidget, QGroupBox, QDoubleSpinBox)
+                              QMessageBox, QLabel, QWidget, QGroupBox, QDoubleSpinBox, QMenu)
+from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt, QDate, QTimer
 from datetime import date
 from .base_document_form import BaseDocumentForm
@@ -119,6 +120,11 @@ class EstimateDocumentForm(BaseDocumentForm):
         self.table_part.setColumnHidden(7, True)  # Hide work_id column
         self.table_part.cellChanged.connect(self.on_cell_changed)
         self.table_part.itemDoubleClicked.connect(self.on_cell_double_clicked)
+        
+        # Context menu
+        self.table_part.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table_part.customContextMenuRequested.connect(self.on_table_context_menu)
+        
         table_layout.addWidget(self.table_part)
         
         # Table buttons
@@ -343,6 +349,26 @@ class EstimateDocumentForm(BaseDocumentForm):
         
         self.modified = True
     
+    def on_table_context_menu(self, position):
+        """Handle table context menu"""
+        menu = QMenu()
+        
+        add_row_action = QAction("Добавить строку", self)
+        add_row_action.triggered.connect(self.on_add_row)
+        menu.addAction(add_row_action)
+        
+        add_group_action = QAction("Добавить группу", self)
+        add_group_action.triggered.connect(self.on_add_group)
+        menu.addAction(add_group_action)
+        
+        menu.addSeparator()
+        
+        delete_row_action = QAction("Удалить строку", self)
+        delete_row_action.triggered.connect(self.on_delete_row)
+        menu.addAction(delete_row_action)
+        
+        menu.exec(self.table_part.viewport().mapToGlobal(position))
+    
     def on_delete_row(self):
         """Handle delete row"""
         current_row = self.table_part.currentRow()
@@ -518,7 +544,12 @@ class EstimateDocumentForm(BaseDocumentForm):
             
             # Load work details
             cursor = self.db.cursor()
-            cursor.execute("SELECT code, unit, price, labor_rate FROM works WHERE id = ?", (selected_id,))
+            cursor.execute("""
+                SELECT w.code, w.price, w.labor_rate, w.unit_id, u.name as unit_name
+                FROM works w
+                LEFT JOIN units u ON w.unit_id = u.id
+                WHERE w.id = ?
+            """, (selected_id,))
             work_row = cursor.fetchone()
             
             if work_row:
@@ -533,7 +564,7 @@ class EstimateDocumentForm(BaseDocumentForm):
                 if not quantity_item or not quantity_item.text() or quantity_item.text() == "0":
                     self.table_part.setItem(row, 1, QTableWidgetItem("1.0"))
                 
-                self.table_part.setItem(row, 2, QTableWidgetItem(work_row['unit'] or ""))
+                self.table_part.setItem(row, 2, QTableWidgetItem(work_row['unit_name'] or ""))
                 self.table_part.setItem(row, 3, QTableWidgetItem(str(work_row['price'] or 0)))
                 self.table_part.setItem(row, 4, QTableWidgetItem(str(work_row['labor_rate'] or 0)))
                 self.table_part.setItem(row, 7, QTableWidgetItem(str(selected_id)))

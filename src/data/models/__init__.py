@@ -35,7 +35,11 @@ from .sqlalchemy_models import (
     WorkExecutionRegister,
     PayrollRegister,
     UserSetting,
-    Constant
+    Constant,
+    Material,
+    CostItem,
+    Unit,
+    WorkSpecification
 )
 
 # Synchronization models
@@ -68,6 +72,10 @@ __all__ = [
     'PayrollRegister',
     'UserSetting',
     'Constant',
+    'Material',
+    'CostItem',
+    'Unit',
+    'WorkSpecification',
     
     # Synchronization Models
     'SyncNode',
