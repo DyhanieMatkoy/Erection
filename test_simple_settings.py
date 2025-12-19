@@ -56,12 +56,8 @@ def test_settings_dialog_creation():
         
         # Проверяем атрибуты
         attrs_to_check = [
-            'use_font_icons_checkbox',
-            'use_text_icons_checkbox', 
-            'use_both_icons_checkbox',
-            'top_radio',
-            'bottom_radio',
-            'both_radio'
+            'button_style_combo',
+            'position_combo'
         ]
         
         for attr in attrs_to_check:

@@ -33,8 +33,7 @@ def test_settings_directly():
         print("✅ SettingsDialog создан без ошибок")
         
         # Проверяем атрибуты
-        radio_attrs = ['use_font_icons_checkbox', 'use_text_icons_checkbox', 
-                      'use_both_icons_checkbox', 'top_radio', 'bottom_radio', 'both_radio']
+        radio_attrs = ['button_style_combo', 'position_combo']
         
         all_exist = True
         for attr in radio_attrs:

@@ -3,8 +3,10 @@ import configparser
 import os
 from typing import Optional, Tuple
 from .estimate_print_form import EstimatePrintForm
+from .estimate_resource_print_form import EstimateResourcePrintForm
 from .daily_report_print_form import DailyReportPrintForm
 from .excel_estimate_print_form import ExcelEstimatePrintForm
+from .excel_estimate_resource_print_form import ExcelEstimateResourcePrintForm
 from .excel_daily_report_print_form import ExcelDailyReportPrintForm
 
 
@@ -21,6 +23,29 @@ class PrintFormService:
         if os.path.exists('env.ini'):
             config.read('env.ini', encoding='utf-8')
         return config
+    
+    def get_estimate_print_variant(self) -> str:
+        """Get configured estimate print variant (STANDARD or RESOURCE)"""
+        if 'PrintForms' in self.config and 'estimate_variant' in self.config['PrintForms']:
+            return self.config['PrintForms']['estimate_variant'].upper()
+        return 'STANDARD'
+    
+    def set_estimate_print_variant(self, variant: str) -> bool:
+        """Set estimate print variant in configuration"""
+        try:
+            if 'PrintForms' not in self.config:
+                self.config.add_section('PrintForms')
+            
+            self.config['PrintForms']['estimate_variant'] = variant.upper()
+            
+            # Save to file
+            with open('env.ini', 'w', encoding='utf-8') as f:
+                self.config.write(f)
+            
+            return True
+        except Exception as e:
+            print(f"Error saving estimate print variant: {e}")
+            return False
     
     def get_print_format(self) -> str:
         """Get configured print format (PDF or Excel)"""
@@ -44,6 +69,21 @@ class PrintFormService:
         except Exception as e:
             print(f"Error saving print format: {e}")
             return False
+        """Set print format in configuration"""
+        try:
+            if 'PrintForms' not in self.config:
+                self.config.add_section('PrintForms')
+            
+            self.config['PrintForms']['format'] = format_type.upper()
+            
+            # Save to file
+            with open('env.ini', 'w', encoding='utf-8') as f:
+                self.config.write(f)
+            
+            return True
+        except Exception as e:
+            print(f"Error saving print format: {e}")
+            return False
     
     def get_templates_path(self) -> str:
         """Get templates path from configuration"""
@@ -51,25 +91,38 @@ class PrintFormService:
             return self.config['PrintForms']['templates_path']
         return 'PrnForms'
     
-    def generate_estimate(self, estimate_id: int) -> Optional[Tuple[bytes, str]]:
+    def generate_estimate(self, estimate_id: int, variant: Optional[str] = None) -> Optional[Tuple[bytes, str]]:
         """
         Generate estimate print form in configured format
         
         Args:
             estimate_id: ID of the estimate
+            variant: Print variant ('STANDARD' or 'RESOURCE'). If None, uses configured variant.
             
         Returns:
             Tuple of (content bytes, file extension) or None if failed
         """
         format_type = self.get_print_format()
         
+        # Determine variant to use
+        if variant is None:
+            variant = self.get_estimate_print_variant()
+        else:
+            variant = variant.upper()
+        
         if format_type == 'EXCEL':
-            generator = ExcelEstimatePrintForm()
+            if variant == 'RESOURCE':
+                generator = ExcelEstimateResourcePrintForm()
+            else:
+                generator = ExcelEstimatePrintForm()
             content = generator.generate(estimate_id)
             if content:
                 return (content, 'xlsx')
         else:  # PDF
-            generator = EstimatePrintForm()
+            if variant == 'RESOURCE':
+                generator = EstimateResourcePrintForm()
+            else:
+                generator = EstimatePrintForm()
             content = generator.generate(estimate_id)
             if content:
                 return (content, 'pdf')
@@ -118,16 +171,22 @@ class PrintFormService:
             estimate_generator = ExcelEstimatePrintForm()
             estimate_success = estimate_generator.create_template()
             
+            # Create estimate resource template
+            estimate_resource_generator = ExcelEstimateResourcePrintForm()
+            estimate_resource_success = estimate_resource_generator.create_template()
+            
             # Create daily report template
             report_generator = ExcelDailyReportPrintForm()
             report_success = report_generator.create_template()
             
-            if estimate_success and report_success:
+            if estimate_success and report_success and estimate_resource_success:
                 return (True, f"Шаблоны успешно созданы в папке '{templates_path}'")
+            elif estimate_success and report_success:
+                return (True, f"Основные шаблоны созданы в папке '{templates_path}', но не удалось создать шаблон сметы с ресурсной ведомостью")
             elif estimate_success:
-                return (True, f"Шаблон сметы создан в папке '{templates_path}', но не удалось создать шаблон ежедневного отчета")
+                return (True, f"Шаблон сметы создан в папке '{templates_path}', но не удалось создать другие шаблоны")
             elif report_success:
-                return (True, f"Шаблон ежедневного отчета создан в папке '{templates_path}', но не удалось создать шаблон сметы")
+                return (True, f"Шаблон ежедневного отчета создан в папке '{templates_path}', но не удалось создать шаблоны смет")
             else:
                 return (False, "Не удалось создать шаблоны")
         except Exception as e:
@@ -137,5 +196,8 @@ class PrintFormService:
         """Check if templates exist"""
         templates_path = self.get_templates_path()
         estimate_template = os.path.join(templates_path, ExcelEstimatePrintForm.TEMPLATE_NAME)
+        estimate_resource_template = os.path.join(templates_path, ExcelEstimateResourcePrintForm.TEMPLATE_NAME)
         report_template = os.path.join(templates_path, ExcelDailyReportPrintForm.TEMPLATE_NAME)
-        return os.path.exists(estimate_template) or os.path.exists(report_template)
+        return (os.path.exists(estimate_template) or 
+                os.path.exists(estimate_resource_template) or 
+                os.path.exists(report_template))

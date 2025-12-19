@@ -45,12 +45,8 @@ def test_settings_dialog_creation():
         
         # Проверяем наличие атрибутов
         radio_attrs = [
-            'use_font_icons_checkbox',
-            'use_text_icons_checkbox', 
-            'use_both_icons_checkbox',
-            'top_radio',
-            'bottom_radio',
-            'both_radio'
+            'button_style_combo',
+            'position_combo'
         ]
         
         for attr in radio_attrs:
@@ -88,20 +84,29 @@ def test_load_settings():
         
         print("✅ Настройки загружены без ошибок")
         
-        # Проверяем состояния radio buttons
-        if hasattr(dialog, 'use_both_icons_checkbox') and dialog.use_both_icons_checkbox.isChecked():
-            print("✅ Кнопка 'both icons' установлена правильно")
-        elif hasattr(dialog, 'use_text_icons_checkbox') and dialog.use_text_icons_checkbox.isChecked():
-            print("✅ Кнопка 'text icons' установлена правильно")
+        # Check button style combo
+        if hasattr(dialog, 'button_style_combo'):
+            style_index = dialog.button_style_combo.currentIndex()
+            style_text = dialog.button_style_combo.currentText()
+            print(f"✅ Button style combo: index={style_index}, text='{style_text}'")
+            if style_index == 1:  # Default should be text (index 1)
+                print("✅ Default button style set correctly (text)")
+            else:
+                print(f"⚠️ Button style not set to default (expected index 1, got {style_index})")
         else:
-            print("❌ Кнопки стиля не установлены правильно")
+            print("❌ button_style_combo not found")
             
-        if hasattr(dialog, 'top_radio') and dialog.top_radio.isChecked():
-            print("✅ Кнопка 'top position' установлена правильно")
-        elif hasattr(dialog, 'bottom_radio') and dialog.bottom_radio.isChecked():
-            print("✅ Кнопка 'bottom position' установлена по умолчанию")
+        # Check position combo
+        if hasattr(dialog, 'position_combo'):
+            current_index = dialog.position_combo.currentIndex()
+            current_text = dialog.position_combo.currentText()
+            print(f"✅ Position combo: index={current_index}, text='{current_text}'")
+            if current_index == 1:  # Default should be bottom (index 1)
+                print("✅ Default position set correctly (bottom)")
+            else:
+                print(f"⚠️ Position not set to default (expected index 1, got {current_index})")
         else:
-            print("❌ Кнопки позиции не установлены правильно")
+            print("❌ position_combo not found")
         
         # Очищаем временный файл
         os.unlink(test_config_file)

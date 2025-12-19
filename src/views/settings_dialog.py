@@ -4,7 +4,7 @@ import configparser
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
                              QWidget, QFormLayout, QLineEdit, QPushButton,
                              QMessageBox, QGroupBox, QRadioButton, QButtonGroup,
-                             QFileDialog, QLabel)
+                             QFileDialog, QLabel, QComboBox)
 from PyQt6.QtCore import Qt, QTimer
 
 
@@ -15,9 +15,25 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.config = configparser.ConfigParser()
         self.config_file = 'env.ini'
+        
+        # Initialize UI component references to prevent access errors
+        self.use_font_icons_checkbox = None
+        self.use_text_icons_checkbox = None
+        self.use_both_icons_checkbox = None
+        self.icon_button_group = None
+        self.position_combo = None
+        self.pdf_radio = None
+        self.excel_radio = None
+        self.format_button_group = None
+        
+        # Flag to track initialization state
+        self._ui_initialized = False
+        self._settings_loaded = False
+        
         self.init_ui()
-        # load_settings() будет вызван после создания всех вкладок
-        QTimer.singleShot(0, self.load_settings)
+        
+        # Use much longer delay and multiple validation steps
+        QTimer.singleShot(500, self.validate_and_load_settings)
     
     def init_ui(self):
         """Initialize UI"""
@@ -63,6 +79,9 @@ class SettingsDialog(QDialog):
         layout.addLayout(button_layout)
         
         self.setLayout(layout)
+        
+        # Mark UI as initialized
+        self._ui_initialized = True
     
     def create_auth_tab(self):
         """Create authentication settings tab"""
@@ -106,11 +125,12 @@ class SettingsDialog(QDialog):
         format_group = QGroupBox("Формат печатных форм")
         format_layout = QVBoxLayout()
         
-        self.format_button_group = QButtonGroup(self)
+        # Create radio buttons with explicit parent
+        self.pdf_radio = QRadioButton("PDF - для печати и просмотра", format_group)
+        self.excel_radio = QRadioButton("Excel - для редактирования и обработки", format_group)
         
-        self.pdf_radio = QRadioButton("PDF - для печати и просмотра")
-        self.excel_radio = QRadioButton("Excel - для редактирования и обработки")
-        
+        # Create button group AFTER creating radio buttons
+        self.format_button_group = QButtonGroup(format_group)
         self.format_button_group.addButton(self.pdf_radio, 1)
         self.format_button_group.addButton(self.excel_radio, 2)
         
@@ -168,12 +188,13 @@ class SettingsDialog(QDialog):
         button_group = QGroupBox("Внешний вид кнопок")
         button_layout = QVBoxLayout()
         
-        # Font icons checkbox
-        self.use_font_icons_checkbox = QRadioButton("Использовать иконки шрифтов для кнопок")
-        self.use_text_icons_checkbox = QRadioButton("Использовать текстовые подписи для кнопок")
-        self.use_both_icons_checkbox = QRadioButton("Использовать иконки и текст")
+        # Create button style radio buttons with explicit parent
+        self.use_font_icons_checkbox = QRadioButton("Использовать иконки шрифтов для кнопок", button_group)
+        self.use_text_icons_checkbox = QRadioButton("Использовать текстовые подписи для кнопок", button_group)
+        self.use_both_icons_checkbox = QRadioButton("Использовать иконки и текст", button_group)
         
-        self.icon_button_group = QButtonGroup(self)
+        # Create button group AFTER creating radio buttons and set parent explicitly
+        self.icon_button_group = QButtonGroup(button_group)
         self.icon_button_group.addButton(self.use_font_icons_checkbox, 0)
         self.icon_button_group.addButton(self.use_text_icons_checkbox, 1)
         self.icon_button_group.addButton(self.use_both_icons_checkbox, 2)
@@ -198,23 +219,24 @@ class SettingsDialog(QDialog):
         button_layout.addWidget(icons_info)
         
         button_group.setLayout(button_layout)
+        layout.addWidget(button_group)
         
         # Button position group
         position_group = QGroupBox("Расположение кнопок в документах")
         position_layout = QVBoxLayout()
         
-        self.top_radio = QRadioButton("Кнопки вверху формы")
-        self.bottom_radio = QRadioButton("Кнопки внизу формы (стандарт)")
-        self.both_radio = QRadioButton("Кнопки и вверху, и внизу")
+        # Create dropdown for button position
+        position_label = QLabel("Выберите расположение кнопок:")
+        self.position_combo = QComboBox()
+        self.position_combo.addItems([
+            "Кнопки вверху формы",
+            "Кнопки внизу формы (стандарт)", 
+            "Кнопки и вверху, и внизу"
+        ])
+        self.position_combo.setCurrentIndex(1)  # Default to bottom
         
-        self.position_button_group = QButtonGroup(self)
-        self.position_button_group.addButton(self.top_radio, 0)
-        self.position_button_group.addButton(self.bottom_radio, 1)
-        self.position_button_group.addButton(self.both_radio, 2)
-        
-        position_layout.addWidget(self.top_radio)
-        position_layout.addWidget(self.bottom_radio)
-        position_layout.addWidget(self.both_radio)
+        position_layout.addWidget(position_label)
+        position_layout.addWidget(self.position_combo)
         
         # Button order info
         position_info = QLabel(
@@ -234,15 +256,176 @@ class SettingsDialog(QDialog):
         widget.setLayout(layout)
         return widget
     
+    def validate_and_load_settings(self):
+        """Validate UI components are ready and load settings with multiple retry attempts"""
+        try:
+            if not self._ui_initialized:
+                print("UI not yet initialized, retrying in 200ms...")
+                QTimer.singleShot(200, self.validate_and_load_settings)
+                return
+            
+            # Validate all critical UI components exist and are accessible
+            validation_passed = self.validate_ui_components()
+            
+            if not validation_passed:
+                print("UI validation failed, retrying in 200ms...")
+                QTimer.singleShot(200, self.validate_and_load_settings)
+                return
+            
+            # All validations passed, proceed with loading
+            self.safe_load_settings()
+            
+        except Exception as e:
+            print(f"Error in validate_and_load_settings: {e}")
+            # Final fallback - set safe defaults
+            QTimer.singleShot(100, self.set_safe_defaults)
+    
+    def validate_ui_components(self):
+        """Validate that all UI components are properly initialized and accessible"""
+        try:
+            # Test radio buttons by attempting to access their properties
+            radio_buttons = [
+                ('use_font_icons_checkbox', self.use_font_icons_checkbox),
+                ('use_text_icons_checkbox', self.use_text_icons_checkbox),
+                ('use_both_icons_checkbox', self.use_both_icons_checkbox),
+                ('pdf_radio', self.pdf_radio),
+                ('excel_radio', self.excel_radio)
+            ]
+            
+            for name, button in radio_buttons:
+                if button is None:
+                    print(f"Validation failed: {name} is None")
+                    return False
+                
+                # Test if we can access the button's properties without error
+                try:
+                    _ = button.isChecked()  # This will fail if button is deleted
+                    _ = button.text()       # Additional validation
+                except RuntimeError as e:
+                    print(f"Validation failed: {name} is deleted or inaccessible: {e}")
+                    return False
+            
+            # Test other components
+            other_components = [
+                ('position_combo', self.position_combo),
+                ('icon_button_group', self.icon_button_group),
+                ('format_button_group', self.format_button_group)
+            ]
+            
+            for name, component in other_components:
+                if component is None:
+                    print(f"Validation failed: {name} is None")
+                    return False
+                
+                try:
+                    if hasattr(component, 'currentIndex'):
+                        _ = component.currentIndex()
+                    elif hasattr(component, 'checkedId'):
+                        _ = component.checkedId()
+                except RuntimeError as e:
+                    print(f"Validation failed: {name} is deleted or inaccessible: {e}")
+                    return False
+            
+            print("UI component validation passed")
+            return True
+            
+        except Exception as e:
+            print(f"Exception during UI validation: {e}")
+            return False
+    
+    def safe_load_settings(self):
+        """Safely load settings with comprehensive error handling"""
+        try:
+            if self._settings_loaded:
+                print("Settings already loaded, skipping...")
+                return
+            
+            # Double-check that all UI components exist and are properly initialized
+            required_components = [
+                ('use_font_icons_checkbox', 'Font icons radio button'),
+                ('use_text_icons_checkbox', 'Text icons radio button'),
+                ('use_both_icons_checkbox', 'Both icons radio button'),
+                ('position_combo', 'Position dropdown'),
+                ('pdf_radio', 'PDF radio button'),
+                ('excel_radio', 'Excel radio button'),
+                ('format_button_group', 'Format button group')
+            ]
+            
+            missing_components = []
+            for attr_name, description in required_components:
+                if not hasattr(self, attr_name) or getattr(self, attr_name) is None:
+                    missing_components.append(f"{description} ({attr_name})")
+            
+            if missing_components:
+                print(f"Warning: Missing UI components during load_settings: {missing_components}")
+                self.set_safe_defaults()
+                return
+            
+            # All components exist, proceed with loading settings
+            self.load_settings()
+            self._settings_loaded = True
+            print("Settings loaded successfully")
+            
+        except Exception as e:
+            print(f"Error in safe_load_settings: {e}")
+            # Set safe defaults as fallback
+            self.set_safe_defaults()
+    
+    def set_safe_defaults(self):
+        """Set safe default values without accessing potentially problematic components"""
+        try:
+            # Set radio button defaults safely using the new safe method
+            self.safe_set_radio_button(self.use_text_icons_checkbox, 'use_text_icons_checkbox')
+            
+            if hasattr(self, 'position_combo') and self.position_combo is not None:
+                try:
+                    self.position_combo.setCurrentIndex(1)  # Default to bottom
+                except Exception as e:
+                    print(f"Error setting position combo default: {e}")
+            
+            # Set print format radio button defaults safely
+            self.safe_set_radio_button(self.pdf_radio, 'pdf_radio')
+                
+            print("Safe defaults applied successfully")
+                
+        except Exception as e:
+            print(f"Warning: Could not set safe defaults: {e}")
+    
     def load_settings(self):
-        """Load settings from env.ini"""
+        """Load settings from env.ini with improved error handling"""
         if not os.path.exists(self.config_file):
+            print("Config file not found, using defaults")
+            self.set_safe_defaults()
             return
         
         try:
             self.config.read(self.config_file, encoding='utf-8')
             
             # Load auth settings
+            self.load_auth_settings()
+            
+            # Load print forms settings
+            self.load_print_forms_settings()
+            
+            # Load interface settings
+            self.load_interface_settings()
+            
+        except Exception as e:
+            print(f"Error loading settings: {e}")
+            QMessageBox.warning(
+                self,
+                "Ошибка",
+                f"Не удалось загрузить настройки: {str(e)}\nИспользуются значения по умолчанию."
+            )
+            self.set_safe_defaults()
+    
+    def load_auth_settings(self):
+        """Load authentication settings"""
+        try:
+            if self.login_edit is None or self.password_edit is None:
+                print("Warning: Auth UI components not initialized")
+                return
+                
             if self.config.has_section('Auth'):
                 if self.config.has_option('Auth', 'login'):
                     self.login_edit.setText(self.config.get('Auth', 'login'))
@@ -263,18 +446,26 @@ class SettingsDialog(QDialog):
                                     self.login_edit.setText(value)
                                 elif key == 'password':
                                     self.password_edit.setText(value)
-                except:
-                    pass
-            
-            # Load print forms settings
+                except Exception as e:
+                    print(f"Warning: Could not read old format auth settings: {e}")
+        except Exception as e:
+            print(f"Warning: Could not load auth settings: {e}")
+    
+    def load_print_forms_settings(self):
+        """Load print forms settings"""
+        try:
+            if self.templates_path_edit is None:
+                print("Warning: Templates path edit not initialized")
+                return
+                
             if self.config.has_section('PrintForms'):
                 if self.config.has_option('PrintForms', 'format'):
                     format_type = self.config.get('PrintForms', 'format').upper()
-                    if format_type == 'EXCEL':
+                    if format_type == 'EXCEL' and hasattr(self, 'excel_radio') and self.excel_radio:
                         self.excel_radio.setChecked(True)
-                    else:
+                    elif hasattr(self, 'pdf_radio') and self.pdf_radio:
                         self.pdf_radio.setChecked(True)
-                else:
+                elif hasattr(self, 'pdf_radio') and self.pdf_radio:
                     self.pdf_radio.setChecked(True)
                 
                 if self.config.has_option('PrintForms', 'templates_path'):
@@ -282,65 +473,107 @@ class SettingsDialog(QDialog):
                 else:
                     self.templates_path_edit.setText('PrnForms')
             else:
-                self.pdf_radio.setChecked(True)
+                if hasattr(self, 'pdf_radio') and self.pdf_radio:
+                    self.pdf_radio.setChecked(True)
                 self.templates_path_edit.setText('PrnForms')
-            
-            # Load interface settings
-            try:
-                if self.config.has_section('Interface'):
-                    if self.config.has_option('Interface', 'button_style'):
-                        button_style = self.config.get('Interface', 'button_style')
-                        if button_style == 'text':
-                            if hasattr(self, 'use_text_icons_checkbox'):
-                                self.use_text_icons_checkbox.setChecked(True)
-                        elif button_style == 'both':
-                            if hasattr(self, 'use_both_icons_checkbox'):
-                                self.use_both_icons_checkbox.setChecked(True)
+        except Exception as e:
+            print(f"Warning: Could not load print forms settings: {e}")
+            # Set safe defaults
+            if hasattr(self, 'pdf_radio') and self.pdf_radio:
+                self.pdf_radio.setChecked(True)
+            self.templates_path_edit.setText('PrnForms')
+    
+    def load_interface_settings(self):
+        """Load interface settings with enhanced error handling"""
+        try:
+            if self.config.has_section('Interface'):
+                # Load button style setting with individual radio button validation
+                if self.config.has_option('Interface', 'button_style'):
+                    button_style = self.config.get('Interface', 'button_style')
+                    
+                    # Validate each radio button before setting
+                    if button_style == 'text':
+                        if self.safe_set_radio_button(self.use_text_icons_checkbox, 'use_text_icons_checkbox'):
+                            pass  # Successfully set
                         else:
-                            if hasattr(self, 'use_font_icons_checkbox'):
-                                self.use_font_icons_checkbox.setChecked(True)
-                    else:
-                        if hasattr(self, 'use_text_icons_checkbox'):
-                            self.use_text_icons_checkbox.setChecked(True)  # Default
-                        
-                    # Load button position setting
-                    if self.config.has_option('Interface', 'button_position'):
-                        button_position = self.config.get('Interface', 'button_position')
-                        if button_position == 'top':
-                            if hasattr(self, 'top_radio'):
-                                self.top_radio.setChecked(True)
-                        elif button_position == 'both':
-                            if hasattr(self, 'both_radio'):
-                                self.both_radio.setChecked(True)
+                            print("Failed to set text icons radio button")
+                    elif button_style == 'both':
+                        if self.safe_set_radio_button(self.use_both_icons_checkbox, 'use_both_icons_checkbox'):
+                            pass  # Successfully set
                         else:
-                            if hasattr(self, 'bottom_radio'):
-                                self.bottom_radio.setChecked(True)  # Default
-                    else:
-                        if hasattr(self, 'bottom_radio'):
-                            self.bottom_radio.setChecked(True)  # Default
+                            print("Failed to set both icons radio button")
+                    else:  # 'icons'
+                        if self.safe_set_radio_button(self.use_font_icons_checkbox, 'use_font_icons_checkbox'):
+                            pass  # Successfully set
+                        else:
+                            print("Failed to set font icons radio button")
                 else:
-                    if hasattr(self, 'use_text_icons_checkbox'):
-                        self.use_text_icons_checkbox.setChecked(True)  # Default
-                    if hasattr(self, 'bottom_radio'):
-                        self.bottom_radio.setChecked(True)  # Default
-            except Exception as e:
-                print(f"Warning: Could not load interface settings: {e}")
-                # Set safe defaults
-                if hasattr(self, 'use_text_icons_checkbox'):
-                    self.use_text_icons_checkbox.setChecked(True)
-                if hasattr(self, 'bottom_radio'):
-                    self.bottom_radio.setChecked(True)
-                
-                # Ensure button_position option exists
+                    # Default to text icons
+                    self.safe_set_radio_button(self.use_text_icons_checkbox, 'use_text_icons_checkbox')
+                    
+                # Load button position setting
+                if self.config.has_option('Interface', 'button_position'):
+                    button_position = self.config.get('Interface', 'button_position')
+                    if hasattr(self, 'position_combo') and self.position_combo:
+                        try:
+                            if button_position == 'top':
+                                self.position_combo.setCurrentIndex(0)
+                            elif button_position == 'both':
+                                self.position_combo.setCurrentIndex(2)
+                            else:
+                                self.position_combo.setCurrentIndex(1)  # Default (bottom)
+                        except Exception as e:
+                            print(f"Error setting position combo: {e}")
+                            self.position_combo.setCurrentIndex(1)  # Safe default
+                elif hasattr(self, 'position_combo') and self.position_combo:
+                    self.position_combo.setCurrentIndex(1)  # Default (bottom)
+            else:
+                # Set defaults for missing Interface section
+                self.safe_set_radio_button(self.use_text_icons_checkbox, 'use_text_icons_checkbox')
+                if hasattr(self, 'position_combo') and self.position_combo:
+                    self.position_combo.setCurrentIndex(1)  # Default (bottom)
+                    
+        except Exception as e:
+            print(f"Warning: Could not load interface settings: {e}")
+            # Set safe defaults
+            self.safe_set_radio_button(self.use_text_icons_checkbox, 'use_text_icons_checkbox')
+            if hasattr(self, 'position_combo') and self.position_combo:
+                try:
+                    self.position_combo.setCurrentIndex(1)  # Default (bottom)
+                except Exception as combo_e:
+                    print(f"Error setting combo default: {combo_e}")
+            
+            # Ensure button_position option exists
+            try:
+                if not self.config.has_section('Interface'):
+                    self.config.add_section('Interface')
                 if not self.config.has_option('Interface', 'button_position'):
                     self.config.set('Interface', 'button_position', 'bottom')
-                
+            except Exception as config_e:
+                print(f"Warning: Could not update config: {config_e}")
+    
+    def safe_set_radio_button(self, radio_button, button_name):
+        """Safely set a radio button with comprehensive error handling"""
+        try:
+            if radio_button is None:
+                print(f"Warning: {button_name} is None")
+                return False
+            
+            # Test if button is accessible
+            try:
+                _ = radio_button.isChecked()  # This will fail if button is deleted
+            except RuntimeError as e:
+                print(f"Warning: {button_name} is deleted or inaccessible: {e}")
+                return False
+            
+            # Set the button
+            radio_button.setChecked(True)
+            print(f"Successfully set {button_name}")
+            return True
+            
         except Exception as e:
-            QMessageBox.warning(
-                self,
-                "Ошибка",
-                f"Не удалось загрузить настройки: {str(e)}"
-            )
+            print(f"Error setting {button_name}: {e}")
+            return False
     
     def save_settings(self):
         """Save settings and close dialog"""
@@ -348,7 +581,7 @@ class SettingsDialog(QDialog):
             self.accept()
     
     def apply_settings(self):
-        """Apply settings to env.ini"""
+        """Apply settings to env.ini with improved error handling"""
         try:
             # Ensure sections exist
             if not self.config.has_section('Auth'):
@@ -362,10 +595,14 @@ class SettingsDialog(QDialog):
             self.config.set('Auth', 'login', self.login_edit.text())
             self.config.set('Auth', 'password', self.password_edit.text())
             
-            # Save print forms settings
-            if self.excel_radio.isChecked():
-                self.config.set('PrintForms', 'format', 'EXCEL')
-            else:
+            # Save print forms settings with safe radio button access
+            try:
+                if hasattr(self, 'excel_radio') and self.excel_radio and self.excel_radio.isChecked():
+                    self.config.set('PrintForms', 'format', 'EXCEL')
+                else:
+                    self.config.set('PrintForms', 'format', 'PDF')
+            except Exception as e:
+                print(f"Warning: Could not read print format, defaulting to PDF: {e}")
                 self.config.set('PrintForms', 'format', 'PDF')
             
             templates_path = self.templates_path_edit.text().strip()
@@ -373,23 +610,35 @@ class SettingsDialog(QDialog):
                 templates_path = 'PrnForms'
             self.config.set('PrintForms', 'templates_path', templates_path)
             
-            # Save interface settings
-            if self.use_font_icons_checkbox.isChecked():
-                button_style = 'icons'
-            elif self.use_both_icons_checkbox.isChecked():
-                button_style = 'both'
-            else:
-                button_style = 'text'
-            self.config.set('Interface', 'button_style', button_style)
+            # Save interface settings with safe radio button access
+            try:
+                if hasattr(self, 'use_font_icons_checkbox') and self.use_font_icons_checkbox and self.use_font_icons_checkbox.isChecked():
+                    button_style = 'icons'
+                elif hasattr(self, 'use_both_icons_checkbox') and self.use_both_icons_checkbox and self.use_both_icons_checkbox.isChecked():
+                    button_style = 'both'
+                else:
+                    button_style = 'text'  # Default or use_text_icons_checkbox is checked
+                self.config.set('Interface', 'button_style', button_style)
+            except Exception as e:
+                print(f"Warning: Could not read button style, defaulting to text: {e}")
+                self.config.set('Interface', 'button_style', 'text')
             
-            # Save button position setting
-            if self.top_radio.isChecked():
-                button_position = 'top'
-            elif self.both_radio.isChecked():
-                button_position = 'both'
-            else:
-                button_position = 'bottom'
-            self.config.set('Interface', 'button_position', button_position)
+            # Save button position setting with safe combo box access
+            try:
+                if hasattr(self, 'position_combo') and self.position_combo:
+                    position_index = self.position_combo.currentIndex()
+                    if position_index == 0:
+                        button_position = 'top'
+                    elif position_index == 2:
+                        button_position = 'both'
+                    else:
+                        button_position = 'bottom'
+                else:
+                    button_position = 'bottom'  # Safe default
+                self.config.set('Interface', 'button_position', button_position)
+            except Exception as e:
+                print(f"Warning: Could not read button position, defaulting to bottom: {e}")
+                self.config.set('Interface', 'button_position', 'bottom')
             
             # Write to file
             with open(self.config_file, 'w', encoding='utf-8') as f:

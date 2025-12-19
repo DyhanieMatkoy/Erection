@@ -2,13 +2,13 @@
 from typing import Optional
 from ..data.models.estimate import Estimate
 from ..data.repositories.estimate_repository import EstimateRepository
-from .estimate_print_form import EstimatePrintForm
+from .print_form_service import PrintFormService
 
 
 class EstimateService:
     def __init__(self):
         self.repo = EstimateRepository()
-        self.print_form = EstimatePrintForm()
+        self.print_service = PrintFormService()
     
     def create(self) -> Estimate:
         """Create new estimate"""
@@ -22,14 +22,15 @@ class EstimateService:
         """Save estimate"""
         return self.repo.save(estimate)
     
-    def generate_print_form(self, estimate_id: int) -> Optional[bytes]:
+    def generate_print_form(self, estimate_id: int, variant: Optional[str] = None) -> Optional[tuple]:
         """
         Generate print form for estimate
         
         Args:
             estimate_id: ID of the estimate
+            variant: Print variant ('STANDARD' or 'RESOURCE'). If None, uses configured variant.
             
         Returns:
-            PDF content as bytes or None if estimate not found
+            Tuple of (content bytes, file extension) or None if estimate not found
         """
-        return self.print_form.generate(estimate_id)
+        return self.print_service.generate_estimate(estimate_id, variant)

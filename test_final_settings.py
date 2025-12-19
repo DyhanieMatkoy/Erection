@@ -104,10 +104,16 @@ def test_without_config_file():
         else:
             print("❌ Default values not set properly")
             
-        if hasattr(dialog, 'bottom_radio') and dialog.bottom_radio.isChecked():
-            print("✅ bottom_radio is checked (default)")
+        # Check position combo
+        if hasattr(dialog, 'position_combo'):
+            current_index = dialog.position_combo.currentIndex()
+            print(f"✅ position_combo current index: {current_index} (default should be 1)")
+            if current_index == 1:
+                print("✅ Default position set correctly (bottom)")
+            else:
+                print(f"⚠️ Position not set to default (expected 1, got {current_index})")
         else:
-            print("❌ Default position not set properly")
+            print("❌ position_combo not found")
         
         return True
         

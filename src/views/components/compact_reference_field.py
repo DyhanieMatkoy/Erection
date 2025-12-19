@@ -47,6 +47,7 @@ class CompactReferenceField(QLineEdit):
         """Setup UI components"""
         self.setReadOnly(True)
         self.setPlaceholderText("Не выбрано")
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)  # Allow focus to trigger auto-open
         
         # Calculate padding for buttons
         total_button_width = (self.button_width * 2) + self.button_spacing + self.right_margin
@@ -64,6 +65,17 @@ class CompactReferenceField(QLineEdit):
                 outline: none;
             }}
         """)
+    
+    def focusInEvent(self, event):
+        """Handle focus in event - auto-open selector if empty"""
+        # Call original focusInEvent
+        super().focusInEvent(event)
+        
+        # Auto-open selector if field is empty and reference table is set
+        if self.reference_table and self.reference_id == 0 and not self.reference_name:
+            # Use QTimer to delay the dialog opening slightly to avoid focus conflicts
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(50, self.select_reference)
     
     def setup_buttons(self):
         """Setup inline buttons"""

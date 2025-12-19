@@ -42,8 +42,14 @@ class DataService:
         query = self.db.query(model_class)
         
         # Apply Soft Delete Filter (exclude deleted by default)
-        if not include_deleted and hasattr(model_class, 'marked_for_deletion'):
-            query = query.filter(model_class.marked_for_deletion == False)
+        if not include_deleted:
+            # Use proper boolean comparison with .is_(False) for better SQL generation
+            if hasattr(model_class, 'marked_for_deletion'):
+                query = query.filter(model_class.marked_for_deletion.is_(False))
+            
+            # Also check is_deleted field if present (for sync compatibility)
+            if hasattr(model_class, 'is_deleted'):
+                query = query.filter(model_class.is_deleted.is_(False))
         
         # Apply Date Range Filter (Task 4.4)
         if date_range:

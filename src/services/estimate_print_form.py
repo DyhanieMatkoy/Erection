@@ -13,7 +13,8 @@ class EstimatePrintForm(PrintFormGenerator):
     def __init__(self):
         """Initialize estimate print form generator"""
         super().__init__(orientation='landscape')
-        self.db = DatabaseManager().get_connection()
+        self.db_manager = DatabaseManager()
+        self.db_manager.initialize('construction.db')
     
     def generate(self, estimate_id: int) -> Optional[bytes]:
         """
@@ -63,79 +64,58 @@ class EstimatePrintForm(PrintFormGenerator):
     
     def _load_estimate_data(self, estimate_id: int) -> Optional[dict]:
         """Load estimate data from database"""
-        cursor = self.db.cursor()
-        
-        # Load estimate header
-        cursor.execute("""
-            SELECT 
-                e.id, e.number, e.date, e.total_sum, e.total_labor,
-                c.name as customer_name,
-                o.name as object_name,
-                org.name as contractor_name,
-                p.full_name as responsible_name
-            FROM estimates e
-            LEFT JOIN counterparties c ON e.customer_id = c.id
-            LEFT JOIN objects o ON e.object_id = o.id
-            LEFT JOIN organizations org ON e.contractor_id = org.id
-            LEFT JOIN persons p ON e.responsible_id = p.id
-            WHERE e.id = ?
-        """, (estimate_id,))
-        
-        row = cursor.fetchone()
-        if not row:
+        try:
+            with self.db_manager.get_session() as session:
+                from src.data.models.sqlalchemy_models import (
+                    Estimate, EstimateLine, Work, Counterparty, Object, Organization, Person
+                )
+                
+                # Load estimate header
+                estimate = session.query(Estimate).filter(Estimate.id == estimate_id).first()
+                if not estimate:
+                    return None
+                
+                estimate_data = {
+                    'id': estimate.id,
+                    'number': estimate.number,
+                    'date': estimate.date,
+                    'total_sum': estimate.total_sum or 0,
+                    'total_labor': estimate.total_labor or 0,
+                    'customer_name': estimate.customer.name if estimate.customer else None,
+                    'object_name': estimate.object.name if estimate.object else None,
+                    'contractor_name': estimate.contractor.name if estimate.contractor else None,
+                    'responsible_name': estimate.responsible.full_name if estimate.responsible else None,
+                    'lines': []
+                }
+                
+                # Load estimate lines including group information
+                lines = session.query(EstimateLine).filter(
+                    EstimateLine.estimate_id == estimate_id
+                ).order_by(EstimateLine.line_number).all()
+                
+                for line in lines:
+                    # Check if this is a group row (work_id = -1)
+                    is_group = line.work_id == -1
+                    
+                    estimate_data['lines'].append({
+                        'line_number': line.line_number,
+                        'work_name': line.work.name if line.work and not is_group else (line.unit if not is_group else ""),
+                        'work_code': line.work.code if line.work else "",
+                        'quantity': line.quantity or 0,
+                        'unit': line.unit if not is_group else "",
+                        'price': line.price or 0,
+                        'labor_rate': line.labor_rate or 0,
+                        'sum': line.sum or 0,
+                        'planned_labor': line.planned_labor or 0,
+                        'is_group': is_group,
+                        'group_name': line.unit if is_group else ""
+                    })
+                
+                return estimate_data
+                
+        except Exception as e:
+            print(f"Error loading estimate data: {e}")
             return None
-        
-        estimate_data = {
-            'id': row['id'],
-            'number': row['number'],
-            'date': row['date'],
-            'total_sum': row['total_sum'],
-            'total_labor': row['total_labor'],
-            'customer_name': row['customer_name'],
-            'object_name': row['object_name'],
-            'contractor_name': row['contractor_name'],
-            'responsible_name': row['responsible_name'],
-            'lines': []
-        }
-        
-        # Load estimate lines including group information
-        cursor.execute("""
-            SELECT 
-                el.line_number,
-                el.work_id,
-                w.name as work_name,
-                w.code as work_code,
-                el.quantity,
-                el.unit,
-                el.price,
-                el.labor_rate,
-                el.sum,
-                el.planned_labor
-            FROM estimate_lines el
-            LEFT JOIN works w ON el.work_id = w.id
-            WHERE el.estimate_id = ?
-            ORDER BY el.line_number
-        """, (estimate_id,))
-        
-        for line_row in cursor.fetchall():
-            # Check if this is a group row (work_id = -1)
-            is_group = line_row['work_id'] == -1
-            
-            estimate_data['lines'].append({
-                'line_number': line_row['line_number'],
-                'work_name': line_row['work_name'] or line_row['unit'] if not is_group else "",
-                'work_code': line_row['work_code'] or "",
-                'quantity': line_row['quantity'],
-                'unit': line_row['unit'] if not is_group else "",
-                'price': line_row['price'],
-                'labor_rate': line_row['labor_rate'],
-                'sum': line_row['sum'],
-                'planned_labor': line_row['planned_labor'],
-                'is_group': is_group,
-                'group_name': line_row['unit'] if is_group else ""
-            })
-        
-        return estimate_data
     
     def _create_approval_section(self, estimate_data: dict) -> 'Table':
         """Create approval section with customer and contractor"""

@@ -265,8 +265,8 @@ class GenericListForm(QWidget):
         self.controller.handle_column_resize(column_id, width)
 
     def on_row_double_click(self, item_id: int):
-        # Open document
-        pass
+        # Open document - same behavior as Enter key
+        self.open_document_requested.emit(item_id)
 
     def on_selection_change(self, selected_ids: List[int]):
         self.controller.update_selection(selected_ids)

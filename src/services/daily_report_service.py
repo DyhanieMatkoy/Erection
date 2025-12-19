@@ -35,7 +35,7 @@ class DailyReportService:
         
         # Load lines
         cursor.execute("""
-            SELECT id, line_number, work_id, planned_labor, actual_labor, deviation_percent,
+            SELECT id, line_number, work_id, planned_labor, actual_labor, labor_deviation_percent,
                    is_group, group_name, parent_group_id, is_collapsed
             FROM daily_report_lines
             WHERE daily_report_id = ?
@@ -62,14 +62,14 @@ class DailyReportService:
                 line.actual_labor = 0.0
             
             try:
-                line.deviation_percent = float(line_row['deviation_percent']) if line_row['deviation_percent'] else 0.0
+                line.deviation_percent = float(line_row['labor_deviation_percent']) if line_row['labor_deviation_percent'] else 0.0
             except (ValueError, TypeError):
                 line.deviation_percent = 0.0
             
-            line.is_group = bool(line_row.get('is_group', 0))
-            line.group_name = line_row.get('group_name', '')
-            line.parent_group_id = line_row.get('parent_group_id', 0) or 0
-            line.is_collapsed = bool(line_row.get('is_collapsed', 0))
+            line.is_group = bool(line_row['is_group'] if 'is_group' in line_row.keys() else 0)
+            line.group_name = line_row['group_name'] if 'group_name' in line_row.keys() else ''
+            line.parent_group_id = line_row['parent_group_id'] if 'parent_group_id' in line_row.keys() and line_row['parent_group_id'] else 0
+            line.is_collapsed = bool(line_row['is_collapsed'] if 'is_collapsed' in line_row.keys() else 0)
             
             # Load executors
             cursor.execute("""
@@ -89,11 +89,15 @@ class DailyReportService:
             cursor = self.db.cursor()
             
             if report.id == 0:
-                # Insert new
+                # Insert new - generate UUID if not present
+                import uuid
+                if not hasattr(report, 'uuid') or not report.uuid:
+                    report.uuid = str(uuid.uuid4())
+                
                 cursor.execute("""
-                    INSERT INTO daily_reports (date, estimate_id, foreman_id)
-                    VALUES (?, ?, ?)
-                """, (report.date, report.estimate_id, report.foreman_id))
+                    INSERT INTO daily_reports (date, estimate_id, foreman_id, uuid)
+                    VALUES (?, ?, ?, ?)
+                """, (report.date, report.estimate_id, report.foreman_id, report.uuid))
                 
                 report.id = cursor.lastrowid
             else:
@@ -111,14 +115,19 @@ class DailyReportService:
             
             # Insert lines
             for line in report.lines:
+                # Generate UUID for line if not present
+                import uuid
+                if not hasattr(line, 'uuid') or not line.uuid:
+                    line.uuid = str(uuid.uuid4())
+                
                 cursor.execute("""
                     INSERT INTO daily_report_lines (daily_report_id, line_number, work_id, planned_labor, 
-                                                   actual_labor, deviation_percent, is_group, group_name,
-                                                   parent_group_id, is_collapsed)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                                   actual_labor, labor_deviation_percent, is_group, group_name,
+                                                   parent_group_id, is_collapsed, uuid)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (report.id, line.line_number, line.work_id, line.planned_labor,
                       line.actual_labor, line.deviation_percent, 1 if line.is_group else 0,
-                      line.group_name, line.parent_group_id or None, 1 if line.is_collapsed else 0))
+                      line.group_name, line.parent_group_id or None, 1 if line.is_collapsed else 0, line.uuid))
                 
                 line_id = cursor.lastrowid
                 

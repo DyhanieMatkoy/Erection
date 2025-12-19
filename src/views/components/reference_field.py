@@ -32,7 +32,9 @@ class ReferenceField(QWidget):
         # Main edit field (read-only, displays selected value)
         self.edit_field = QLineEdit()
         self.edit_field.setReadOnly(True)
-        self.edit_field.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # Don't take focus by default
+        self.edit_field.setFocusPolicy(Qt.FocusPolicy.StrongFocus)  # Allow focus to trigger auto-open
+        # Connect focus event to auto-open selector when empty
+        self.edit_field.focusInEvent = self._on_focus_in
         layout.addWidget(self.edit_field)
         
         # Selector button
@@ -50,6 +52,17 @@ class ReferenceField(QWidget):
         layout.addWidget(self.clear_button)
         
         self.setLayout(layout)
+    
+    def _on_focus_in(self, event):
+        """Handle focus in event - auto-open selector if empty"""
+        # Call original focusInEvent
+        QLineEdit.focusInEvent(self.edit_field, event)
+        
+        # Auto-open selector if field is empty and reference table is set
+        if self.reference_table and self.reference_id == 0 and not self.reference_name:
+            # Use QTimer to delay the dialog opening slightly to avoid focus conflicts
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(50, self.open_selector)
     
     def set_reference(self, table_name: str, title: str = None):
         """Set reference table and title"""
