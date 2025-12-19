@@ -1,0 +1,43 @@
+{
+  "work_unit_assignments": {
+    "total_works": 3905,
+    "works_with_unit_id": 3606,
+    "works_with_legacy_only": 0,
+    "invalid_unit_references": 0,
+    "coverage_percentage": 92.34,
+    "validation_passed": true
+  },
+  "data_integrity": {
+    "duplicate_work_ids": 0,
+    "orphaned_migration_entries": 0,
+    "inconsistent_unit_assignments": 0,
+    "circular_parent_references": 0,
+    "validation_passed": true
+  },
+  "migration_tracking": {
+    "total_migration_entries": 0,
+    "completed_migrations": 0,
+    "pending_migrations": 0,
+    "manual_review_items": 0,
+    "completion_percentage": 0.0,
+    "validation_passed": true
+  },
+  "api_endpoints": {
+    "works_queried": 10,
+    "works_with_unit_info": 8,
+    "api_structure_valid": true,
+    "validation_passed": true
+  },
+  "unit_references": {
+    "total_unit_ids_used": 18,
+    "existing_unit_ids": 18,
+    "missing_unit_ids": 0,
+    "works_with_missing_units": 0,
+    "validation_passed": true
+  },
+  "overall": {
+    "validation_passed": true,
+    "validation_time_seconds": 0.112758,
+    "validation_completed_at": "2025-12-19T01:35:45.337318"
+  }
+}

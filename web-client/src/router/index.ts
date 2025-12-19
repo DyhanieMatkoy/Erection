@@ -136,6 +136,13 @@ const router = createRouter({
       component: () => import('@/views/WorkCompositionView.vue'),
       meta: { requiresAuth: true },
     },
+    // Admin
+    {
+      path: '/admin/audit',
+      name: 'audit-logs',
+      component: () => import('@/views/admin/AuditLogView.vue'),
+      meta: { requiresAuth: true, roles: ['admin'] },
+    },
   ],
 })
 
@@ -155,6 +162,15 @@ router.beforeEach(async (to, from, next) => {
         next({ name: 'login', query: { redirect: to.fullPath } })
         return
       }
+    }
+    
+    // Check roles
+    if (to.meta.roles && Array.isArray(to.meta.roles)) {
+       // @ts-ignore
+       if (!to.meta.roles.includes(authStore.user?.role)) {
+           next({ name: 'home' })
+           return
+       }
     }
   } else if (to.name === 'login' && authStore.isAuthenticated) {
     // Already logged in, redirect to home

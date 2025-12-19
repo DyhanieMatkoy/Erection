@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
+from sqlalchemy import text
 
 from core.importer import DBFImporter
 from ui.import_dialog import ImportDialog
@@ -196,6 +197,11 @@ class MainWindow(QMainWindow):
         self.validate_button.clicked.connect(self.validate_structure)
         self.validate_button.setEnabled(False)
         buttons_layout.addWidget(self.validate_button)
+        
+        self.delete_all_docs_button = QPushButton("Удалить все документы")
+        self.delete_all_docs_button.clicked.connect(self.delete_all_documents)
+        self.delete_all_docs_button.setEnabled(True)
+        buttons_layout.addWidget(self.delete_all_docs_button)
         
         layout.addLayout(buttons_layout)
         
@@ -440,12 +446,81 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Ошибка", f"Ошибка при очистке справочников: {e}")
             self.log_message(f"Ошибка: {e}")
     
+    def delete_all_documents(self):
+        """Удаляет все документы из системы"""
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение удаления",
+            "ВНИМАНИЕ! Это действие удалит ВСЕ документы:\n"
+            "• Все сметы (estimates)\n"
+            "• Все ежедневные отчеты (daily_reports)\n"
+            "• Все табели (timesheets)\n"
+            "• Все записи в регистре выполнения работ\n\n"
+            "Это действие необратимо! Продолжить?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.No:
+            return
+        
+        try:
+            from core.importer import DBFImporter
+            importer = DBFImporter()
+            
+            # Таблицы документов для очистки (в правильном порядке для соблюдения внешних ключей)
+            doc_tables = [
+                "estimate_lines",           # Сначала дочерние записи
+                "daily_report_lines",
+                "daily_report_executors", 
+                "timesheet_lines",
+                "work_execution_register",
+                "estimates",               # Затем родительские записи
+                "daily_reports",
+                "timesheets"
+            ]
+            
+            total_tables = len(doc_tables)
+            for i, table_name in enumerate(doc_tables, 1):
+                self.log_message(f"Очистка таблицы {i}/{total_tables}: {table_name}")
+                
+                session = importer.db_manager.get_session()
+                try:
+                    # Проверяем, есть ли данные в таблице
+                    count_result = session.execute(text(f"SELECT COUNT(*) FROM {table_name}")).fetchone()
+                    row_count = count_result[0] if count_result else 0
+                    
+                    if row_count > 0:
+                        session.execute(text(f"DELETE FROM {table_name}"))
+                        session.commit()
+                        self.log_message(f"✓ Удалено {row_count} записей из таблицы: {table_name}")
+                    else:
+                        self.log_message(f"• Таблица {table_name} уже пуста")
+                        
+                except Exception as e:
+                    session.rollback()
+                    error_msg = f"Ошибка при очистке таблицы {table_name}: {e}"
+                    self.log_message(f"✗ {error_msg}")
+                    QMessageBox.critical(self, "Ошибка", error_msg)
+                    return  # Прерываем процесс при ошибке
+                finally:
+                    session.close()
+            
+            self.log_message("Все документы успешно удалены")
+            QMessageBox.information(self, "Успех", "Все документы были успешно удалены")
+            
+        except Exception as e:
+            error_msg = f"Ошибка при удалении документов: {e}"
+            QMessageBox.critical(self, "Ошибка", error_msg)
+            self.log_message(f"Ошибка: {e}")
+    
     def set_ui_enabled(self, enabled: bool):
         """Включает или выключает элементы UI"""
         self.browse_button.setEnabled(enabled)
         self.import_button.setEnabled(enabled and bool(self.dbf_path))
         self.validate_button.setEnabled(enabled and bool(self.dbf_path))
         self.clear_references_button.setEnabled(enabled and bool(self.dbf_path))
+        self.delete_all_docs_button.setEnabled(enabled)
         self.units_check.setEnabled(enabled)
         self.nomenclature_check.setEnabled(enabled)
         self.materials_check.setEnabled(enabled)

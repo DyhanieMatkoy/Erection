@@ -1,9 +1,10 @@
 """Dialog for deleting marked objects"""
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, 
                               QTableWidget, QTableWidgetItem, QLabel, QMessageBox,
-                              QHeaderView, QCheckBox)
+                              QHeaderView, QCheckBox, QGroupBox, QGridLayout)
 from PyQt6.QtCore import Qt
 from src.data.database_manager import DatabaseManager
+from src.services.user_settings_service import UserSettingsService
 
 
 class DeleteMarkedDialog(QDialog):
@@ -12,7 +13,10 @@ class DeleteMarkedDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.db_manager = DatabaseManager()
+        self.settings_service = UserSettingsService()
+        self.current_user_id = 4  # Use admin user as fallback (TODO: Get from auth service)
         self.setup_ui()
+        self.load_settings()
         self.load_marked_objects()
     
     def setup_ui(self):
@@ -30,6 +34,38 @@ class DeleteMarkedDialog(QDialog):
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
+        
+        # Settings group
+        settings_group = QGroupBox("Настройки отображения")
+        settings_layout = QGridLayout()
+        
+        self.show_marked_checkbox = QCheckBox("Отображать помеченные на удаление объекты в списке")
+        self.show_marked_checkbox.stateChanged.connect(self.on_show_marked_changed)
+        settings_layout.addWidget(self.show_marked_checkbox, 0, 0, 1, 2)
+        
+        # Object type checkboxes
+        self.type_checkboxes = {}
+        types = [
+            ('show_estimates', 'Сметы'),
+            ('show_daily_reports', 'Ежедневные отчеты'),
+            ('show_timesheets', 'Табели'),
+            ('show_counterparties', 'Контрагенты'),
+            ('show_objects', 'Объекты'),
+            ('show_organizations', 'Организации'),
+            ('show_persons', 'Физические лица'),
+            ('show_works', 'Виды работ'),
+        ]
+        
+        for i, (key, label) in enumerate(types):
+            checkbox = QCheckBox(label)
+            checkbox.stateChanged.connect(self.on_type_filter_changed)
+            self.type_checkboxes[key] = checkbox
+            row = (i // 2) + 1
+            col = i % 2
+            settings_layout.addWidget(checkbox, row, col)
+        
+        settings_group.setLayout(settings_layout)
+        layout.addWidget(settings_group)
         
         # Select all checkbox
         self.select_all_checkbox = QCheckBox("Выбрать все")
@@ -72,6 +108,42 @@ class DeleteMarkedDialog(QDialog):
         
         self.setLayout(layout)
     
+    def load_settings(self):
+        """Load user settings"""
+        settings = self.settings_service.get_delete_marked_settings(self.current_user_id)
+        
+        self.show_marked_checkbox.setChecked(settings['show_marked_objects'])
+        
+        for key, checkbox in self.type_checkboxes.items():
+            checkbox.setChecked(settings.get(key, True))
+            checkbox.setEnabled(settings['show_marked_objects'])
+    
+    def save_settings(self):
+        """Save user settings"""
+        settings = {
+            'show_marked_objects': self.show_marked_checkbox.isChecked()
+        }
+        
+        for key, checkbox in self.type_checkboxes.items():
+            settings[key] = checkbox.isChecked()
+        
+        self.settings_service.set_delete_marked_settings(self.current_user_id, settings)
+    
+    def on_show_marked_changed(self, state):
+        """Handle show marked objects checkbox change"""
+        enabled = state == Qt.CheckState.Checked.value
+        
+        for checkbox in self.type_checkboxes.values():
+            checkbox.setEnabled(enabled)
+        
+        self.save_settings()
+        self.load_marked_objects()
+    
+    def on_type_filter_changed(self):
+        """Handle type filter checkbox change"""
+        self.save_settings()
+        self.load_marked_objects()
+    
     def toggle_select_all(self, state):
         """Toggle selection of all items"""
         checked = state == Qt.CheckState.Checked.value
@@ -87,20 +159,30 @@ class DeleteMarkedDialog(QDialog):
         self.table.setRowCount(0)
         self.select_all_checkbox.setChecked(False)
         
-        # Tables to check for marked objects
+        # Check if we should show marked objects at all
+        if not self.show_marked_checkbox.isChecked():
+            self.update_button_states()
+            return
+        
+        # Tables to check for marked objects with their setting keys
         tables_info = [
-            ("estimates", "Смета", "number"),
-            ("daily_reports", "Ежедневный отчет", "number"),
-            ("counterparties", "Контрагент", "name"),
-            ("objects", "Объект", "name"),
-            ("organizations", "Организация", "name"),
-            ("persons", "Физическое лицо", "full_name"),
-            ("works", "Вид работ", "name"),
+            ("estimates", "Смета", "number", "show_estimates"),
+            ("daily_reports", "Ежедневный отчет", "number", "show_daily_reports"),
+            ("timesheets", "Табель", "number", "show_timesheets"),
+            ("counterparties", "Контрагент", "name", "show_counterparties"),
+            ("objects", "Объект", "name", "show_objects"),
+            ("organizations", "Организация", "name", "show_organizations"),
+            ("persons", "Физическое лицо", "full_name", "show_persons"),
+            ("works", "Вид работ", "name", "show_works"),
         ]
         
         marked_objects = []
         
-        for table_name, type_name, name_field in tables_info:
+        for table_name, type_name, name_field, setting_key in tables_info:
+            # Check if this type should be shown
+            if not self.type_checkboxes[setting_key].isChecked():
+                continue
+                
             try:
                 query = f"""
                     SELECT id, {name_field}

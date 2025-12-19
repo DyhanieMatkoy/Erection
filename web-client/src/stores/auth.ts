@@ -11,7 +11,21 @@ export const useAuthStore = defineStore('auth', () => {
   // Getters
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
+  const isManager = computed(() => user.value?.role === 'manager')
+  const isForeman = computed(() => user.value?.role === 'foreman')
   const currentUser = computed(() => user.value)
+
+  const canCreateGeneralEstimate = computed(() => {
+    return isAdmin.value || isManager.value
+  })
+
+  const canCreatePlanEstimate = computed(() => {
+    return isAdmin.value || isManager.value || isForeman.value
+  })
+
+  const canModifyHierarchy = computed(() => {
+    return isAdmin.value || isManager.value
+  })
 
   // Actions
   async function login(username: string, password: string) {
@@ -89,7 +103,12 @@ export const useAuthStore = defineStore('auth', () => {
     // Getters
     isAuthenticated,
     isAdmin,
+    isManager,
+    isForeman,
     currentUser,
+    canCreateGeneralEstimate,
+    canCreatePlanEstimate,
+    canModifyHierarchy,
     // Actions
     login,
     logout,

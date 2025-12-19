@@ -123,6 +123,14 @@ class MainWindow(QMainWindow):
         # Show quick navigation on startup
         QTimer.singleShot(100, self.show_quick_navigation)
     
+    def get_current_user_id(self):
+        """Get current user ID with fallback to admin user"""
+        current_user = self.auth_service.current_user()
+        if current_user:
+            return current_user.id
+        # Fallback to admin user (ID=4) instead of non-existent user_id=1
+        return 4
+    
     def setup_ui(self):
         """Setup UI"""
         self.setWindowTitle("Система управления рабочим временем")
@@ -394,7 +402,8 @@ class MainWindow(QMainWindow):
     
     def open_estimates(self):
         """Open estimates list"""
-        from .estimate_list_form import EstimateListForm
+        # Use new generic list form
+        from .estimate_list_form_v2 import EstimateListFormV2 as EstimateListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -404,14 +413,16 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = EstimateListForm()
+        user_id = self.get_current_user_id()
+            
+        form = EstimateListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Сметы", "open_estimates")
     
     def open_daily_reports(self):
         """Open daily reports list"""
-        from .daily_report_list_form import DailyReportListForm
+        from .daily_report_list_form_v2 import DailyReportListFormV2 as DailyReportListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -421,14 +432,16 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = DailyReportListForm()
+        user_id = self.get_current_user_id()
+            
+        form = DailyReportListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Ежедневные отчеты", "open_daily_reports")
     
     def open_timesheets(self):
         """Open timesheets list"""
-        from .timesheet_list_form import TimesheetListForm
+        from .timesheet_list_form_v2 import TimesheetListFormV2 as TimesheetListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -438,14 +451,16 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = TimesheetListForm()
+        user_id = self.get_current_user_id()
+            
+        form = TimesheetListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Табели", "open_timesheets")
     
     def open_objects(self):
         """Open objects list"""
-        from .object_list_form import ObjectListForm
+        from .object_list_form_v2 import ObjectListFormV2 as ObjectListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -455,14 +470,16 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = ObjectListForm()
+        user_id = self.get_current_user_id()
+            
+        form = ObjectListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Объекты", "open_objects")
     
     def open_organizations(self):
         """Open organizations list"""
-        from .organization_list_form import OrganizationListForm
+        from .organization_list_form_v2 import OrganizationListFormV2 as OrganizationListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -472,14 +489,16 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = OrganizationListForm()
+        user_id = self.get_current_user_id()
+            
+        form = OrganizationListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Организации", "open_organizations")
     
     def open_persons(self):
         """Open persons list"""
-        from .person_list_form import PersonListForm
+        from .person_list_form_v2 import PersonListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -496,7 +515,7 @@ class MainWindow(QMainWindow):
     
     def open_works(self):
         """Open works list"""
-        from .work_list_form import WorkListForm
+        from .work_list_form_v2 import WorkListFormV2 as WorkListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -506,7 +525,9 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = WorkListForm()
+        user_id = self.get_current_user_id()
+            
+        form = WorkListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Виды работ", "open_works")
@@ -515,7 +536,7 @@ class MainWindow(QMainWindow):
     
     def open_counterparties(self):
         """Open counterparties list"""
-        from .counterparty_list_form import CounterpartyListForm
+        from .counterparty_list_form_v2 import CounterpartyListFormV2 as CounterpartyListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -525,14 +546,16 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = CounterpartyListForm()
+        user_id = self.get_current_user_id()
+            
+        form = CounterpartyListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Контрагенты", "open_counterparties")
     
     def open_cost_items(self):
         """Open cost items list"""
-        from .cost_item_list_form import CostItemListForm
+        from .cost_item_list_form_v2 import CostItemListFormV2 as CostItemListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -542,14 +565,16 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = CostItemListForm()
+        user_id = self.get_current_user_id()
+            
+        form = CostItemListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Элементы затрат", "open_cost_items")
     
     def open_materials(self):
         """Open materials list"""
-        from .material_list_form import MaterialListForm
+        from .material_list_form_v2 import MaterialListFormV2 as MaterialListForm
         
         # Check if already open
         for window in self.mdi_area.subWindowList():
@@ -559,7 +584,9 @@ class MainWindow(QMainWindow):
                 return
         
         # Create new window
-        form = MaterialListForm()
+        user_id = self.get_current_user_id()
+            
+        form = MaterialListForm(user_id=user_id)
         sub_window = self.mdi_area.addSubWindow(form)
         sub_window.show()
         self.add_to_recent("Материалы", "open_materials")

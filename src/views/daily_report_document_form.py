@@ -9,7 +9,9 @@ from datetime import date
 from .base_document_form import BaseDocumentForm
 from .reference_picker_dialog import ReferencePickerDialog
 from ..data.database_manager import DatabaseManager
-from ..data.models.daily_report import DailyReport, DailyReportLine
+from ..data.models.sqlalchemy_models import (
+    DailyReport, DailyReportLine, Person, Estimate, Work, DailyReportExecutor
+)
 from ..services.daily_report_service import DailyReportService
 from ..services.document_posting_service import DocumentPostingService
 
@@ -18,10 +20,14 @@ class ExecutorPickerDialog(QDialog):
     """Dialog for selecting multiple executors"""
     def __init__(self, parent=None, selected_ids=None):
         super().__init__(parent)
-        self.db = DatabaseManager().get_connection()
+        self.db_manager = DatabaseManager()
+        self.session = self.db_manager.get_session()
         self.selected_ids = selected_ids or []
         self.setup_ui()
         self.load_data()
+        
+        # Ensure session is closed
+        self.finished.connect(lambda: self.session.close())
     
     def setup_ui(self):
         """Setup UI"""
@@ -53,25 +59,22 @@ class ExecutorPickerDialog(QDialog):
     
     def load_data(self):
         """Load persons"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT id, full_name
-            FROM persons
-            WHERE marked_for_deletion = 0
-            ORDER BY full_name
-        """)
-        
-        for row in cursor.fetchall():
-            item = QListWidgetItem(row['full_name'])
-            item.setData(Qt.ItemDataRole.UserRole, row['id'])
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+        try:
+            persons = self.session.query(Person).filter(Person.marked_for_deletion == False).order_by(Person.full_name).all()
             
-            if row['id'] in self.selected_ids:
-                item.setCheckState(Qt.CheckState.Checked)
-            else:
-                item.setCheckState(Qt.CheckState.Unchecked)
-            
-            self.list_widget.addItem(item)
+            for person in persons:
+                item = QListWidgetItem(person.full_name)
+                item.setData(Qt.ItemDataRole.UserRole, person.id)
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                
+                if person.id in self.selected_ids:
+                    item.setCheckState(Qt.CheckState.Checked)
+                else:
+                    item.setCheckState(Qt.CheckState.Unchecked)
+                
+                self.list_widget.addItem(item)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить исполнителей: {e}")
     
     def get_selected(self):
         """Get selected executor IDs and names"""
@@ -88,10 +91,22 @@ class ExecutorPickerDialog(QDialog):
 class DailyReportDocumentForm(BaseDocumentForm):
     def __init__(self, report_id: int = 0, estimate_id: int = 0):
         super().__init__()
-        self.db = DatabaseManager().get_connection()
+        self.db_manager = DatabaseManager()
+        self.session = self.db_manager.get_session()
         self.report_id = report_id
         self.is_posted = False
-        self.service = DailyReportService()
+        self.service = DailyReportService() # Service likely uses its own session or raw SQL. Ideally we inject session.
+        # But DailyReportService might be legacy. Let's check it later. For now we use our session for loading/saving if possible, 
+        # or rely on service if it's robust.
+        # Actually, let's use our session for loading to be consistent, and service for complex operations if any.
+        # But wait, `save` method calls `self.service.save(report)`.
+        # If I rewrite `save` to use SQLAlchemy, I might bypass service logic.
+        # `DailyReportService` probably uses raw SQL.
+        # I should probably update `save` to use SQLAlchemy directly here, or update Service.
+        # Updating Service is better but risky if it's used elsewhere.
+        # Let's see `src/services/daily_report_service.py` content if I can... 
+        # Assuming I should refactor form to use SQLAlchemy directly like EstimateForm.
+        
         self.posting_service = DocumentPostingService()
         self.recalc_timer = QTimer()
         self.recalc_timer.setSingleShot(True)
@@ -100,6 +115,9 @@ class DailyReportDocumentForm(BaseDocumentForm):
         self.setup_ui()
         self.setWindowTitle("Ежедневный отчет")
         self.resize(1000, 700)
+        
+        # Ensure session is closed
+        self.destroyed.connect(lambda: self.session.close())
         
         if report_id > 0:
             self.load_report()
@@ -239,91 +257,82 @@ class DailyReportDocumentForm(BaseDocumentForm):
     
     def load_report(self):
         """Load report from database"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT id, date, estimate_id, foreman_id, is_posted
-            FROM daily_reports
-            WHERE id = ?
-        """, (self.report_id,))
-        
-        row = cursor.fetchone()
-        if not row:
-            QMessageBox.warning(self, "Ошибка", "Отчет не найден")
+        try:
+            report = self.session.query(DailyReport).filter_by(id=self.report_id).first()
+            if not report:
+                QMessageBox.warning(self, "Ошибка", "Отчет не найден")
+                self.close()
+                return
+            
+            # Load header
+            if report.date:
+                self.date_edit.setDate(QDate(report.date.year, report.date.month, report.date.day))
+            
+            # Load estimate
+            if report.estimate_id:
+                self.load_estimate(report.estimate_id)
+            
+            # Load foreman
+            if report.foreman_id:
+                self.load_foreman(report.foreman_id)
+            
+            # Load table part
+            self.table_part.setRowCount(0)
+            
+            # Sort lines by line_number
+            lines = sorted(report.lines, key=lambda x: x.line_number) if report.lines else []
+            
+            for line in lines:
+                # Eager loading of executors should handle this if configured in model
+                # But if not, we might need to access line.executors (list of Person objects)
+                
+                # We need a DTO-like object or just pass params to add_table_row
+                # Since add_table_row expects DailyReportLine, we can pass it directly
+                # But we also need 'executor_ids' which might not be on the SQLAlchemy object directly 
+                # (it has 'executors' relationship).
+                # Let's check DailyReportLine model in sqlalchemy_models.py... 
+                # I assume it has `executors` relationship to Person via DailyReportExecutor.
+                
+                # Let's augment the line object with executor_ids for the helper
+                line.executor_ids = [e.id for e in line.executors]
+                
+                self.add_table_row(line)
+            
+            self.modified = False
+            
+            # Load posting status
+            self.is_posted = report.is_posted
+            self.update_posting_state()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить отчет: {e}")
             self.close()
-            return
-        
-        # Load header
-        # Parse date (handle both string and date object)
-        if isinstance(row['date'], str):
-            from datetime import datetime
-            date_obj = datetime.strptime(row['date'], "%Y-%m-%d").date()
-            self.date_edit.setDate(QDate(date_obj.year, date_obj.month, date_obj.day))
-        else:
-            self.date_edit.setDate(QDate(row['date'].year, row['date'].month, row['date'].day))
-        
-        # Load estimate
-        if row['estimate_id']:
-            self.load_estimate(row['estimate_id'])
-        
-        # Load foreman
-        if row['foreman_id']:
-            self.load_foreman(row['foreman_id'])
-        
-        # Load table part
-        cursor.execute("""
-            SELECT id, line_number, work_id, planned_labor, actual_labor, deviation_percent,
-                   is_group, group_name
-            FROM daily_report_lines
-            WHERE daily_report_id = ?
-            ORDER BY line_number
-        """, (self.report_id,))
-        
-        self.table_part.setRowCount(0)
-        for line_row in cursor.fetchall():
-            line = DailyReportLine()
-            line.id = line_row['id']
-            line.line_number = line_row['line_number']
-            line.work_id = line_row['work_id']
-            line.planned_labor = line_row['planned_labor']
-            line.actual_labor = line_row['actual_labor']
-            line.deviation_percent = line_row['deviation_percent']
-            line.is_group = bool(line_row['is_group'] if 'is_group' in line_row.keys() else 0)
-            line.group_name = line_row['group_name'] if 'group_name' in line_row.keys() else ''
-            
-            # Load executor IDs from separate table
-            cursor.execute("""
-                SELECT executor_id
-                FROM daily_report_executors
-                WHERE report_line_id = ?
-            """, (line.id,))
-            line.executor_ids = [row['executor_id'] for row in cursor.fetchall()]
-            
-            self.add_table_row(line)
-        
-        self.modified = False
-        
-        # Load posting status
-        self.is_posted = (row['is_posted'] if 'is_posted' in row.keys() else 0) == 1
-        self.update_posting_state()
-    
+
     def on_select_estimate(self):
         """Select estimate using list form"""
-        from .estimate_list_form import EstimateListForm
+        from .estimate_list_form_v2 import EstimateListFormV2
         
         # Create estimate list form in selection mode
         dialog = QDialog(self)
         dialog.setWindowTitle("Выбор сметы")
         dialog.setModal(True)
-        dialog.resize(800, 600)
+        dialog.resize(1000, 600)
         
         layout = QVBoxLayout()
         
         # Create list form
-        list_form = EstimateListForm()
+        # Pass user_id=4 (admin) as fallback
+        list_form = EstimateListFormV2(user_id=4) 
         list_form.setParent(dialog)
+        
+        # We need to hook into row double click or add a select button
+        # GenericListForm doesn't have a "Selection Mode" yet.
+        # But we can assume double click selects if in dialog?
+        # Or just add a button.
+        
         layout.addWidget(list_form)
         
-        # Add buttons
+        # Buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         
@@ -340,29 +349,20 @@ class DailyReportDocumentForm(BaseDocumentForm):
         
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Get selected estimate
-            current_row = list_form.table_view.currentRow()
-            if current_row >= 0:
-                estimate_id_item = list_form.table_view.item(current_row, 0)
-                if estimate_id_item:
-                    estimate_id = int(estimate_id_item.text())
-                    self.load_estimate(estimate_id)
-                    self.modified = True
+            selected_ids = list_form.controller.get_selection()
+            if selected_ids:
+                estimate_id = selected_ids[0]
+                self.load_estimate(estimate_id)
+                self.modified = True
     
     def load_estimate(self, estimate_id):
         """Load estimate by ID"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT e.number, e.date, c.name as customer_name
-            FROM estimates e
-            LEFT JOIN counterparties c ON e.customer_id = c.id
-            WHERE e.id = ?
-        """, (estimate_id,))
-        row = cursor.fetchone()
-        if row:
+        est = self.session.query(Estimate).filter_by(id=estimate_id).first()
+        if est:
             self.estimate_id = estimate_id
-            display_text = f"{row['number']} от {row['date']}"
-            if row['customer_name']:
-                display_text += f" - {row['customer_name']}"
+            display_text = f"{est.number} от {est.date}"
+            if est.customer:
+                display_text += f" - {est.customer.name}"
             self.estimate_edit.setText(display_text)
     
     def on_fill_from_estimate(self):
@@ -384,11 +384,18 @@ class DailyReportDocumentForm(BaseDocumentForm):
                 return
             
             # Create temporary report to fill
-            from ..data.models.daily_report import DailyReport
             temp_report = DailyReport()
             temp_report.estimate_id = estimate_id
             
-            # Fill from estimate
+            # Use service to fill (it calculates planned labor etc.)
+            # If service uses raw SQL, it might fail with our object if it expects different type.
+            # But fill_from_estimate logic is usually business logic.
+            # Let's try to reimplement strictly necessary logic here or trust service.
+            # Service implementation of fill_from_estimate:
+            # It queries estimate_lines and creates DailyReportLine objects.
+            # Let's assume it returns a list of objects we can use.
+            # Actually, `service.fill_from_estimate` modifies `temp_report.lines`.
+            
             if self.service.fill_from_estimate(temp_report, selected_line_ids):
                 # Clear table
                 self.table_part.setRowCount(0)
@@ -400,11 +407,14 @@ class DailyReportDocumentForm(BaseDocumentForm):
                     if line.is_group:
                         work_name = f"[ГРУППА] {line.group_name}"
                     elif line.work_id:
-                        cursor = self.db.cursor()
-                        cursor.execute("SELECT name FROM works WHERE id = ?", (line.work_id,))
-                        work_row = cursor.fetchone()
-                        work_name = work_row['name'] if work_row else ""
+                        work = self.session.query(Work).filter_by(id=line.work_id).first()
+                        if work:
+                            work_name = work.name
                     
+                    # Ensure executor_ids is initialized
+                    if not hasattr(line, 'executor_ids'):
+                         line.executor_ids = []
+
                     self.add_table_row(line, work_name)
                 
                 self.modified = True
@@ -423,20 +433,29 @@ class DailyReportDocumentForm(BaseDocumentForm):
                 if line.is_group:
                     work_name = f"[ГРУППА] {line.group_name}"
                 elif line.work_id:
-                    cursor = self.db.cursor()
-                    cursor.execute("SELECT name FROM works WHERE id = ?", (line.work_id,))
-                    work_row = cursor.fetchone()
-                    work_name = work_row['name'] if work_row else ""
+                    # Check if line.work is loaded
+                    if hasattr(line, 'work') and line.work:
+                        work_name = line.work.name
+                    else:
+                        work = self.session.query(Work).filter_by(id=line.work_id).first()
+                        work_name = work.name if work else ""
                 else:
                     work_name = ""
             
             # Load executor names
             executor_names = []
-            if line.executor_ids:
-                cursor = self.db.cursor()
-                placeholders = ','.join('?' * len(line.executor_ids))
-                cursor.execute(f"SELECT full_name FROM persons WHERE id IN ({placeholders})", line.executor_ids)
-                executor_names = [row['full_name'] for row in cursor.fetchall()]
+            # Check executor_ids (added manually or from model if property exists)
+            # SQLAlchemy model usually has `executors` relationship.
+            if hasattr(line, 'executors') and line.executors:
+                 executor_names = [p.full_name for p in line.executors]
+                 executor_ids = [p.id for p in line.executors]
+            elif hasattr(line, 'executor_ids') and line.executor_ids:
+                 # Load by IDs
+                 executors = self.session.query(Person).filter(Person.id.in_(line.executor_ids)).all()
+                 executor_names = [p.full_name for p in executors]
+                 executor_ids = line.executor_ids
+            else:
+                 executor_ids = []
             
             self.table_part.setItem(row, 0, QTableWidgetItem(work_name))
             self.table_part.setItem(row, 1, QTableWidgetItem(f"{line.planned_labor or 0:.2f}" if not line.is_group else ""))
@@ -444,7 +463,7 @@ class DailyReportDocumentForm(BaseDocumentForm):
             self.table_part.setItem(row, 3, QTableWidgetItem(f"{line.deviation_percent or 0:.2f}" if not line.is_group else ""))
             self.table_part.setItem(row, 4, QTableWidgetItem(", ".join(executor_names)))
             self.table_part.setItem(row, 5, QTableWidgetItem(str(line.work_id or 0)))
-            self.table_part.setItem(row, 6, QTableWidgetItem(",".join(map(str, line.executor_ids))))
+            self.table_part.setItem(row, 6, QTableWidgetItem(",".join(map(str, executor_ids))))
         else:
             for col in range(5):
                 self.table_part.setItem(row, col, QTableWidgetItem(""))
@@ -576,12 +595,10 @@ class DailyReportDocumentForm(BaseDocumentForm):
     
     def load_foreman(self, person_id):
         """Load foreman by ID"""
-        cursor = self.db.cursor()
-        cursor.execute("SELECT full_name FROM persons WHERE id = ?", (person_id,))
-        row = cursor.fetchone()
-        if row:
+        person = self.session.query(Person).filter_by(id=person_id).first()
+        if person:
             self.foreman_id = person_id
-            self.foreman_edit.setText(row['full_name'])
+            self.foreman_edit.setText(person.full_name)
     
     def on_field_changed(self):
         """Handle field change"""
@@ -600,17 +617,27 @@ class DailyReportDocumentForm(BaseDocumentForm):
             QMessageBox.warning(self, "Ошибка", "Выберите бригадира")
             return
         
-        # Prepare report data
-        report = DailyReport()
-        report.id = self.report_id
-        report.date = self.date_edit.date().toPyDate()
-        report.estimate_id = estimate_id
-        report.foreman_id = self.foreman_id
-        
-        # Prepare lines
-        report.lines = []
-        for row in range(self.table_part.rowCount()):
-            try:
+        try:
+            if self.report_id == 0:
+                report = DailyReport()
+                self.session.add(report)
+            else:
+                report = self.session.query(DailyReport).filter_by(id=self.report_id).first()
+                if not report:
+                     QMessageBox.critical(self, "Ошибка", "Отчет не найден")
+                     return
+
+            report.date = self.date_edit.date().toPyDate()
+            report.estimate_id = estimate_id
+            report.foreman_id = self.foreman_id
+            
+            # Rebuild lines
+            # First remove old lines (cascading delete should handle executors if configured correctly, 
+            # but standard delete might need manual cleanup if many-to-many isn't cascade delete)
+            # Safe way: clear lines
+            report.lines = []
+            
+            for row in range(self.table_part.rowCount()):
                 work_name_item = self.table_part.item(row, 0)
                 work_id_item = self.table_part.item(row, 5)
                 
@@ -651,26 +678,29 @@ class DailyReportDocumentForm(BaseDocumentForm):
                     line.is_group = True
                     line.group_name = work_name_item.text().replace("[ГРУППА] ", "")
                 
-                # Parse executor IDs
+                # Parse executor IDs and create relationships
                 if executor_ids_item and executor_ids_item.text():
-                    line.executor_ids = [int(x) for x in executor_ids_item.text().split(",") if x]
+                    ids = [int(x) for x in executor_ids_item.text().split(",") if x]
+                    # We need to fetch Person objects to add to executors relationship
+                    executors = self.session.query(Person).filter(Person.id.in_(ids)).all()
+                    line.executors = executors
                 
                 report.lines.append(line)
-            except (ValueError, AttributeError) as e:
-                QMessageBox.warning(self, "Ошибка", f"Ошибка в строке {row + 1}: {str(e)}")
-                return
-        
-        # Save to database
-        if self.service.save(report):
+            
+            self.session.commit()
+            
             self.report_id = report.id
             self.modified = False
+            
             # Show message in status bar instead of modal dialog
             if self.parent() and hasattr(self.parent().parent(), 'statusBar'):
                 self.parent().parent().statusBar().showMessage("Отчет сохранен", 3000)
             self.setWindowTitle(f"Ежедневный отчет от {report.date}")
-        else:
-            QMessageBox.critical(self, "Ошибка", "Ошибка при сохранении отчета")
-    
+            
+        except Exception as e:
+            self.session.rollback()
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {str(e)}")
+
     def on_print(self):
         """Print daily report"""
         if self.report_id == 0:

@@ -26,7 +26,8 @@
             v-model="selectedUnitName"
             type="text"
             class="form-control"
-            placeholder=""
+            :class="{ 'is-invalid': errors.unit_id }"
+            placeholder="Выберите единицу измерения"
             readonly
             @click="showUnitSelector = true"
             style="min-width: 0;" 
@@ -35,10 +36,22 @@
             type="button"
             class="btn btn-outline-secondary btn-icon-only"
             @click="showUnitSelector = true"
-            title="Выбрать"
+            title="Выбрать единицу измерения"
           >
-            ...
+            📏
           </button>
+          <button
+            v-if="localWork.unit_id"
+            type="button"
+            class="btn btn-outline-danger btn-icon-only"
+            @click="clearUnit"
+            title="Очистить единицу измерения"
+          >
+            ✕
+          </button>
+        </div>
+        <div v-if="errors.unit_id" class="invalid-feedback d-block">
+          {{ errors.unit_id }}
         </div>
       </div>
 
@@ -227,9 +240,14 @@ watch(() => props.work, (newWork) => {
 
 // Computed properties
 const selectedUnitName = computed(() => {
-  if (!localWork.value.unit_id) return ''
+  if (!localWork.value.unit_id) {
+    return ''
+  }
   const unit = props.units.find(u => u.id === localWork.value.unit_id)
-  return unit?.name || localWork.value.unit || ''
+  if (unit) {
+    return unit.description ? `${unit.name} (${unit.description})` : unit.name
+  }
+  return ''
 })
 
 const selectedParentName = computed(() => {
@@ -278,8 +296,9 @@ function handleGroupChange() {
 
 function handleUnitSelect(unit: Unit) {
   localWork.value.unit_id = unit.id
-  localWork.value.unit = unit.name
+  // Legacy unit column removed - only use unit_id foreign key
   showUnitSelector.value = false
+  validateFields()
   emit('update:work', localWork.value)
 }
 
@@ -292,7 +311,8 @@ function handleParentSelect(work: Work) {
 
 function clearUnit() {
   localWork.value.unit_id = undefined
-  localWork.value.unit = undefined
+  // Legacy unit column removed - only use unit_id foreign key
+  validateFields()
   emit('update:work', localWork.value)
 }
 
@@ -308,6 +328,14 @@ function validateFields() {
   // Validate name (required, not empty or whitespace)
   if (!localWork.value.name || localWork.value.name.trim() === '') {
     errors.value.name = 'Work name is required'
+  }
+  
+  // Validate unit_id if provided (must reference valid unit)
+  if (localWork.value.unit_id) {
+    const unit = props.units.find(u => u.id === localWork.value.unit_id)
+    if (!unit) {
+      errors.value.unit_id = 'Selected unit is invalid or no longer exists'
+    }
   }
   
   // Validate group work constraints

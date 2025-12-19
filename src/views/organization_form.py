@@ -8,17 +8,20 @@ from ..data.database_manager import DatabaseManager
 
 
 class OrganizationForm(QWidget):
-    def __init__(self, organization_id=0, is_group=False):
+    def __init__(self, organization_id=0, is_group=False, parent_id=None):
         super().__init__()
         self.organization_id = organization_id
         self.is_group = is_group
         self.db = DatabaseManager().get_connection()
         self.is_modified = False
         self.default_responsible_id = 0
+        self.parent_id = parent_id
         self.setup_ui()
         
         if self.organization_id > 0:
             self.load_data()
+        elif self.parent_id:
+            self.load_parent(self.parent_id)
     
     def setup_ui(self):
         """Setup UI"""
@@ -42,7 +45,7 @@ class OrganizationForm(QWidget):
         parent_layout = QHBoxLayout()
         self.parent_edit = QLineEdit()
         self.parent_edit.setReadOnly(True)
-        self.parent_id = None
+        # self.parent_id = None
         parent_layout.addWidget(self.parent_edit)
         self.parent_button = QPushButton("...")
         self.parent_button.setMaximumWidth(30)

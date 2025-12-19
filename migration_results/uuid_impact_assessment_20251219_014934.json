@@ -1,0 +1,102 @@
+{
+  "assessment_date": "2025-12-19T01:49:34.044196",
+  "database_type": "sqlite",
+  "works_table_record_count": 3908,
+  "foreign_key_relationships": [
+    {
+      "table_name": "cost_item_materials",
+      "column_name": "work_id",
+      "constraint_name": null,
+      "is_nullable": false,
+      "record_count": 100,
+      "has_cascade_delete": true,
+      "relationship_type": "many_to_one"
+    },
+    {
+      "table_name": "works",
+      "column_name": "parent_id",
+      "constraint_name": null,
+      "is_nullable": true,
+      "record_count": 3908,
+      "has_cascade_delete": false,
+      "relationship_type": "self_referential"
+    },
+    {
+      "table_name": "daily_report_lines",
+      "column_name": "work_id",
+      "constraint_name": null,
+      "is_nullable": true,
+      "record_count": 164,
+      "has_cascade_delete": false,
+      "relationship_type": "many_to_one"
+    },
+    {
+      "table_name": "estimate_lines",
+      "column_name": "work_id",
+      "constraint_name": null,
+      "is_nullable": true,
+      "record_count": 3,
+      "has_cascade_delete": false,
+      "relationship_type": "many_to_one"
+    },
+    {
+      "table_name": "work_execution_register",
+      "column_name": "work_id",
+      "constraint_name": null,
+      "is_nullable": true,
+      "record_count": 0,
+      "has_cascade_delete": false,
+      "relationship_type": "many_to_one"
+    },
+    {
+      "table_name": "work_specifications",
+      "column_name": "work_id",
+      "constraint_name": null,
+      "is_nullable": false,
+      "record_count": 100,
+      "has_cascade_delete": true,
+      "relationship_type": "many_to_one"
+    },
+    {
+      "table_name": "work_unit_migration",
+      "column_name": "work_id",
+      "constraint_name": null,
+      "is_nullable": false,
+      "record_count": 0,
+      "has_cascade_delete": false,
+      "relationship_type": "many_to_one"
+    }
+  ],
+  "migration_complexity": {
+    "total_tables_affected": 7,
+    "total_foreign_keys": 7,
+    "total_records_to_update": 4275,
+    "estimated_migration_time_minutes": 15,
+    "risk_level": "medium",
+    "critical_dependencies": [
+      "cost_item_materials (non-nullable FK)",
+      "work_specifications (non-nullable FK)",
+      "work_unit_migration (non-nullable FK)"
+    ],
+    "migration_phases": [
+      "Phase 1: Add UUID columns to all affected tables",
+      "Phase 2: Generate UUIDs for existing works records",
+      "Phase 3: Update foreign key references to use UUIDs",
+      "Phase 4: Add UUID-based constraints and indexes",
+      "Phase 5: Update application code to use UUIDs",
+      "Phase 6: Remove integer ID columns (optional)"
+    ]
+  },
+  "recommendations": [
+    "Implement thorough testing in staging environment",
+    "Plan for maintenance window during low-usage period",
+    "Prepare rollback procedures",
+    "Add UUID columns before migration to minimize downtime",
+    "Use batch processing for large table updates",
+    "Implement UUID validation at application level",
+    "Consider keeping integer IDs for backward compatibility initially",
+    "Update all API endpoints to support UUID lookups",
+    "Implement UUID-based synchronization logic"
+  ],
+  "migration_strategy": "staged_migration_with_validation"
+}

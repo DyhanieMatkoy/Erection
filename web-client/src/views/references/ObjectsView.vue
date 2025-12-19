@@ -190,9 +190,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useReferenceView } from '@/composables/useReferenceView'
 import { useFilters } from '@/composables/useFilters'
+import { useListShortcuts } from '@/composables/useListShortcuts'
 import { useReferencesStore } from '@/stores/references'
 import * as referencesApi from '@/api/references'
 import type { Object } from '@/types/models'
@@ -291,6 +292,41 @@ function formatDate(dateString: string): string {
   if (!dateString) return '—'
   return new Date(dateString).toLocaleDateString('ru-RU')
 }
+
+function handleCopy() {
+  if (selectedItems.value.length !== 1) return
+  
+  const item = selectedItems.value[0]
+  view.editingItem.value = null // Create mode
+  view.formData.value = {
+    name: item.name,
+    parent_id: item.parent_id,
+    address: item.address,
+    owner_id: item.owner_id,
+  }
+  view.errors.value = {}
+  view.submitError.value = ''
+  view.modalOpen.value = true
+}
+
+function handlePrint() {
+  if (selectedItems.value.length === 0) return
+  alert(`Печать ${selectedItems.value.length} элементов (Функционал в разработке)`)
+}
+
+useListShortcuts({
+  enabled: computed(() => !view.modalOpen.value),
+  onCreate: view.handleCreate,
+  onCopy: handleCopy,
+  onEdit: () => {
+    if (selectedItems.value.length === 1) {
+      view.handleEdit(selectedItems.value[0])
+    }
+  },
+  onDelete: handleBulkDelete,
+  onRefresh: view.loadData,
+  onPrint: handlePrint
+})
 
 async function loadReferences() {
   try {

@@ -47,7 +47,7 @@ class MaterialsTable(QTableWidget):
             # Description
             self.setItem(row, 2, QTableWidgetItem(material.description or ""))
             # Unit
-            unit_name = material.unit or ""
+            unit_name = material.unit_ref.name if material.unit_ref else ""
             self.setItem(row, 3, QTableWidgetItem(unit_name))
             # Price
             self.setItem(row, 4, QTableWidgetItem(f"{material.price:.2f}"))

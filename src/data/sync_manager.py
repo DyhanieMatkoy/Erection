@@ -63,6 +63,15 @@ class SyncManager:
         self.db_manager = db_manager
         self.node_id = node_id
         self._session_factory = None
+        
+        # Проверяем переменную окружения для отключения синхронизации
+        import os
+        sync_disabled = os.getenv('DISABLE_SYNC', '').lower() in ('true', '1', 'yes')
+        self.sync_enabled = not sync_disabled
+        
+        if sync_disabled:
+            logger.info("Synchronization disabled via DISABLE_SYNC environment variable")
+        
         self._setup_session_factory()
         
     def _setup_session_factory(self):
@@ -128,27 +137,46 @@ class SyncManager:
             operation: Type of operation (INSERT/UPDATE/DELETE)
             target_node_id: Target node for this change (None for broadcast)
         """
+        # Проверяем, включена ли синхронизация
+        if not self.sync_enabled:
+            logger.debug(f"Sync disabled, skipping change registration: {entity_type} {entity_uuid} {operation.value}")
+            return
+            
         if entity_type not in self.SYNCHRONIZABLE_ENTITIES:
             logger.warning(f"Skipping sync registration for non-synchronizable entity: {entity_type}")
             return
-        
-        with self.get_session() as session:
-            # Get next change ID
-            max_id = session.query(SyncChange).order_by(desc(SyncChange.id)).first()
-            next_id = (max_id.id + 1) if max_id else 1
-            
-            # Create change record
-            change = SyncChange(
-                id=next_id,
-                node_id=target_node_id or self.node_id,
-                entity_type=entity_type,
-                entity_uuid=entity_uuid,
-                operation=operation
-            )
-            session.add(change)
-            session.commit()
-            
-            logger.debug(f"Registered change: {entity_type} {entity_uuid} {operation.value}")
+
+        try:
+            with self.get_session() as session:
+                # Get next change ID
+                max_id = session.query(SyncChange).order_by(desc(SyncChange.id)).first()
+                next_id = (max_id.id + 1) if max_id else 1
+                
+                # Create change record
+                change = SyncChange(
+                    id=next_id,
+                    node_id=target_node_id or self.node_id,
+                    entity_type=entity_type,
+                    entity_uuid=entity_uuid,
+                    operation=operation
+                )
+                session.add(change)
+                session.commit()
+                
+                logger.debug(f"Registered change: {entity_type} {entity_uuid} {operation.value}")
+        except Exception as e:
+            logger.error(f"Failed to register sync change: {e}")
+            # Не прерываем выполнение, просто логируем ошибку
+    
+    def disable_sync(self):
+        """Временно отключить синхронизацию"""
+        self.sync_enabled = False
+        logger.info("Synchronization disabled")
+    
+    def enable_sync(self):
+        """Включить синхронизацию"""
+        self.sync_enabled = True
+        logger.info("Synchronization enabled")
     
     def get_pending_changes(self, target_node_id: str, limit: int = 1000) -> List[SyncChange]:
         """Get pending changes for a target node

@@ -87,7 +87,8 @@ class CostItemMaterialForm(QDialog):
             self.materials_table.setItem(row, 1, QTableWidgetItem(material.description or ""))
             
             # Unit
-            self.materials_table.setItem(row, 2, QTableWidgetItem(material.unit or ""))
+            unit_name = material.unit_ref.name if material.unit_ref else ""
+            self.materials_table.setItem(row, 2, QTableWidgetItem(unit_name))
             
             # Quantity
             quantity_item = QTableWidgetItem(f"{quantity:.2f}")

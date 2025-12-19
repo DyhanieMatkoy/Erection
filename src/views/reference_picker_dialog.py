@@ -7,12 +7,13 @@ from ..data.database_manager import DatabaseManager
 
 
 class ReferencePickerDialog(QDialog):
-    def __init__(self, table_name, title="Выбор из справочника", parent=None, owner_id=None, current_id=None):
+    def __init__(self, table_name, title="Выбор из справочника", parent=None, owner_id=None, current_id=None, extra_filter=None):
         super().__init__(parent)
         self.table_name = table_name
         self.title = title
         self.owner_id = owner_id
         self.current_id = current_id  # Current value to position cursor on
+        self.extra_filter = extra_filter  # Extra SQL WHERE clause
         self.current_parent_id = None  # Current parent for hierarchical navigation
         self.db = DatabaseManager().get_connection()
         self._selected_id = 0
@@ -35,6 +36,8 @@ class ReferencePickerDialog(QDialog):
             return "name"
         elif self.table_name == "persons":
             return "full_name"
+        elif self.table_name == "estimates":
+            return "number"
         else:
             return "name"
     
@@ -143,12 +146,25 @@ class ReferencePickerDialog(QDialog):
         cursor = self.db.cursor()
         
         # Build WHERE clause
-        where_clauses = ["marked_for_deletion = 0"]
+        if self.table_name == "works":
+            where_clauses = ["w.marked_for_deletion = 0"]
+        else:
+            where_clauses = ["marked_for_deletion = 0"]
         params = []
         
         if self.owner_id and self.table_name == "objects":
-            where_clauses.append("owner_id = ?")
-            params.append(self.owner_id)
+            # Сначала проверим, есть ли объекты у данного владельца
+            cursor.execute("SELECT COUNT(*) FROM objects WHERE owner_id = ? AND marked_for_deletion = 0", (self.owner_id,))
+            owner_objects_count = cursor.fetchone()[0]
+            
+            if owner_objects_count > 0:
+                # Если у владельца есть объекты, фильтруем по нему
+                where_clauses.append("owner_id = ?")
+                params.append(self.owner_id)
+            # Если у владельца нет объектов, показываем все объекты (не добавляем фильтр)
+            
+        if self.extra_filter:
+            where_clauses.append(self.extra_filter)
         
         # Determine if we need to navigate to the current item's parent first
         # Only do this on initial load (when search is empty and we have a current_id)
@@ -183,20 +199,22 @@ class ReferencePickerDialog(QDialog):
         # Build SELECT clause based on table type
         if self.table_name == "works":
             select_clause = f"""
-                SELECT w.id, w.{self.display_column}, w.code, COALESCE(u.name, w.unit) as unit, w.price, {parent_col}
+                SELECT w.id, w.{self.display_column}, w.code, u.name as unit, w.price, {parent_col}
                 FROM {self.table_name} w
                 LEFT JOIN units u ON w.unit_id = u.id
             """
+            order_by_clause = f"w.{self.display_column}"
         else:
             select_clause = f"""
                 SELECT id, {self.display_column}, {parent_col}
                 FROM {self.table_name}
             """
+            order_by_clause = self.display_column
         
         cursor.execute(f"""
             {select_clause}
             WHERE {where_clause}
-            ORDER BY {self.display_column}
+            ORDER BY {order_by_clause}
         """, params)
         
         rows = cursor.fetchall()
@@ -223,9 +241,9 @@ class ReferencePickerDialog(QDialog):
             
             if self.table_name == "works":
                 # Fill additional columns for works
-                self.table_view.setItem(row_idx, 2, QTableWidgetItem(row.get('code', '') or ''))
-                self.table_view.setItem(row_idx, 3, QTableWidgetItem(row.get('unit', '') or ''))
-                self.table_view.setItem(row_idx, 4, QTableWidgetItem(str(row.get('price', 0) or 0)))
+                self.table_view.setItem(row_idx, 2, QTableWidgetItem(row['code'] if row['code'] else ''))
+                self.table_view.setItem(row_idx, 3, QTableWidgetItem(row['unit'] if row['unit'] else ''))
+                self.table_view.setItem(row_idx, 4, QTableWidgetItem(str(row['price'] if row['price'] else 0)))
                 self.table_view.setItem(row_idx, 5, QTableWidgetItem(str(row['parent_id']) if row['parent_id'] else ""))
             else:
                 self.table_view.setItem(row_idx, 2, QTableWidgetItem(str(row['parent_id']) if row['parent_id'] else ""))

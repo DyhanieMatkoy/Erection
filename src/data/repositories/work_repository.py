@@ -1,5 +1,5 @@
 """
-Repository for Work operations
+Repository for Work operations - Updated to remove legacy unit column references
 """
 import logging
 from typing import List, Dict, Optional
@@ -26,7 +26,7 @@ class WorkRepository:
                     Work.parent_id,
                     Work.name,
                     Work.code,
-                    Work.unit,
+                    # Legacy unit column removed
                     Work.unit_id,
                     Work.price,
                     Work.labor_rate,
@@ -45,7 +45,7 @@ class WorkRepository:
                         'parent_id': row.parent_id,
                         'name': row.name,
                         'code': row.code,
-                        'unit': row.unit_name or row.unit,
+                        'unit': row.unit_name,
                         'unit_id': row.unit_id,
                         'price': row.price,
                         'labor_rate': row.labor_rate,
@@ -66,7 +66,7 @@ class WorkRepository:
                     Work.parent_id,
                     Work.name,
                     Work.code,
-                    Work.unit,
+                    # Legacy unit column removed
                     Work.unit_id,
                     Work.price,
                     Work.labor_rate,
@@ -85,7 +85,7 @@ class WorkRepository:
                         'parent_id': result.parent_id,
                         'name': result.name,
                         'code': result.code,
-                        'unit': result.unit_name or result.unit,
+                        'unit': result.unit_name,
                         'unit_id': result.unit_id,
                         'price': result.price,
                         'labor_rate': result.labor_rate,
@@ -106,7 +106,7 @@ class WorkRepository:
                     Work.parent_id,
                     Work.name,
                     Work.code,
-                    Work.unit,
+                    # Legacy unit column removed
                     Work.unit_id,
                     Work.price,
                     Work.labor_rate,
@@ -126,7 +126,7 @@ class WorkRepository:
                         'parent_id': row.parent_id,
                         'name': row.name,
                         'code': row.code,
-                        'unit': row.unit_name or row.unit,
+                        'unit': row.unit_name,
                         'unit_id': row.unit_id,
                         'price': row.price,
                         'labor_rate': row.labor_rate,
@@ -147,7 +147,7 @@ class WorkRepository:
                     Work.parent_id,
                     Work.name,
                     Work.code,
-                    Work.unit,
+                    # Legacy unit column removed
                     Work.unit_id,
                     Work.price,
                     Work.labor_rate,
@@ -171,7 +171,7 @@ class WorkRepository:
                         'parent_id': row.parent_id,
                         'name': row.name,
                         'code': row.code,
-                        'unit': row.unit_name or row.unit,
+                        'unit': row.unit_name,
                         'unit_id': row.unit_id,
                         'price': row.price,
                         'labor_rate': row.labor_rate,
@@ -183,8 +183,6 @@ class WorkRepository:
             logger.error(f"Failed to find children for parent {parent_id}: {e}")
             return []
     
-    
-    
     def search_by_name(self, search_term: str) -> List[Dict]:
         """Search works by name"""
         try:
@@ -194,7 +192,7 @@ class WorkRepository:
                     Work.parent_id,
                     Work.name,
                     Work.code,
-                    Work.unit,
+                    # Legacy unit column removed
                     Work.unit_id,
                     Work.price,
                     Work.labor_rate,
@@ -214,7 +212,7 @@ class WorkRepository:
                         'parent_id': row.parent_id,
                         'name': row.name,
                         'code': row.code,
-                        'unit': row.unit_name or row.unit,
+                        'unit': row.unit_name,
                         'unit_id': row.unit_id,
                         'price': row.price,
                         'labor_rate': row.labor_rate,
@@ -235,7 +233,7 @@ class WorkRepository:
                     Work.parent_id,
                     Work.name,
                     Work.code,
-                    Work.unit,
+                    # Legacy unit column removed
                     Work.unit_id,
                     Work.price,
                     Work.labor_rate,
@@ -259,7 +257,7 @@ class WorkRepository:
                         'parent_id': result.parent_id,
                         'name': result.name,
                         'code': result.code,
-                        'unit': result.unit_name or result.unit,
+                        'unit': result.unit_name,
                         'unit_id': result.unit_id,
                         'price': result.price,
                         'labor_rate': result.labor_rate,

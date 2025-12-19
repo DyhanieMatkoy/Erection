@@ -21,19 +21,48 @@
     @retry="loadWorks"
   >
     <template #filters>
-      <div class="filter-buttons">
-        <button 
-          :class="['filter-btn', { active: !showGroupsOnly }]"
-          @click="showGroupsOnly = false"
-        >
-          All Works
-        </button>
-        <button 
-          :class="['filter-btn', { active: showGroupsOnly }]"
-          @click="showGroupsOnly = true"
-        >
-          Groups Only
-        </button>
+      <div class="filter-controls">
+        <div class="filter-buttons">
+          <button 
+            :class="['filter-btn', { active: !showGroupsOnly }]"
+            @click="showGroupsOnly = false"
+          >
+            All Works
+          </button>
+          <button 
+            :class="['filter-btn', { active: showGroupsOnly }]"
+            @click="showGroupsOnly = true"
+          >
+            Groups Only
+          </button>
+        </div>
+        
+        <div v-if="showHierarchyControls" class="hierarchy-controls">
+          <label class="control-label">Display:</label>
+          <div class="hierarchy-buttons">
+            <button 
+              :class="['hierarchy-btn', { active: currentHierarchyMode === 'flat' }]"
+              @click="setHierarchyMode('flat')"
+              title="Flat list view"
+            >
+              📋 Flat
+            </button>
+            <button 
+              :class="['hierarchy-btn', { active: currentHierarchyMode === 'tree' }]"
+              @click="setHierarchyMode('tree')"
+              title="Hierarchical tree view"
+            >
+              🌳 Tree
+            </button>
+            <button 
+              :class="['hierarchy-btn', { active: currentHierarchyMode === 'breadcrumb' }]"
+              @click="setHierarchyMode('breadcrumb')"
+              title="Show hierarchy paths"
+            >
+              🗂️ Path
+            </button>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -68,6 +97,9 @@
           </div>
           <div v-if="!item.is_group" class="item-metadata">
             <span v-if="item.price" class="price-info">{{ formatPrice(item.price) }}</span>
+            <span v-if="item.unit_display || item.unit_name" class="unit-info">
+              {{ item.unit_display || item.unit_name || '-' }}
+            </span>
           </div>
         </div>
       </div>
@@ -94,6 +126,8 @@ interface Props {
   currentWorkId?: number | null
   groupsOnly?: boolean
   selectedId?: number | null // ID of the work to be selected/highlighted
+  hierarchyMode?: 'flat' | 'tree' | 'breadcrumb'
+  showHierarchyControls?: boolean
 }
 
 interface Emits {
@@ -105,7 +139,9 @@ const props = withDefaults(defineProps<Props>(), {
   title: 'Select Parent Work',
   currentWorkId: null,
   groupsOnly: false,
-  selectedId: null
+  selectedId: null,
+  hierarchyMode: 'flat',
+  showHierarchyControls: true
 })
 
 const emit = defineEmits<Emits>()
@@ -118,6 +154,7 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const showGroupsOnly = ref(false)
 const expandedNodes = ref<Set<number>>(new Set())
+const currentHierarchyMode = ref<'flat' | 'tree' | 'breadcrumb'>(props.hierarchyMode)
 
 // Watch for selectedId changes
 watch(() => props.selectedId, (newId) => {
@@ -265,7 +302,10 @@ async function loadWorks() {
   loading.value = true
   error.value = null
   try {
-    await referencesStore.fetchWorks()
+    await referencesStore.fetchWorks(true, {
+      include_unit_info: true,
+      hierarchy_mode: currentHierarchyMode.value
+    })
     
     // Handle initial selection if provided
     if (props.selectedId && props.isOpen) {
@@ -285,6 +325,11 @@ async function loadWorks() {
   } finally {
     loading.value = false
   }
+}
+
+function setHierarchyMode(mode: 'flat' | 'tree' | 'breadcrumb') {
+  currentHierarchyMode.value = mode
+  loadWorks()
 }
 
 function buildHierarchyPath(workId: number, visited = new Set<number>()): string {
@@ -372,9 +417,40 @@ function toggleExpand(workId: number, event: Event) {
 </script>
 
 <style scoped>
+.filter-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .filter-controls {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
 .filter-buttons {
   display: flex;
   gap: 0.5rem;
+}
+
+.hierarchy-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.hierarchy-buttons {
+  display: flex;
+  gap: 0.25rem;
 }
 
 .filter-btn {
@@ -395,6 +471,27 @@ function toggleExpand(workId: number, event: Event) {
   background-color: #007bff;
   color: white;
   border-color: #007bff;
+}
+
+.hierarchy-btn {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #ced4da;
+  background-color: white;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.hierarchy-btn:hover {
+  background-color: #f8f9fa;
+}
+
+.hierarchy-btn.active {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
 }
 
 .work-content {
@@ -475,6 +572,12 @@ function toggleExpand(workId: number, event: Event) {
 .price-info {
   font-weight: 600;
   color: #28a745;
+}
+
+.unit-info {
+  font-weight: 500;
+  color: #6f42c1;
+  font-style: italic;
 }
 
 .badge {

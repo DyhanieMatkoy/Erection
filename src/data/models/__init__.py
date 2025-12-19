@@ -76,6 +76,8 @@ __all__ = [
     'CostItem',
     'Unit',
     'WorkSpecification',
+    'UserFormSettings',
+    'FormCommandConfiguration',
     
     # Synchronization Models
     'SyncNode',

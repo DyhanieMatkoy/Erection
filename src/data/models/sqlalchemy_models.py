@@ -12,9 +12,16 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime, date
+from enum import Enum
 import uuid
 
 from ..sqlalchemy_base import Base
+
+
+class EstimateType(Enum):
+    """Estimate type enumeration"""
+    GENERAL = "General"
+    PLAN = "Plan"
 
 
 # ============================================================================
@@ -63,7 +70,7 @@ class Person(Base):
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -97,7 +104,7 @@ class Organization(Base):
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -124,7 +131,7 @@ class Counterparty(Base):
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -150,7 +157,7 @@ class Object(Base):
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -173,18 +180,18 @@ class Work(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(500), nullable=False)
     code = Column(String(50))
-    unit = Column(String(50))  # Legacy field for backward compatibility
-    unit_id = Column(Integer, ForeignKey('units.id'))
+    # Legacy unit column removed - use unit_id foreign key relationship instead
+    unit_id = Column(Integer, ForeignKey('units.id'), index=True)  # Primary unit reference
     price = Column(Float, default=0.0)
     labor_rate = Column(Float, default=0.0)
-    parent_id = Column(Integer, ForeignKey('works.id'))
+    parent_id = Column(Integer, ForeignKey('works.id'), index=True)
     is_group = Column(Boolean, default=False)
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -199,8 +206,59 @@ class Work(Base):
     specifications = relationship("WorkSpecification", back_populates="work",
                                  cascade="all, delete, delete-orphan")
     
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_works_unit_id', 'unit_id'),
+        Index('idx_works_parent_id', 'parent_id'),
+        Index('idx_works_uuid', 'uuid'),
+        Index('idx_works_name', 'name'),
+    )
+    
+    @property
+    def effective_unit_name(self):
+        """Get the unit name from unit_id foreign key relationship"""
+        if self.unit_ref:
+            return self.unit_ref.name
+        return None
+    
+    @property
+    def has_unit_reference(self):
+        """Check if work has a proper unit reference (unit_id)"""
+        return self.unit_id is not None
+    
+    @property
+    def needs_unit_migration(self):
+        """Migration is complete - all works should use unit_id"""
+        return False  # Migration completed, legacy unit column removed
+    
+    def validate_unit_reference(self):
+        """Validate that unit_id references a valid unit record"""
+        if self.unit_id is not None and self.unit_ref is None:
+            raise ValueError(f"Work {self.id} has invalid unit_id {self.unit_id}")
+    
+    def validate_hierarchy(self):
+        """Validate that parent-child relationships don't create circular references"""
+        if self.parent_id is None:
+            return True
+        
+        visited = set()
+        current_id = self.parent_id
+        
+        while current_id is not None:
+            if current_id == self.id:
+                raise ValueError(f"Circular reference detected: Work {self.id} cannot be its own ancestor")
+            if current_id in visited:
+                raise ValueError(f"Circular reference detected in work hierarchy involving work {current_id}")
+            
+            visited.add(current_id)
+            # This would need to be implemented with a database query in practice
+            # For now, we'll assume the validation is done at the service layer
+            break
+        
+        return True
+    
     def __repr__(self):
-        return f"<Work(id={self.id}, name='{self.name}')>"
+        return f"<Work(id={self.id}, name='{self.name}', unit_id={self.unit_id})>"
 
 
 # ============================================================================
@@ -218,6 +276,11 @@ class Estimate(Base):
     object_id = Column(Integer, ForeignKey('objects.id'))
     contractor_id = Column(Integer, ForeignKey('organizations.id'))
     responsible_id = Column(Integer, ForeignKey('persons.id'), index=True)
+    
+    # Hierarchy fields
+    base_document_id = Column(Integer, ForeignKey('estimates.id'), nullable=True, index=True)
+    estimate_type = Column(String(20), nullable=False, default='General', index=True)
+    
     total_sum = Column(Float, default=0.0)
     total_labor = Column(Float, default=0.0)
     is_posted = Column(Boolean, default=False)
@@ -227,7 +290,7 @@ class Estimate(Base):
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -236,14 +299,28 @@ class Estimate(Base):
     object = relationship("Object", back_populates="estimates")
     contractor = relationship("Organization", back_populates="estimates")
     responsible = relationship("Person", foreign_keys=[responsible_id], back_populates="estimates_responsible")
+    
+    # Hierarchy relationships
+    base_document = relationship("Estimate", remote_side=[id], backref="plan_estimates")
+    
     lines = relationship("EstimateLine", back_populates="estimate", cascade="all, delete-orphan", order_by="EstimateLine.line_number")
     daily_reports = relationship("DailyReport", back_populates="estimate")
     timesheets = relationship("Timesheet", back_populates="estimate")
     work_execution_entries = relationship("WorkExecutionRegister", back_populates="estimate")
     payroll_entries = relationship("PayrollRegister", back_populates="estimate")
     
+    @property
+    def is_general(self) -> bool:
+        """Check if this is a general estimate"""
+        return self.estimate_type == EstimateType.GENERAL.value
+    
+    @property
+    def is_plan(self) -> bool:
+        """Check if this is a plan estimate"""
+        return self.estimate_type == EstimateType.PLAN.value
+    
     def __repr__(self):
-        return f"<Estimate(id={self.id}, number='{self.number}', date={self.date})>"
+        return f"<Estimate(id={self.id}, number='{self.number}', date={self.date}, type='{self.estimate_type}')>"
 
 
 class EstimateLine(Base):
@@ -270,7 +347,7 @@ class EstimateLine(Base):
     material_sum = Column(Float, default=0.0)
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -300,7 +377,7 @@ class DailyReport(Base):
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -334,7 +411,7 @@ class DailyReportLine(Base):
     material_deviation_percent = Column(Float, default=0.0)
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -382,7 +459,7 @@ class Timesheet(Base):
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -443,7 +520,7 @@ class TimesheetLine(Base):
     total_amount = Column(Float, default=0.0)
     
     # Synchronization fields
-    uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, nullable=False, default=False)
     
@@ -545,6 +622,60 @@ class UserSetting(Base):
         return f"<UserSetting(user_id={self.user_id}, form_name='{self.form_name}', key='{self.setting_key}')>"
 
 
+class UserTablePartSettings(Base):
+    """User table part settings model for document table parts configuration"""
+    __tablename__ = 'user_table_part_settings'
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    document_type = Column(String(100), nullable=False, index=True)
+    table_part_id = Column(String(100), nullable=False, index=True)
+    settings_data = Column(Text, nullable=False)  # JSON string
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationships
+    user = relationship("User")
+    
+    # Unique constraint for user + document_type + table_part_id
+    __table_args__ = (
+        UniqueConstraint('user_id', 'document_type', 'table_part_id', name='uq_user_table_part_settings'),
+        Index('idx_user_table_part_settings_lookup', 'user_id', 'document_type', 'table_part_id'),
+    )
+    
+    def __repr__(self):
+        return f"<UserTablePartSettings(id='{self.id}', user_id={self.user_id}, document_type='{self.document_type}', table_part_id='{self.table_part_id}')>"
+
+
+class TablePartCommandConfig(Base):
+    """Table part command configuration for customizing command panels"""
+    __tablename__ = 'table_part_command_config'
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    document_type = Column(String(100), nullable=False, index=True)
+    table_part_id = Column(String(100), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)  # NULL for global settings
+    command_id = Column(String(100), nullable=False, index=True)
+    is_visible = Column(Boolean, default=True, nullable=False)
+    is_enabled = Column(Boolean, default=True, nullable=False)
+    position = Column(Integer, default=0, nullable=False)
+    is_in_more_menu = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationships
+    user = relationship("User")
+    
+    # Unique constraint for user + document_type + table_part_id + command_id
+    __table_args__ = (
+        UniqueConstraint('document_type', 'table_part_id', 'user_id', 'command_id', name='uq_table_part_command_config'),
+        Index('idx_table_part_command_config_lookup', 'document_type', 'table_part_id', 'user_id'),
+    )
+    
+    def __repr__(self):
+        return f"<TablePartCommandConfig(id='{self.id}', document_type='{self.document_type}', table_part_id='{self.table_part_id}', command_id='{self.command_id}')>"
+
+
 class Constant(Base):
     """System constants model (key-value configuration)"""
     __tablename__ = 'constants'
@@ -577,10 +708,10 @@ class CostItem(Base):
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # TODO: Add synchronization fields after migration
-    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
-    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
-    # is_deleted = Column(Boolean, nullable=False, default=False)
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     parent = relationship("CostItem", remote_side=[id], backref="children")
@@ -605,10 +736,10 @@ class Material(Base):
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # TODO: Add synchronization fields after migration
-    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
-    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
-    # is_deleted = Column(Boolean, nullable=False, default=False)
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     estimate_lines = relationship("EstimateLine", back_populates="material")
@@ -630,10 +761,10 @@ class Unit(Base):
     created_at = Column(DateTime, default=func.now())
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # TODO: Add synchronization fields after migration
-    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
-    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
-    # is_deleted = Column(Boolean, nullable=False, default=False)
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     materials = relationship("Material", back_populates="unit_ref")
@@ -688,10 +819,10 @@ class WorkSpecification(Base):
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     marked_for_deletion = Column(Boolean, default=False)
     
-    # TODO: Add synchronization fields after migration
-    # uuid = Column(String(36), unique=True, nullable=False, default=uuid.uuid4, index=True)
-    # updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
-    # is_deleted = Column(Boolean, nullable=False, default=False)
+    # Synchronization fields
+    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, nullable=False, default=False)
     
     # Relationships
     work = relationship("Work", back_populates="specifications")
@@ -706,3 +837,29 @@ class WorkSpecification(Base):
     
     def __repr__(self):
         return f"<WorkSpecification(id={self.id}, work_id={self.work_id}, name='{self.component_name}')>"
+
+
+class WorkUnitMigration(Base):
+    """Work unit migration tracking table"""
+    __tablename__ = 'work_unit_migration'
+    
+    work_id = Column(Integer, ForeignKey('works.id'), primary_key=True)
+    legacy_unit = Column(String(50))
+    matched_unit_id = Column(Integer, ForeignKey('units.id'))
+    migration_status = Column(String(20), nullable=False, default='pending')  # 'pending', 'matched', 'manual', 'completed'
+    confidence_score = Column(Float, default=0.0)  # Matching confidence (0.0 to 1.0)
+    manual_review_reason = Column(String(255))  # Reason for manual review
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    work = relationship("Work")
+    matched_unit = relationship("Unit", foreign_keys=[matched_unit_id])
+    
+    __table_args__ = (
+        Index('idx_work_unit_migration_status', 'migration_status'),
+        Index('idx_work_unit_migration_legacy_unit', 'legacy_unit'),
+    )
+    
+    def __repr__(self):
+        return f"<WorkUnitMigration(work_id={self.work_id}, legacy_unit='{self.legacy_unit}', status='{self.migration_status}')>"

@@ -248,3 +248,42 @@ class AuthService:
                 "role": role,
                 "is_active": bool(user[3])
             }
+
+    def has_permission(self, role: str, action: str, resource: str = None) -> bool:
+        """
+        Check if user role has permission for an action
+        
+        Args:
+            role: User role (admin, manager, foreman, executor)
+            action: Action to check (create_general, create_plan, modify_hierarchy, etc.)
+            resource: Resource type (estimate, daily_report)
+        """
+        # Admin has full access
+        if role == 'admin':
+            return True
+            
+        # Manager has full access to estimates
+        if role == 'manager':
+            if resource == 'estimate':
+                return True
+            return True
+            
+        # Foreman permissions
+        if role == 'foreman':
+            if resource == 'estimate':
+                if action == 'create_plan':
+                    return True
+                if action in ['view', 'create']: # Basic create might refer to plan?
+                    return True
+                if action in ['create_general', 'modify_hierarchy']:
+                    return False
+            return False
+            
+        # Executor permissions
+        if role == 'executor':
+            if action == 'view':
+                return True
+            return False
+            
+        return False
+

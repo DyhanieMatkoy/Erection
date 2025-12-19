@@ -48,8 +48,8 @@ class CostItemsTable(QTableWidget):
             try:
                 if hasattr(cost_item, 'unit_name') and cost_item.unit_name:
                      unit_name = cost_item.unit_name
-                elif cost_item.unit:
-                     unit_name = cost_item.unit
+                elif cost_item.unit_ref:
+                     unit_name = cost_item.unit_ref.name
             except:
                 unit_name = ""
                 

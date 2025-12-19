@@ -575,7 +575,7 @@ class TestSyncProperties:
     @given(
         packet_data=st.dictionaries(
             keys=st.sampled_from(['header', 'body']),
-            values=st.dictionaries()
+            values=st.dictionaries(keys=st.text(), values=st.text())
         )
     )
     def test_packet_validation_property(self, packet_data):

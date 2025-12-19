@@ -1,13 +1,19 @@
 """Auto-fill service for timesheets from daily reports"""
 from typing import List, Dict
 from datetime import date, timedelta
+from sqlalchemy import func
 from ..data.database_manager import DatabaseManager
-
+from ..data.models.sqlalchemy_models import DailyReport, DailyReportLine, Person, DailyReportExecutor
 
 class AutoFillService:
-    def __init__(self):
-        self.db = DatabaseManager().get_connection()
+    def __init__(self, session=None):
+        self.session = session or DatabaseManager().get_session()
+        self._owns_session = session is None
     
+    def __del__(self):
+        if self._owns_session:
+            self.session.close()
+
     def fill_from_daily_reports(
         self,
         object_id: int,
@@ -41,84 +47,63 @@ class AutoFillService:
             end_date = date(year, month + 1, 1) - timedelta(days=1)
         
         # Get daily reports for period
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT dr.id, dr.date
-            FROM daily_reports dr
-            WHERE dr.estimate_id = ?
-              AND dr.date >= ?
-              AND dr.date <= ?
-              AND dr.marked_for_deletion = 0
-            ORDER BY dr.date
-        """, (estimate_id, start_date.isoformat(), end_date.isoformat()))
+        reports = (
+            self.session.query(DailyReport)
+            .filter(
+                DailyReport.estimate_id == estimate_id,
+                DailyReport.date >= start_date,
+                DailyReport.date <= end_date,
+                DailyReport.marked_for_deletion == False
+            )
+            .order_by(DailyReport.date)
+            .all()
+        )
         
-        report_rows = cursor.fetchall()
-        
-        if not report_rows:
+        if not reports:
             return []
         
         # Aggregate hours by employee and day
         employee_hours = {}  # {employee_id: {day: hours}}
         employee_rates = {}  # {employee_id: hourly_rate}
         
-        for report_row in report_rows:
-            report_id = report_row['id']
-            report_date = date.fromisoformat(report_row['date'])
-            day = report_date.day
+        for report in reports:
+            report_day = report.date.day
             
             # Get report lines with executors
-            cursor.execute("""
-                SELECT drl.id, drl.actual_labor
-                FROM daily_report_lines drl
-                WHERE drl.daily_report_id = ?
-                  AND drl.is_group = 0
-                  AND drl.actual_labor > 0
-            """, (report_id,))
+            # We filter in python loop or can query lines directly if needed.
+            # Querying lines directly is more efficient if reports are many.
+            # But iterating report.lines is easier if lazy loading is efficient or eager loaded.
+            # Let's query lines directly for all fetched reports to avoid N+1 if not eager loaded.
             
-            line_rows = cursor.fetchall()
-            
-            for line_row in line_rows:
-                line_id = line_row['id']
-                actual_labor = line_row['actual_labor']
+            # Actually, let's just iterate report.lines as the number of reports per month isn't huge (30 max)
+            for line in report.lines:
+                if line.is_group or line.actual_labor <= 0:
+                    continue
                 
-                # Get executors for this line
-                cursor.execute("""
-                    SELECT executor_id
-                    FROM daily_report_executors
-                    WHERE report_line_id = ?
-                """, (line_id,))
+                # Get executors
+                executors = line.executors # This is a list of DailyReportExecutor objects
                 
-                executor_rows = cursor.fetchall()
-                executor_ids = [row['executor_id'] for row in executor_rows]
-                
-                if executor_ids:
-                    # Distribute hours among executors
-                    hours_per_executor = actual_labor / len(executor_ids)
+                if executors:
+                    # Distribute hours
+                    hours_per_executor = line.actual_labor / len(executors)
                     
-                    for executor_id in executor_ids:
+                    for executor_assoc in executors:
+                        executor_id = executor_assoc.executor_id
+                        
                         if executor_id not in employee_hours:
                             employee_hours[executor_id] = {}
                         
-                        if day not in employee_hours[executor_id]:
-                            employee_hours[executor_id][day] = 0
+                        if report_day not in employee_hours[executor_id]:
+                            employee_hours[executor_id][report_day] = 0
                         
-                        employee_hours[executor_id][day] += hours_per_executor
-        
+                        employee_hours[executor_id][report_day] += hours_per_executor
+
         # Get hourly rates for employees
         if employee_hours:
             employee_ids = list(employee_hours.keys())
-            placeholders = ','.join('?' * len(employee_ids))
-            
-            # Note: Assuming hourly_rate field exists in persons table
-            # If not, we'll use 0 as default
-            cursor.execute(f"""
-                SELECT id, full_name
-                FROM persons
-                WHERE id IN ({placeholders})
-            """, employee_ids)
-            
-            for row in cursor.fetchall():
-                employee_rates[row['id']] = 0  # Default rate, can be updated later
+            persons = self.session.query(Person).filter(Person.id.in_(employee_ids)).all()
+            for person in persons:
+                employee_rates[person.id] = person.hourly_rate or 0.0
         
         # Create timesheet lines
         lines = []

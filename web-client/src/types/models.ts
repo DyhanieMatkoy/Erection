@@ -23,9 +23,10 @@ export interface Work {
   id: number
   name: string
   code?: string
-  unit?: string
+  // Legacy unit column removed - only use unit_id foreign key
   unit_id?: number
   unit_name?: string
+  unit_display?: string
   price?: number
   labor_rate?: number
   parent_id: number | null
@@ -36,6 +37,9 @@ export interface Work {
   updated_at: string
   cost_items?: CostItemMaterial[]
   materials?: CostItemMaterial[]
+  hierarchy_path?: string[]
+  level?: number
+  children_count?: number
 }
 
 export interface CostItem {
@@ -137,6 +141,9 @@ export interface Estimate {
   total_labor: number
   is_posted: boolean
   posted_at: string | null
+  base_document_id?: number | null
+  base_document_name?: string | null
+  estimate_type?: 'General' | 'Plan'
   is_deleted: boolean
   created_at?: string
   updated_at?: string
@@ -293,4 +300,31 @@ export interface WorkSpecificationSummary {
   specifications: WorkSpecification[]
   totals_by_type: Record<ComponentType, number>
   total_cost: number
+}
+
+// ============================================================================
+// User UI Settings
+// ============================================================================
+
+export interface UserFormSettings {
+  id: string;
+  user_id: number;
+  form_id: string;
+  settings_type: 'columns' | 'filters' | 'commands' | 'daterange' | 'sorting';
+  settings_data: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FormCommandConfiguration {
+  id: string;
+  form_id: string;
+  user_id?: number;
+  command_id: string;
+  is_visible: boolean;
+  is_enabled: boolean;
+  position?: number;
+  is_in_more_menu: boolean;
+  created_at?: string;
+  updated_at?: string;
 }

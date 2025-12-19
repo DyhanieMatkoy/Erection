@@ -57,6 +57,28 @@
           </div>
           
           <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Тип сметы</label>
+            <select
+              v-model="filters.filters.value.estimateType"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option :value="null">Все</option>
+              <option value="General">Генеральные</option>
+              <option value="Plan">Плановые</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Основание</label>
+            <Picker
+              v-model="filters.filters.value.baseDocumentId"
+              :items="generalEstimates"
+              display-key="number"
+              placeholder="Все"
+            />
+          </div>
+          
+          <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Статус проведения</label>
             <select
               v-model="filters.filters.value.isPosted"
@@ -92,70 +114,55 @@
         </template>
         <template #bulk-actions="{ selected }">
           <div v-if="selected.length > 0" class="flex gap-2">
-            <button
+            <ActionButton
               @click="handleBulkPost"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+              icon="POST"
+              variant="success"
             >
               Провести ({{ selected.length }})
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
               @click="handleBulkUnpost"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
+              icon="UNPOST"
+              variant="warning"
             >
               Отменить проведение ({{ selected.length }})
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
               @click="handleBulkDelete"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+              icon="DELETE"
+              variant="danger"
             >
               Удалить ({{ selected.length }})
-            </button>
+            </ActionButton>
           </div>
         </template>
         <template #header-actions>
           <div class="flex gap-2">
-            <button
+            <ActionButton
+              v-if="canCreateAny"
               @click="handleCreateFromTimesheet"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+              icon="copy"
+              variant="secondary"
             >
-              <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
               Ввод на основании ежедневного отчета
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
+              v-if="canCreateAny"
               @click="handleImportExcel"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+              icon="IMPORT"
+              variant="secondary"
             >
-              <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
               Импорт из Excel
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
+              v-if="canCreateAny"
               @click="handleCreate"
-              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              icon="CREATE"
+              variant="primary"
             >
-              <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
               Создать смету
-            </button>
+            </ActionButton>
           </div>
           <input
             ref="fileInputRef"
@@ -164,6 +171,18 @@
             style="display: none"
             @change="handleFileSelected"
           />
+        </template>
+
+        <template #cell-estimate_type="{ value }">
+          <span
+            :class="[
+              'inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold',
+              value === 'Plan' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'
+            ]"
+            :title="value === 'Plan' ? 'Плановая смета' : 'Генеральная смета'"
+          >
+            {{ value === 'Plan' ? 'П' : 'Г' }}
+          </span>
         </template>
 
         <template #cell-date="{ value }">
@@ -295,27 +314,34 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTable } from '@/composables/useTable'
 import { useFilters } from '@/composables/useFilters'
 import { useReferencesStore } from '@/stores/references'
+import { useAuthStore } from '@/stores/auth'
 import * as documentsApi from '@/api/documents'
 import type { Estimate, Timesheet } from '@/types/models'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import Modal from '@/components/common/Modal.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
+import Picker from '@/components/common/Picker.vue'
 
 const router = useRouter()
 const table = useTable()
 const referencesStore = useReferencesStore()
+const authStore = useAuthStore()
+const { canCreateGeneralEstimate, canCreatePlanEstimate } = authStore
 const tableRef = ref<InstanceType<typeof DataTable>>()
 const selectedItems = ref<Estimate[]>([])
-const fileInputRef = ref<HTMLInputElement>()
 const showTimesheetModal = ref(false)
 const timesheets = ref<Timesheet[]>([])
 const selectedTimesheetId = ref<number | null>(null)
+const fileInputRef = ref<HTMLInputElement>()
+
+const canCreateAny = computed(() => canCreateGeneralEstimate || canCreatePlanEstimate)
 
 // Filters
 const filters = useFilters({
@@ -324,22 +350,26 @@ const filters = useFilters({
   objectId: null as number | null,
   customerId: null as number | null,
   isPosted: null as boolean | null,
+  estimateType: null as string | null,
+  baseDocumentId: null as number | null,
   sumFrom: null as number | null,
   sumTo: null as number | null,
 })
 
 // Reference data
 const objects = ref<any[]>([])
-const customers = ref<any[]>([])
+const customers = ref<unknown[]>([])
+const generalEstimates = ref<Estimate[]>([])
 
 const columns = [
+  { key: 'estimate_type', label: 'Тип', width: '50px', sortable: true },
   { key: 'number', label: 'Номер', width: '100px' },
   { key: 'date', label: 'Дата', width: '100px' },
   { key: 'is_posted', label: 'Статус', width: '40px', sortable: false },
   { key: 'customer_name', label: 'Заказчик', width: '200px' },
   { key: 'object_name', label: 'Объект', width: '250px' },
   { key: 'total_sum', label: 'Сумма', width: '120px' },
-  { key: 'author', label: 'Автор', width: '150px' },
+  { key: 'base_document_name', label: 'Основание', width: '150px' },
 ]
 
 function formatDate(dateString: string): string {
@@ -376,6 +406,10 @@ async function loadReferences() {
     await referencesStore.fetchCounterparties()
     objects.value = referencesStore.objects
     customers.value = referencesStore.counterparties
+    
+    // Load general estimates for filter
+    const res = await documentsApi.getEstimates({ estimate_type: 'General', page_size: 1000 })
+    generalEstimates.value = res.data
   } catch (error) {
     console.error('Failed to load references:', error)
   }

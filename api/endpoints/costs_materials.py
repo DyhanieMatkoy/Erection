@@ -473,7 +473,7 @@ async def get_work_composition(work_id: int, db: Session = Depends(get_db)):
         "work_id": work.id,
         "work_name": work.name,
         "work_code": work.code,
-        "work_unit": work.unit,
+        "work_unit": work.unit_ref.name if work.unit_ref else None,
         "work_price": work.price,
         "work_labor_rate": work.labor_rate,
         "cost_items": cost_items,

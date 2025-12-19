@@ -47,7 +47,9 @@ class EstimateRepository:
                         contractor_id=estimate.contractor_id if estimate.contractor_id else None,
                         responsible_id=estimate.responsible_id if estimate.responsible_id else None,
                         total_sum=estimate.total_sum,
-                        total_labor=estimate.total_labor
+                        total_labor=estimate.total_labor,
+                        base_document_id=estimate.base_document_id,
+                        estimate_type=estimate.estimate_type
                     )
                     session.add(estimate_model)
                     session.flush()  # Get the ID without committing
@@ -90,6 +92,8 @@ class EstimateRepository:
                     estimate_model.responsible_id = estimate.responsible_id if estimate.responsible_id else None
                     estimate_model.total_sum = estimate.total_sum
                     estimate_model.total_labor = estimate.total_labor
+                    estimate_model.base_document_id = estimate.base_document_id
+                    estimate_model.estimate_type = estimate.estimate_type
                     
                     # Delete existing lines (cascade will handle this)
                     session.query(EstimateLineModel)\
@@ -173,7 +177,9 @@ class EstimateRepository:
             contractor_id=estimate_model.contractor_id or 0,
             responsible_id=estimate_model.responsible_id or 0,
             total_sum=estimate_model.total_sum,
-            total_labor=estimate_model.total_labor
+            total_labor=estimate_model.total_labor,
+            base_document_id=estimate_model.base_document_id,
+            estimate_type=estimate_model.estimate_type
         )
         
         # Convert lines

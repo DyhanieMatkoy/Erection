@@ -116,7 +116,8 @@ class MaterialRepository:
         try:
             with self.db_manager.session_scope() as session:
                 return session.query(Material)\
-                    .filter(Material.unit == unit)\
+                    .join(Unit, Material.unit_id == Unit.id)\
+                    .filter(Unit.name == unit)\
                     .filter(Material.marked_for_deletion == False)\
                     .order_by(Material.code)\
                     .all()
@@ -167,7 +168,7 @@ class MaterialRepository:
                         existing.code = material.code
                         existing.description = material.description
                         existing.price = material.price
-                        existing.unit = material.unit
+                        # Legacy unit column removed - only use unit_id foreign key
                         existing.unit_id = material.unit_id
                         existing.marked_for_deletion = material.marked_for_deletion
                 

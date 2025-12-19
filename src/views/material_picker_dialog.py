@@ -71,7 +71,8 @@ class MaterialPickerDialog(QDialog):
             self.materials_table.setItem(row, 2, QTableWidgetItem(price_text))
             
             # Unit
-            self.materials_table.setItem(row, 3, QTableWidgetItem(material.unit or ""))
+            unit_name = material.unit_ref.name if material.unit_ref else ""
+            self.materials_table.setItem(row, 3, QTableWidgetItem(unit_name))
             
             # Store material object in item data
             self.materials_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, material)

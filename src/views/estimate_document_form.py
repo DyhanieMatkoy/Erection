@@ -8,17 +8,27 @@ from datetime import date
 from .base_document_form import BaseDocumentForm
 from .reference_picker_dialog import ReferencePickerDialog
 from ..data.database_manager import DatabaseManager
-from ..data.models.estimate import Estimate, EstimateLine
+from ..data.models.sqlalchemy_models import (
+    Estimate, EstimateLine, Work, Unit, Person, Organization, 
+    Counterparty, Object, Constant
+)
+from ..data.models.estimate import EstimateType 
 from ..services.document_posting_service import DocumentPostingService
+from ..services.hierarchy_service import HierarchyService
+from .utils.button_styler import get_button_styler
 
 
 class EstimateDocumentForm(BaseDocumentForm):
     def __init__(self, estimate_id: int = 0):
         super().__init__()
-        self.db = DatabaseManager().get_connection()
+        self.db_manager = DatabaseManager()
+        self.session = self.db_manager.get_session()
         self.estimate_id = estimate_id
         self.is_posted = False
+        self.base_document_id = None
+        self.estimate_type = EstimateType.GENERAL.value
         self.posting_service = DocumentPostingService()
+        self.hierarchy_service = HierarchyService()
         self.recalc_timer = QTimer()
         self.recalc_timer.setSingleShot(True)
         self.recalc_timer.timeout.connect(self.recalculate_totals)
@@ -26,6 +36,9 @@ class EstimateDocumentForm(BaseDocumentForm):
         self.setup_ui()
         self.setWindowTitle("Смета")
         self.resize(1000, 700)
+        
+        # Ensure session is closed
+        self.destroyed.connect(lambda: self.session.close())
         
         if estimate_id > 0:
             self.load_estimate()
@@ -53,6 +66,31 @@ class EstimateDocumentForm(BaseDocumentForm):
         self.date_edit.setDate(QDate.currentDate())
         self.date_edit.dateChanged.connect(self.on_field_changed)
         header_layout.addRow("Дата:", self.date_edit)
+        
+        # Estimate Type and Base Document
+        type_layout = QHBoxLayout()
+        self.estimate_type_label = QLabel("Генеральная смета")
+        self.estimate_type_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
+        type_layout.addWidget(self.estimate_type_label)
+        header_layout.addRow("Тип сметы:", type_layout)
+        
+        base_doc_layout = QHBoxLayout()
+        self.base_document_edit = QLineEdit()
+        self.base_document_edit.setReadOnly(True)
+        self.base_document_edit.setPlaceholderText("Выберите генеральную смету...")
+        base_doc_layout.addWidget(self.base_document_edit)
+        
+        self.base_document_button = QPushButton("...")
+        self.base_document_button.setMaximumWidth(30)
+        self.base_document_button.clicked.connect(self.on_select_base_document)
+        base_doc_layout.addWidget(self.base_document_button)
+        
+        self.clear_base_button = QPushButton("X")
+        self.clear_base_button.setMaximumWidth(30)
+        self.clear_base_button.clicked.connect(self.on_clear_base_document)
+        base_doc_layout.addWidget(self.clear_base_button)
+        
+        header_layout.addRow("Основание:", base_doc_layout)
         
         # Customer
         customer_layout = QHBoxLayout()
@@ -166,34 +204,44 @@ class EstimateDocumentForm(BaseDocumentForm):
         # Action buttons
         button_layout = QHBoxLayout()
         
-        self.save_button = QPushButton("Сохранить (Ctrl+S)")
+        # Get button styler
+        styler = get_button_styler()
+        
+        self.save_button = QPushButton()
+        styler.apply_style(self.save_button, 'save')
         self.save_button.clicked.connect(self.on_save)
         button_layout.addWidget(self.save_button)
         
-        self.save_close_button = QPushButton("Сохранить и закрыть (Ctrl+Shift+S)")
+        self.save_close_button = QPushButton()
+        styler.apply_style(self.save_close_button, 'save_and_close')
         self.save_close_button.clicked.connect(self.on_save_and_close)
         self.save_close_button.setDefault(True)  # Set as default button
         button_layout.addWidget(self.save_close_button)
         
-        self.post_button = QPushButton("Провести (Ctrl+K)")
+        self.post_button = QPushButton()
+        styler.apply_style(self.post_button, 'post')
         self.post_button.clicked.connect(self.on_post)
         button_layout.addWidget(self.post_button)
         
-        self.unpost_button = QPushButton("Отменить проведение")
+        self.unpost_button = QPushButton()
+        styler.apply_style(self.unpost_button, 'unpost')
         self.unpost_button.clicked.connect(self.on_unpost)
         button_layout.addWidget(self.unpost_button)
         
-        self.print_button = QPushButton("Печать (Ctrl+P)")
+        self.print_button = QPushButton()
+        styler.apply_style(self.print_button, 'print')
         self.print_button.clicked.connect(self.on_print)
         button_layout.addWidget(self.print_button)
         
-        self.import_button = QPushButton("Загрузить из Excel")
+        self.import_button = QPushButton()
+        styler.apply_style(self.import_button, 'import')
         self.import_button.clicked.connect(self.on_import_from_excel)
         button_layout.addWidget(self.import_button)
         
         button_layout.addStretch()
         
-        self.close_button = QPushButton("Закрыть (Esc)")
+        self.close_button = QPushButton()
+        styler.apply_style(self.close_button, 'close')
         self.close_button.clicked.connect(self.on_close)
         button_layout.addWidget(self.close_button)
         
@@ -205,87 +253,80 @@ class EstimateDocumentForm(BaseDocumentForm):
         """Create new estimate"""
         self.number_edit.setText("")
         self.date_edit.setDate(QDate.currentDate())
+        self.base_document_id = None
+        self.estimate_type = EstimateType.GENERAL.value
+        self.estimate_type_label.setText("Генеральная смета")
+        self.base_document_edit.setText("")
         
         # Load default contractor and responsible from constants
-        cursor = self.db.cursor()
-        cursor.execute("SELECT value FROM constants WHERE key = 'default_organization_id'")
-        row = cursor.fetchone()
-        if row:
-            org_id = int(row['value'])
-            self.load_organization(org_id)
+        try:
+            constant = self.session.query(Constant).filter_by(key='default_organization_id').first()
+            if constant:
+                org_id = int(constant.value)
+                self.load_organization(org_id)
+        except Exception:
+            pass # Ignore errors here
     
     def load_estimate(self):
         """Load estimate from database"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT id, number, date, customer_id, object_id, contractor_id, 
-                   responsible_id, total_sum, total_labor, is_posted
-            FROM estimates
-            WHERE id = ?
-        """, (self.estimate_id,))
-        
-        row = cursor.fetchone()
-        if not row:
-            QMessageBox.warning(self, "Ошибка", "Смета не найдена")
-            self.close()
-            return
-        
-        # Load header
-        self.number_edit.setText(row['number'] or "")
-        
-        # Parse date (handle both string and date object)
-        if isinstance(row['date'], str):
-            from datetime import datetime
-            date_obj = datetime.strptime(row['date'], "%Y-%m-%d").date()
-            self.date_edit.setDate(QDate(date_obj.year, date_obj.month, date_obj.day))
-        else:
-            self.date_edit.setDate(QDate(row['date'].year, row['date'].month, row['date'].day))
-        
-        # Load references
-        if row['customer_id']:
-            self.load_customer(row['customer_id'])
-        if row['object_id']:
-            self.load_object(row['object_id'])
-        if row['contractor_id']:
-            self.load_organization(row['contractor_id'])
-        if row['responsible_id']:
-            self.load_responsible(row['responsible_id'])
-        
-        # Load table part
-        cursor.execute("""
-            SELECT line_number, work_id, quantity, unit, price, labor_rate, sum, planned_labor
-            FROM estimate_lines
-            WHERE estimate_id = ?
-            ORDER BY line_number
-        """, (self.estimate_id,))
-        
-        self.table_part.setRowCount(0)
-        for line_row in cursor.fetchall():
-            line = EstimateLine()
-            line.line_number = line_row['line_number']
-            line.work_id = line_row['work_id']
-            line.quantity = line_row['quantity']
-            line.unit = line_row['unit']
-            line.price = line_row['price']
-            line.labor_rate = line_row['labor_rate']
-            line.sum = line_row['sum']
-            line.planned_labor = line_row['planned_labor']
+        try:
+            estimate = self.session.query(Estimate).filter_by(id=self.estimate_id).first()
+            if not estimate:
+                QMessageBox.warning(self, "Ошибка", "Смета не найдена")
+                self.close()
+                return
             
-            # Handle group rows
-            if line.work_id == -1:
-                self.add_table_row(line)
-                row = self.table_part.rowCount() - 1
-                self.table_part.setItem(row, 0, QTableWidgetItem(line.unit))  # Group name stored in unit
-            else:
-                self.add_table_row(line)
-        
-        self.update_totals()
-        self.modified = False
-        
-        # Load posting status
-        self.is_posted = (row['is_posted'] if 'is_posted' in row.keys() else 0) == 1
-        self.update_posting_state()
-    
+            # Load header
+            self.number_edit.setText(estimate.number or "")
+            self.estimate_type = estimate.estimate_type or EstimateType.GENERAL.value
+            self.estimate_type_label.setText("Генеральная смета" if self.estimate_type == EstimateType.GENERAL.value else "Плановая смета")
+            
+            # Load base document
+            if estimate.base_document_id:
+                self.base_document_id = estimate.base_document_id
+                base_doc = self.session.query(Estimate).filter_by(id=self.base_document_id).first()
+                if base_doc:
+                    self.base_document_edit.setText(base_doc.number)
+            
+            # Parse date
+            if estimate.date:
+                self.date_edit.setDate(QDate(estimate.date.year, estimate.date.month, estimate.date.day))
+            
+            # Load references
+            if estimate.customer_id:
+                self.load_customer(estimate.customer_id)
+            if estimate.object_id:
+                self.load_object(estimate.object_id)
+            if estimate.contractor_id:
+                self.load_organization(estimate.contractor_id)
+            if estimate.responsible_id:
+                self.load_responsible(estimate.responsible_id)
+            
+            # Load table part
+            self.table_part.setRowCount(0)
+            # Ensure lines are ordered
+            lines = sorted(estimate.lines, key=lambda x: x.line_number) if estimate.lines else []
+            
+            for line in lines:
+                # Handle group rows
+                if line.work_id == -1:
+                    self.add_table_row(line)
+                    row = self.table_part.rowCount() - 1
+                    self.table_part.setItem(row, 0, QTableWidgetItem(line.unit))  # Group name stored in unit
+                else:
+                    self.add_table_row(line)
+            
+            self.update_totals()
+            self.modified = False
+            
+            # Load posting status
+            self.is_posted = estimate.is_posted
+            self.update_posting_state()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить смету: {e}")
+            self.close()
+
     def add_table_row(self, line: EstimateLine = None):
         """Add row to table"""
         row = self.table_part.rowCount()
@@ -300,14 +341,14 @@ class EstimateDocumentForm(BaseDocumentForm):
                 self.table_part.setItem(row, 7, QTableWidgetItem("-1"))
             else:
                 # Load work name and code
-                cursor = self.db.cursor()
-                cursor.execute("SELECT code, name FROM works WHERE id = ?", (line.work_id,))
-                work_row = cursor.fetchone()
-                if work_row:
-                    work_name = f"[{work_row['code']}] {work_row['name']}" if work_row['code'] else work_row['name']
-                else:
-                    work_name = ""
-                
+                work_name = ""
+                if line.work: # SQLAlchemy relationship
+                     work_name = f"[{line.work.code}] {line.work.name}" if line.work.code else line.work.name
+                elif line.work_id:
+                    work = self.session.query(Work).filter_by(id=line.work_id).first()
+                    if work:
+                         work_name = f"[{work.code}] {work.name}" if work.code else work.name
+
                 self.table_part.setItem(row, 0, QTableWidgetItem(work_name))
                 self.table_part.setItem(row, 1, QTableWidgetItem(str(line.quantity)))
                 self.table_part.setItem(row, 2, QTableWidgetItem(line.unit))
@@ -511,6 +552,80 @@ class EstimateDocumentForm(BaseDocumentForm):
             self.responsible_id = selected_id
             self.responsible_edit.setText(selected_name)
             self.modified = True
+            
+    def on_select_base_document(self):
+        """Select base document (General Estimate)"""
+        # Filter: base_document_id IS NULL (General Estimates)
+        # And ID != current ID (prevent self-reference)
+        extra_filter = "base_document_id IS NULL"
+        if self.estimate_id > 0:
+             extra_filter += f" AND id != {self.estimate_id}"
+        
+        dialog = ReferencePickerDialog("estimates", "Выбор генеральной сметы", self, current_id=self.base_document_id, extra_filter=extra_filter)
+        if dialog.exec():
+             selected_id, selected_number = dialog.get_selected()
+             self.base_document_id = selected_id
+             self.base_document_edit.setText(selected_number)
+             self.estimate_type = EstimateType.PLAN.value
+             self.estimate_type_label.setText("Плановая смета")
+             self.modified = True
+             
+             # Ask to copy works
+             reply = QMessageBox.question(
+                 self, "Копирование работ",
+                 "Скопировать работы из генеральной сметы?",
+                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+             )
+             if reply == QMessageBox.StandardButton.Yes:
+                 self.copy_works_from_base()
+
+    def copy_works_from_base(self):
+        """Open dialog to copy works from base estimate"""
+        if not self.base_document_id:
+            return
+            
+        from .estimate_line_picker_dialog import EstimateLinePickerDialog
+        dialog = EstimateLinePickerDialog(self.base_document_id, self)
+        if dialog.exec():
+            selected_ids = dialog.get_selected_line_ids()
+            if not selected_ids:
+                return
+                
+            # Fetch selected lines from base estimate
+            try:
+                lines = self.session.query(EstimateLine).filter(EstimateLine.id.in_(selected_ids)).order_by(EstimateLine.line_number).all()
+                
+                rows_added = 0
+                for base_line in lines:
+                    line = EstimateLine()
+                    line.work_id = base_line.work_id
+                    line.quantity = base_line.quantity
+                    line.unit = base_line.unit
+                    line.price = base_line.price
+                    line.labor_rate = base_line.labor_rate
+                    line.sum = base_line.sum
+                    line.planned_labor = base_line.planned_labor
+                    # line.is_group = base_line.is_group # Not in model yet? Assuming it is based on logic
+                    # Just replicate the logic:
+                    
+                    self.add_table_row(line)
+                    rows_added += 1
+                
+                if rows_added > 0:
+                    self.update_totals()
+                    self.modified = True
+                    QMessageBox.information(self, "Успех", f"Скопировано строк: {rows_added}")
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Не удалось скопировать работы: {e}")
+
+    def on_clear_base_document(self):
+        """Clear base document selection"""
+        if self.base_document_id:
+            self.base_document_id = None
+            self.base_document_edit.setText("")
+            self.estimate_type = EstimateType.GENERAL.value
+            self.estimate_type_label.setText("Генеральная смета")
+            self.modified = True
     
     def on_select_work(self, row):
         """Select work for table row"""
@@ -521,17 +636,8 @@ class EstimateDocumentForm(BaseDocumentForm):
         # Use substring search if user typed something
         work_name_item = self.table_part.item(row, 0)
         search_text = ""
-        # Only use text as search if we don't have a valid ID, or if the text doesn't look like the resolved name
-        # But ReferencePickerDialog logic is: if search_text is present, it searches.
-        # If we want to position on current item, we should NOT pass search_text unless the user actually typed a search query.
-        # Here we assume if they clicked the button, they might want to see the current item selected.
-        # If they typed something and hit enter/button, they might want search.
-        # Let's try to be smart: if we have a valid ID, prioritize selection. 
-        # But the user might have edited the text to search for something else.
-        
         if work_name_item and work_name_item.text():
              text = work_name_item.text()
-             # If text contains code in brackets [code], it's likely a resolved name
              if not (text.startswith("[") and "]" in text) and current_work_id is None:
                  search_text = text
 
@@ -543,18 +649,10 @@ class EstimateDocumentForm(BaseDocumentForm):
             selected_id, selected_name = dialog.get_selected()
             
             # Load work details
-            cursor = self.db.cursor()
-            cursor.execute("""
-                SELECT w.code, w.price, w.labor_rate, w.unit_id, u.name as unit_name
-                FROM works w
-                LEFT JOIN units u ON w.unit_id = u.id
-                WHERE w.id = ?
-            """, (selected_id,))
-            work_row = cursor.fetchone()
-            
-            if work_row:
+            work = self.session.query(Work).filter_by(id=selected_id).first()
+            if work:
                 # Format name with code if available
-                display_name = f"[{work_row['code']}] {selected_name}" if work_row['code'] else selected_name
+                display_name = f"[{work.code}] {selected_name}" if work.code else selected_name
                 
                 self.table_part.blockSignals(True)
                 self.table_part.setItem(row, 0, QTableWidgetItem(display_name))
@@ -564,9 +662,11 @@ class EstimateDocumentForm(BaseDocumentForm):
                 if not quantity_item or not quantity_item.text() or quantity_item.text() == "0":
                     self.table_part.setItem(row, 1, QTableWidgetItem("1.0"))
                 
-                self.table_part.setItem(row, 2, QTableWidgetItem(work_row['unit_name'] or ""))
-                self.table_part.setItem(row, 3, QTableWidgetItem(str(work_row['price'] or 0)))
-                self.table_part.setItem(row, 4, QTableWidgetItem(str(work_row['labor_rate'] or 0)))
+                unit_name = work.unit_ref.name if work.unit_ref else ""
+                
+                self.table_part.setItem(row, 2, QTableWidgetItem(unit_name))
+                self.table_part.setItem(row, 3, QTableWidgetItem(str(work.price or 0)))
+                self.table_part.setItem(row, 4, QTableWidgetItem(str(work.labor_rate or 0)))
                 self.table_part.setItem(row, 7, QTableWidgetItem(str(selected_id)))
                 self.table_part.blockSignals(False)
                 
@@ -575,43 +675,35 @@ class EstimateDocumentForm(BaseDocumentForm):
     
     def load_customer(self, customer_id):
         """Load customer by ID"""
-        cursor = self.db.cursor()
-        cursor.execute("SELECT name FROM counterparties WHERE id = ?", (customer_id,))
-        row = cursor.fetchone()
-        if row:
+        cp = self.session.query(Counterparty).filter_by(id=customer_id).first()
+        if cp:
             self.customer_id = customer_id
-            self.customer_edit.setText(row['name'])
+            self.customer_edit.setText(cp.name)
     
     def load_object(self, object_id):
         """Load object by ID"""
-        cursor = self.db.cursor()
-        cursor.execute("SELECT name FROM objects WHERE id = ?", (object_id,))
-        row = cursor.fetchone()
-        if row:
+        obj = self.session.query(Object).filter_by(id=object_id).first()
+        if obj:
             self.object_id = object_id
-            self.object_edit.setText(row['name'])
+            self.object_edit.setText(obj.name)
     
     def load_organization(self, org_id):
         """Load organization by ID"""
-        cursor = self.db.cursor()
-        cursor.execute("SELECT name, default_responsible_id FROM organizations WHERE id = ?", (org_id,))
-        row = cursor.fetchone()
-        if row:
+        org = self.session.query(Organization).filter_by(id=org_id).first()
+        if org:
             self.contractor_id = org_id
-            self.contractor_edit.setText(row['name'])
+            self.contractor_edit.setText(org.name)
             
             # Load default responsible
-            if row['default_responsible_id'] and not self.responsible_id:
-                self.load_responsible(row['default_responsible_id'])
+            if org.default_responsible_id and not self.responsible_id:
+                self.load_responsible(org.default_responsible_id)
     
     def load_responsible(self, person_id):
         """Load responsible by ID"""
-        cursor = self.db.cursor()
-        cursor.execute("SELECT full_name FROM persons WHERE id = ?", (person_id,))
-        row = cursor.fetchone()
-        if row:
+        person = self.session.query(Person).filter_by(id=person_id).first()
+        if person:
             self.responsible_id = person_id
-            self.responsible_edit.setText(row['full_name'])
+            self.responsible_edit.setText(person.full_name)
     
     def on_field_changed(self):
         """Handle field change"""
@@ -628,24 +720,34 @@ class EstimateDocumentForm(BaseDocumentForm):
             QMessageBox.warning(self, "Ошибка", "Выберите заказчика")
             return
         
-        # Prepare estimate data
-        estimate = Estimate()
-        estimate.id = self.estimate_id
-        estimate.number = self.number_edit.text()
-        estimate.date = self.date_edit.date().toPyDate()
-        estimate.customer_id = self.customer_id
-        estimate.object_id = self.object_id
-        estimate.contractor_id = self.contractor_id
-        estimate.responsible_id = self.responsible_id
-        
-        # Calculate totals
-        total_sum = 0.0
-        total_labor = 0.0
-        
-        # Prepare lines
-        estimate.lines = []
-        for row in range(self.table_part.rowCount()):
-            try:
+        try:
+            if self.estimate_id == 0:
+                estimate = Estimate()
+                self.session.add(estimate)
+            else:
+                estimate = self.session.query(Estimate).filter_by(id=self.estimate_id).first()
+                if not estimate:
+                     QMessageBox.critical(self, "Ошибка", "Смета не найдена для сохранения")
+                     return
+
+            estimate.number = self.number_edit.text()
+            estimate.date = self.date_edit.date().toPyDate()
+            estimate.customer_id = self.customer_id
+            estimate.object_id = self.object_id
+            estimate.contractor_id = self.contractor_id
+            estimate.responsible_id = self.responsible_id
+            estimate.base_document_id = self.base_document_id
+            estimate.estimate_type = self.estimate_type
+            
+            # Calculate totals and Rebuild lines
+            total_sum = 0.0
+            total_labor = 0.0
+            
+            # Remove existing lines (the naive way: delete all and recreate)
+            # SQLAlchemy handles this if we clear the list and add new objects
+            estimate.lines = []
+            
+            for row in range(self.table_part.rowCount()):
                 work_id_item = self.table_part.item(row, 7)
                 if not work_id_item or not work_id_item.text() or work_id_item.text() == "0":
                     continue
@@ -687,52 +789,13 @@ class EstimateDocumentForm(BaseDocumentForm):
                 estimate.lines.append(line)
                 total_sum += line.sum
                 total_labor += line.planned_labor
-            except (ValueError, AttributeError) as e:
-                QMessageBox.warning(self, "Ошибка", f"Ошибка в строке {row + 1}: {str(e)}")
-                return
-        
-        estimate.total_sum = total_sum
-        estimate.total_labor = total_labor
-        
-        # Save to database
-        try:
-            cursor = self.db.cursor()
             
-            if self.estimate_id == 0:
-                # Insert new
-                cursor.execute("""
-                    INSERT INTO estimates (number, date, customer_id, object_id, contractor_id, 
-                                         responsible_id, total_sum, total_labor)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (estimate.number, estimate.date, estimate.customer_id, estimate.object_id,
-                      estimate.contractor_id, estimate.responsible_id, estimate.total_sum, estimate.total_labor))
-                
-                self.estimate_id = cursor.lastrowid
-            else:
-                # Update existing
-                cursor.execute("""
-                    UPDATE estimates 
-                    SET number = ?, date = ?, customer_id = ?, object_id = ?, 
-                        contractor_id = ?, responsible_id = ?, total_sum = ?, total_labor = ?,
-                        modified_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                """, (estimate.number, estimate.date, estimate.customer_id, estimate.object_id,
-                      estimate.contractor_id, estimate.responsible_id, estimate.total_sum, 
-                      estimate.total_labor, self.estimate_id))
-                
-                # Delete old lines
-                cursor.execute("DELETE FROM estimate_lines WHERE estimate_id = ?", (self.estimate_id,))
+            estimate.total_sum = total_sum
+            estimate.total_labor = total_labor
             
-            # Insert lines
-            for line in estimate.lines:
-                cursor.execute("""
-                    INSERT INTO estimate_lines (estimate_id, line_number, work_id, quantity, unit,
-                                               price, labor_rate, sum, planned_labor)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (self.estimate_id, line.line_number, line.work_id, line.quantity, line.unit,
-                      line.price, line.labor_rate, line.sum, line.planned_labor))
+            self.session.commit()
             
-            self.db.commit()
+            self.estimate_id = estimate.id
             self.modified = False
             
             # Show message in status bar instead of modal dialog
@@ -741,7 +804,7 @@ class EstimateDocumentForm(BaseDocumentForm):
             self.setWindowTitle(f"Смета {estimate.number}")
             
         except Exception as e:
-            self.db.rollback()
+            self.session.rollback()
             QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {str(e)}")
     
     def on_import_from_excel(self):
@@ -778,35 +841,35 @@ class EstimateDocumentForm(BaseDocumentForm):
         try:
             # Import estimate
             service = ExcelImportService()
-            estimate, error = service.import_estimate(file_path)
+            estimate_dto, error = service.import_estimate(file_path)
             
             if error:
                 QMessageBox.critical(self, "Ошибка импорта", error)
                 return
             
-            if not estimate:
+            if not estimate_dto:
                 QMessageBox.warning(self, "Ошибка", "Не удалось импортировать смету")
                 return
             
             # Load imported data into form
-            self.number_edit.setText(estimate.number or "")
+            self.number_edit.setText(estimate_dto.number or "")
             
-            if estimate.date:
-                self.date_edit.setDate(QDate(estimate.date.year, estimate.date.month, estimate.date.day))
+            if estimate_dto.date:
+                self.date_edit.setDate(QDate(estimate_dto.date.year, estimate_dto.date.month, estimate_dto.date.day))
             
             # Load references
-            if estimate.customer_id:
-                self.load_customer(estimate.customer_id)
-            if estimate.object_id:
-                self.load_object(estimate.object_id)
-            if estimate.contractor_id:
-                self.load_organization(estimate.contractor_id)
-            if estimate.responsible_id:
-                self.load_responsible(estimate.responsible_id)
+            if estimate_dto.customer_id:
+                self.load_customer(estimate_dto.customer_id)
+            if estimate_dto.object_id:
+                self.load_object(estimate_dto.object_id)
+            if estimate_dto.contractor_id:
+                self.load_organization(estimate_dto.contractor_id)
+            if estimate_dto.responsible_id:
+                self.load_responsible(estimate_dto.responsible_id)
             
             # Clear and load table
             self.table_part.setRowCount(0)
-            for line in estimate.lines:
+            for line in estimate_dto.lines:
                 self.add_table_row(line)
             
             self.update_totals()
@@ -814,9 +877,9 @@ class EstimateDocumentForm(BaseDocumentForm):
             
             QMessageBox.information(
                 self, "Успех",
-                f"Импортировано строк: {len(estimate.lines)}\n"
-                f"Итого сумма: {estimate.total_sum:.2f}\n"
-                f"Итого трудозатраты: {estimate.total_labor:.2f}"
+                f"Импортировано строк: {len(estimate_dto.lines)}\n"
+                f"Итого сумма: {estimate_dto.total_sum:.2f}\n"
+                f"Итого трудозатраты: {estimate_dto.total_labor:.2f}"
             )
             
         except Exception as e:

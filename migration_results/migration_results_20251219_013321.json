@@ -1,0 +1,47 @@
+{
+  "migration_result": {
+    "migration_plan": {
+      "analysis": {
+        "total_works_needing_migration": 0,
+        "unique_legacy_units": 0,
+        "legacy_unit_strings": [],
+        "work_count_by_unit": {},
+        "existing_migration_entries": 0,
+        "analysis_timestamp": "2025-12-19T01:33:21.892329"
+      },
+      "match_statistics": {
+        "total": 0,
+        "exact": 0,
+        "fuzzy_high": 0,
+        "fuzzy_medium": 0,
+        "similarity": 0,
+        "no_match": 0,
+        "no_input": 0
+      },
+      "batch_size": 100,
+      "estimated_batches": 0,
+      "estimated_processing_time_minutes": 0,
+      "plan_created_at": "2025-12-19T01:33:21.892478"
+    },
+    "batches_executed": 0,
+    "total_works_processed": 0,
+    "batch_results": [],
+    "final_statistics": {
+      "status_counts": {},
+      "total_legacy_works": 0,
+      "total_entries": 0,
+      "average_confidence": 0.0,
+      "completion_percentage": 0.0
+    },
+    "total_processing_time_seconds": 0.005115,
+    "migration_completed_at": "2025-12-19T01:33:21.895207"
+  },
+  "application_result": {
+    "applied_count": 0,
+    "errors": [],
+    "auto_apply_threshold": 0.9,
+    "processing_time_seconds": 0.001637,
+    "application_completed_at": "2025-12-19T01:33:21.902475"
+  },
+  "timestamp": "20251219_013321"
+}

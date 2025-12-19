@@ -1,0 +1,11 @@
+{
+  "timestamp": "20251218_234226",
+  "backup_type": "pre_migration",
+  "files": {
+    "database": "migration_backups\\database_backup_20251218_234226.db",
+    "works_data": "migration_backups\\works_data_20251218_234226.json"
+  },
+  "metadata": {
+    "original_db_path": "construction.db"
+  }
+}

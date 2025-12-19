@@ -100,9 +100,7 @@ class MaterialForm(QDialog):
                     if self.unit_combo.itemData(i) == self.material.unit_id:
                         self.unit_combo.setCurrentIndex(i)
                         break
-            elif self.material.unit:
-                # Set custom text for backward compatibility
-                self.unit_combo.setCurrentText(self.material.unit)
+            # Legacy unit column removed - only use unit_id foreign key
     
     def save(self):
         """Save material"""
@@ -127,11 +125,9 @@ class MaterialForm(QDialog):
         unit_id = self.unit_combo.currentData()
         if unit_id:
             self.material.unit_id = unit_id
-            # Also set unit text for backward compatibility
-            self.material.unit = self.unit_combo.currentText()
+            # Legacy unit column removed - only use unit_id foreign key
         else:
-            # Custom unit text
-            self.material.unit = self.unit_combo.currentText().strip()
+            # Custom unit - should create a new unit record instead of using legacy column
             self.material.unit_id = None
         
         # Save

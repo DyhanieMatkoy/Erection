@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from api.dependencies.database import get_db_manager
-from api.dependencies.auth import get_current_user, require_auth
+from api.dependencies.auth import get_current_user
 from src.data.database_manager import DatabaseManager
 from src.data.models import User
 from src.data.sync_manager import get_sync_manager

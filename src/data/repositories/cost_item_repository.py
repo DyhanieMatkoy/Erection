@@ -180,7 +180,7 @@ class CostItemRepository:
                         existing.description = cost_item.description
                         existing.is_folder = cost_item.is_folder
                         existing.price = cost_item.price
-                        existing.unit = cost_item.unit
+                        # Legacy unit column removed - only use unit_id foreign key
                         existing.unit_id = cost_item.unit_id
                         existing.labor_coefficient = cost_item.labor_coefficient
                         existing.marked_for_deletion = cost_item.marked_for_deletion

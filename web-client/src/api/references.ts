@@ -64,7 +64,13 @@ export const updateObject = (id: number, data: Partial<Object>) =>
 export const deleteObject = (id: number) => deleteReference('objects', id)
 
 // Works
-export const getWorks = (params?: PaginationParams) => getReferences<Work>('works', params)
+export interface WorksParams extends PaginationParams {
+  include_unit_info?: boolean
+  hierarchy_mode?: 'flat' | 'tree' | 'breadcrumb'
+  parent_id?: number | null
+}
+
+export const getWorks = (params?: WorksParams) => getReferences<Work>('works', params)
 
 export const getWork = (id: number) => getReference<Work>('works', id)
 
@@ -244,3 +250,60 @@ export const permanentDeleteMarkedPersons = () => permanentDeleteMarked('persons
 
 export const permanentDeleteMarkedOrganizations = () =>
   permanentDeleteMarked('organizations')
+
+// ============================================================================
+// Work Unit Migration API
+// ============================================================================
+
+export interface MigrationStatus {
+  total_works: number
+  migrated_count: number
+  pending_count: number
+  manual_review_count: number
+  matched_count: number
+  completion_percentage: number
+  total_entries: number
+  status_breakdown: Record<string, number>
+}
+
+export interface MigrationEntry {
+  work_id: number
+  legacy_unit: string
+  matched_unit_id?: number | null
+  confidence_score?: number
+  manual_review_reason?: string
+  migration_status: string
+  work_name: string
+  matched_unit_name?: string | null
+}
+
+export interface StartMigrationRequest {
+  auto_apply_threshold?: number
+  batch_size?: number
+}
+
+export interface ManualReviewRequest {
+  work_id: number
+  unit_id?: number | null
+  action: 'approve' | 'reject' | 'assign'
+}
+
+export async function getMigrationStatus(): Promise<MigrationStatus> {
+  const response = await apiClient.get<{ success: boolean; data: MigrationStatus }>('/references/works/migration-status')
+  return response.data.data
+}
+
+export async function startMigration(request: StartMigrationRequest): Promise<{ success: boolean; message: string; data: any }> {
+  const response = await apiClient.post<{ success: boolean; message: string; data: any }>('/references/works/migrate-units', request)
+  return response.data
+}
+
+export async function getPendingMigrations(limit: number = 50): Promise<MigrationEntry[]> {
+  const response = await apiClient.get<{ success: boolean; data: MigrationEntry[] }>(`/references/works/migration-pending?limit=${limit}`)
+  return response.data.data
+}
+
+export async function reviewMigration(request: ManualReviewRequest): Promise<{ success: boolean; message: string }> {
+  const response = await apiClient.post<{ success: boolean; message: string }>('/references/works/migration-review', request)
+  return response.data
+}

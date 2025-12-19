@@ -13,7 +13,8 @@
         error ? 'border-red-300' : 'border-gray-300',
         disabled ? 'bg-gray-100 cursor-not-allowed' : ''
       ]"
-      @click="open = !open"
+      @click="toggleDropdown"
+      @keydown="handleKeydown"
     >
       <span v-if="selectedItem" class="block truncate">{{ selectedItem[displayKey] }}</span>
       <span v-else class="block truncate text-gray-400">{{ placeholder }}</span>
@@ -39,11 +40,13 @@
         <!-- Search -->
         <div class="sticky top-0 bg-white px-2 py-2 border-b border-gray-200">
           <input
+            ref="searchInputRef"
             v-model="searchQuery"
             type="text"
             placeholder="Поиск..."
             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             @click.stop
+            @keydown.esc="open = false"
           />
         </div>
 
@@ -172,9 +175,13 @@ watch(open, async (newValue) => {
   if (!newValue) {
     searchQuery.value = ''
   } else {
+    await nextTick()
+    
+    // Focus search input
+    searchInputRef.value?.focus()
+
     // Scroll to selected item when opened
     if (props.modelValue && itemRefs.value[props.modelValue]) {
-      await nextTick()
       const el = itemRefs.value[props.modelValue]
       if (el) {
         el.scrollIntoView({ block: 'nearest' })

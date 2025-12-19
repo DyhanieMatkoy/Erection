@@ -10,20 +10,24 @@ from .base_document_form import BaseDocumentForm
 from .reference_picker_dialog import ReferencePickerDialog
 from .employee_picker_dialog import EmployeePickerDialog
 from ..data.database_manager import DatabaseManager
-from ..data.repositories.timesheet_repository import TimesheetRepository
+from ..data.models.sqlalchemy_models import Timesheet, TimesheetLine, Object, Estimate, Person
 from ..services.timesheet_posting_service import TimesheetPostingService
 from ..services.auto_fill_service import AutoFillService
+from ..services.timesheet_export_import_service import TimesheetExportImportService
 
 
 class TimesheetDocumentForm(BaseDocumentForm):
     def __init__(self, timesheet_id: int = 0):
         super().__init__()
-        self.db = DatabaseManager().get_connection()
+        self.db_manager = DatabaseManager()
+        self.session = self.db_manager.get_session()
         self.timesheet_id = timesheet_id
         self.is_posted = False
-        self.repository = TimesheetRepository()
+        
         self.posting_service = TimesheetPostingService()
-        self.auto_fill_service = AutoFillService()
+        self.auto_fill_service = AutoFillService(session=self.session)
+        self.export_import_service = TimesheetExportImportService()
+        
         self.recalc_timer = QTimer()
         self.recalc_timer.setSingleShot(True)
         self.recalc_timer.timeout.connect(self.recalculate_totals)
@@ -31,6 +35,9 @@ class TimesheetDocumentForm(BaseDocumentForm):
         self.setup_ui()
         self.setWindowTitle("Табель")
         self.resize(1200, 700)
+        
+        # Ensure session is closed
+        self.destroyed.connect(lambda: self.session.close())
         
         if timesheet_id > 0:
             self.load_timesheet()
@@ -96,6 +103,24 @@ class TimesheetDocumentForm(BaseDocumentForm):
         self.fill_button = QPushButton("Заполнить из ежедневных отчетов")
         self.fill_button.clicked.connect(self.on_fill_from_daily_reports)
         toolbar_layout.addWidget(self.fill_button)
+        
+        toolbar_layout.addWidget(QLabel("|"))  # Separator
+        
+        self.export_excel_button = QPushButton("Экспорт в Excel")
+        self.export_excel_button.clicked.connect(self.on_export_excel)
+        toolbar_layout.addWidget(self.export_excel_button)
+        
+        self.import_excel_button = QPushButton("Импорт из Excel")
+        self.import_excel_button.clicked.connect(self.on_import_excel)
+        toolbar_layout.addWidget(self.import_excel_button)
+        
+        self.export_json_button = QPushButton("Экспорт в JSON")
+        self.export_json_button.clicked.connect(self.on_export_json)
+        toolbar_layout.addWidget(self.export_json_button)
+        
+        self.import_json_button = QPushButton("Импорт из JSON")
+        self.import_json_button.clicked.connect(self.on_import_json)
+        toolbar_layout.addWidget(self.import_json_button)
         
         toolbar_layout.addStretch()
         layout.addLayout(toolbar_layout)
@@ -206,13 +231,7 @@ class TimesheetDocumentForm(BaseDocumentForm):
     
     def create_new_timesheet(self):
         """Create new timesheet"""
-        # Generate number
-        cursor = self.db.cursor()
-        cursor.execute("SELECT MAX(CAST(number AS INTEGER)) as max_num FROM timesheets")
-        row = cursor.fetchone()
-        max_num = row['max_num'] if row and row['max_num'] else 0
-        self.number_edit.setText(str(max_num + 1))
-        
+        self.number_edit.setText("")
         self.date_edit.setDate(QDate.currentDate())
         self.object_id = 0
         self.object_edit.setText("")
@@ -226,39 +245,63 @@ class TimesheetDocumentForm(BaseDocumentForm):
     
     def load_timesheet(self):
         """Load timesheet from database"""
-        timesheet = self.repository.find_by_id(self.timesheet_id)
-        
-        if not timesheet:
-            QMessageBox.warning(self, "Ошибка", "Табель не найден")
+        try:
+            timesheet = self.session.query(Timesheet).filter_by(id=self.timesheet_id).first()
+            if not timesheet:
+                QMessageBox.warning(self, "Ошибка", "Табель не найден")
+                self.close()
+                return
+            
+            # Load header
+            self.number_edit.setText(timesheet.number or "")
+            
+            if timesheet.date:
+                self.date_edit.setDate(QDate(timesheet.date.year, timesheet.date.month, timesheet.date.day))
+            
+            # Load references
+            if timesheet.object_id:
+                self.load_object(timesheet.object_id)
+            if timesheet.estimate_id:
+                self.load_estimate(timesheet.estimate_id)
+            
+            self.foreman_id = timesheet.foreman_id
+            
+            # Ensure foreman_id is set, fallback to current user if not available
+            if not self.foreman_id:
+                from ..services.auth_service import AuthService
+                auth_service = AuthService()
+                self.foreman_id = auth_service.current_person_id()
+            
+            # Load lines
+            # Convert ORM lines to list of dicts for populate_table
+            lines_data = []
+            for line in timesheet.lines:
+                # Build days dict
+                days = {}
+                for day in range(1, 32):
+                    val = getattr(line, f'day_{day:02d}', 0)
+                    if val > 0:
+                        days[day] = val
+                
+                line_data = {
+                    'employee_id': line.employee_id,
+                    'employee_name': line.employee.full_name if line.employee else "",
+                    'hourly_rate': line.hourly_rate,
+                    'days': days,
+                    'total_hours': line.total_hours,
+                    'total_amount': line.total_amount
+                }
+                lines_data.append(line_data)
+            
+            self.populate_table(lines_data)
+            
+            self.modified = False
+            self.is_posted = timesheet.is_posted
+            self.update_posting_state()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить табель: {e}")
             self.close()
-            return
-        
-        # Load header
-        self.number_edit.setText(timesheet['number'] or "")
-        
-        # Parse date
-        if isinstance(timesheet['date'], str):
-            date_obj = datetime.strptime(timesheet['date'], "%Y-%m-%d").date()
-            self.date_edit.setDate(QDate(date_obj.year, date_obj.month, date_obj.day))
-        else:
-            self.date_edit.setDate(QDate(timesheet['date'].year, timesheet['date'].month, timesheet['date'].day))
-        
-        # Load references
-        if timesheet.get('object_id'):
-            self.load_object(timesheet['object_id'])
-        if timesheet.get('estimate_id'):
-            self.load_estimate(timesheet['estimate_id'])
-        
-        self.foreman_id = timesheet.get('foreman_id')
-        
-        # Load lines
-        self.populate_table(timesheet.get('lines', []))
-        
-        self.modified = False
-        
-        # Load posting status
-        self.is_posted = timesheet.get('is_posted', False)
-        self.update_posting_state()
     
     def populate_table(self, lines):
         """Populate table with lines"""
@@ -283,10 +326,8 @@ class TimesheetDocumentForm(BaseDocumentForm):
             # Load employee name
             employee_name = line.get('employee_name', '')
             if not employee_name and line.get('employee_id'):
-                cursor = self.db.cursor()
-                cursor.execute("SELECT full_name FROM persons WHERE id = ?", (line['employee_id'],))
-                emp_row = cursor.fetchone()
-                employee_name = emp_row['full_name'] if emp_row else ""
+                person = self.session.query(Person).filter_by(id=line['employee_id']).first()
+                employee_name = person.full_name if person else ""
             
             # Column 0: Employee name
             self.table_part.setItem(row, 0, QTableWidgetItem(employee_name))
@@ -318,7 +359,7 @@ class TimesheetDocumentForm(BaseDocumentForm):
             # Empty row
             for col in range(self.table_part.columnCount()):
                 self.table_part.setItem(row, col, QTableWidgetItem(""))
-
+    
     def on_add_employee(self):
         """Add employee to table"""
         dialog = EmployeePickerDialog(self, self.foreman_id)
@@ -544,7 +585,7 @@ class TimesheetDocumentForm(BaseDocumentForm):
             return
         
         # Use estimate list form for selection
-        from .estimate_list_form import EstimateListForm
+        from .estimate_list_form_v2 import EstimateListFormV2
         
         dialog = QDialog(self)
         dialog.setWindowTitle("Выбор сметы")
@@ -554,11 +595,11 @@ class TimesheetDocumentForm(BaseDocumentForm):
         layout = QVBoxLayout()
         
         # Create list form
-        list_form = EstimateListForm()
+        list_form = EstimateListFormV2(user_id=4)  # Use admin user as fallback
         list_form.setParent(dialog)
         layout.addWidget(list_form)
         
-        # Add buttons
+        # Buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         
@@ -574,46 +615,32 @@ class TimesheetDocumentForm(BaseDocumentForm):
         dialog.setLayout(layout)
         
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            current_row = list_form.table_view.currentRow()
-            if current_row >= 0:
-                estimate_id_item = list_form.table_view.item(current_row, 0)
-                if estimate_id_item:
-                    estimate_id = int(estimate_id_item.text())
-                    self.load_estimate(estimate_id)
-                    self.modified = True
+            selected_ids = list_form.controller.get_selection()
+            if selected_ids:
+                estimate_id = selected_ids[0]
+                self.load_estimate(estimate_id)
+                self.modified = True
     
     def load_object(self, object_id):
         """Load object by ID"""
-        cursor = self.db.cursor()
-        cursor.execute("SELECT name FROM objects WHERE id = ?", (object_id,))
-        row = cursor.fetchone()
-        if row:
+        obj = self.session.query(Object).filter_by(id=object_id).first()
+        if obj:
             self.object_id = object_id
-            self.object_edit.setText(row['name'])
+            self.object_edit.setText(obj.name)
     
     def load_estimate(self, estimate_id):
         """Load estimate by ID"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT e.number, e.date, o.name as object_name
-            FROM estimates e
-            LEFT JOIN objects o ON e.object_id = o.id
-            WHERE e.id = ?
-        """, (estimate_id,))
-        row = cursor.fetchone()
-        if row:
+        est = self.session.query(Estimate).filter_by(id=estimate_id).first()
+        if est:
             self.estimate_id = estimate_id
-            display_text = f"{row['number']} от {row['date']}"
-            if row['object_name']:
-                display_text += f" - {row['object_name']}"
+            display_text = f"{est.number} от {est.date}"
+            if est.object:
+                display_text += f" - {est.object.name}"
             self.estimate_edit.setText(display_text)
             
             # Also set object if not set
-            if not self.object_id:
-                cursor.execute("SELECT object_id FROM estimates WHERE id = ?", (estimate_id,))
-                est_row = cursor.fetchone()
-                if est_row and est_row['object_id']:
-                    self.load_object(est_row['object_id'])
+            if not self.object_id and est.object_id:
+                self.load_object(est.object_id)
     
     def on_field_changed(self):
         """Handle field change"""
@@ -635,47 +662,68 @@ class TimesheetDocumentForm(BaseDocumentForm):
             return
         
         # Get table data
-        lines = self.get_table_data()
+        lines_data = self.get_table_data()
         
-        if not lines:
+        if not lines_data:
             QMessageBox.warning(self, "Ошибка", 
                               "Добавьте хотя бы одного сотрудника")
             return
         
-        # Prepare timesheet data
-        current_date = self.date_edit.date().toPyDate()
-        month_year = f"{current_date.year:04d}-{current_date.month:02d}"
-        
-        timesheet_data = {
-            'number': self.number_edit.text(),
-            'date': current_date.isoformat(),
-            'object_id': self.object_id,
-            'estimate_id': self.estimate_id,
-            'month_year': month_year,
-            'lines': lines
-        }
-        
-        # Save to database
         try:
             if self.timesheet_id == 0:
-                # Create new
-                result = self.repository.create(timesheet_data, self.foreman_id)
-                self.timesheet_id = result['id']
+                timesheet = Timesheet()
+                self.session.add(timesheet)
             else:
-                # Update existing
-                result = self.repository.update(self.timesheet_id, timesheet_data)
+                timesheet = self.session.query(Timesheet).filter_by(id=self.timesheet_id).first()
+                if not timesheet:
+                     QMessageBox.critical(self, "Ошибка", "Табель не найден")
+                     return
+
+            timesheet.number = self.number_edit.text()
+            timesheet.date = self.date_edit.date().toPyDate()
+            timesheet.object_id = self.object_id
+            timesheet.estimate_id = self.estimate_id
+            timesheet.foreman_id = self.foreman_id
+            timesheet.month_year = f"{timesheet.date.year:04d}-{timesheet.date.month:02d}"
             
+            # Update lines
+            timesheet.lines = []
+            
+            for data in lines_data:
+                line = TimesheetLine()
+                line.line_number = data['line_number']
+                line.employee_id = data['employee_id']
+                line.hourly_rate = data['hourly_rate']
+                
+                # Map days
+                days = data['days']
+                total_hours = 0
+                
+                # Initialize all days to 0 first
+                for d in range(1, 32):
+                    setattr(line, f'day_{d:02d}', 0.0)
+                
+                for day, hours in days.items():
+                    setattr(line, f'day_{day:02d}', hours)
+                    total_hours += hours
+                
+                line.total_hours = total_hours
+                line.total_amount = total_hours * line.hourly_rate
+                
+                timesheet.lines.append(line)
+            
+            self.session.commit()
+            self.timesheet_id = timesheet.id
             self.modified = False
             
-            # Show message in status bar
             if self.parent() and hasattr(self.parent().parent(), 'statusBar'):
                 self.parent().parent().statusBar().showMessage("Табель сохранен", 3000)
             
-            self.setWindowTitle(f"Табель {self.number_edit.text()}")
+            self.setWindowTitle(f"Табель {timesheet.number}")
             
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", 
-                               f"Ошибка при сохранении: {str(e)}")
+            self.session.rollback()
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {str(e)}")
     
     def on_post(self):
         """Post timesheet"""
@@ -793,3 +841,131 @@ class TimesheetDocumentForm(BaseDocumentForm):
         
         # Call parent handler for other shortcuts
         super().keyPressEvent(event)
+    
+    def on_export_excel(self):
+        """Export timesheet to Excel"""
+        if self.timesheet_id == 0:
+            QMessageBox.warning(self, "Предупреждение", "Сначала сохраните табель")
+            return
+        
+        from PyQt6.QtWidgets import QFileDialog
+        
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Экспорт табеля в Excel",
+            f"Табель_{self.number_edit.text()}.xlsx",
+            "Excel files (*.xlsx)"
+        )
+        
+        if file_path:
+            try:
+                success = self.export_import_service.export_timesheet_to_excel(self.timesheet_id, file_path)
+                if success:
+                    QMessageBox.information(self, "Успешно", f"Табель экспортирован в файл:\n{file_path}")
+                else:
+                    QMessageBox.critical(self, "Ошибка", "Не удалось экспортировать табель")
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Ошибка экспорта: {str(e)}")
+    
+    def on_import_excel(self):
+        """Import timesheet from Excel"""
+        if self.timesheet_id == 0:
+            QMessageBox.warning(self, "Предупреждение", "Сначала сохраните табель")
+            return
+        
+        if self.is_posted:
+            QMessageBox.warning(self, "Предупреждение", "Нельзя импортировать данные в проведенный документ")
+            return
+        
+        from PyQt6.QtWidgets import QFileDialog
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Импорт табеля из Excel",
+            "",
+            "Excel files (*.xlsx)"
+        )
+        
+        if file_path:
+            reply = QMessageBox.question(
+                self,
+                "Подтверждение импорта",
+                "Импорт заменит все существующие данные в табличной части.\nПродолжить?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                try:
+                    success, message = self.export_import_service.import_timesheet_from_excel(file_path, self.timesheet_id)
+                    if success:
+                        QMessageBox.information(self, "Успешно", message)
+                        self.load_timesheet()  # Reload data
+                    else:
+                        QMessageBox.critical(self, "Ошибка", message)
+                except Exception as e:
+                    QMessageBox.critical(self, "Ошибка", f"Ошибка импорта: {str(e)}")
+    
+    def on_export_json(self):
+        """Export timesheet to JSON"""
+        if self.timesheet_id == 0:
+            QMessageBox.warning(self, "Предупреждение", "Сначала сохраните табель")
+            return
+        
+        from PyQt6.QtWidgets import QFileDialog
+        
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Экспорт табеля в JSON",
+            f"Табель_{self.number_edit.text()}.json",
+            "JSON files (*.json)"
+        )
+        
+        if file_path:
+            try:
+                success = self.export_import_service.export_timesheet_to_json_file(self.timesheet_id, file_path)
+                if success:
+                    QMessageBox.information(self, "Успешно", f"Табель экспортирован в файл:\n{file_path}")
+                else:
+                    QMessageBox.critical(self, "Ошибка", "Не удалось экспортировать табель")
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Ошибка экспорта: {str(e)}")
+    
+    def on_import_json(self):
+        """Import timesheet from JSON"""
+        if self.timesheet_id == 0:
+            QMessageBox.warning(self, "Предупреждение", "Сначала сохраните табель")
+            return
+        
+        if self.is_posted:
+            QMessageBox.warning(self, "Предупреждение", "Нельзя импортировать данные в проведенный документ")
+            return
+        
+        from PyQt6.QtWidgets import QFileDialog
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Импорт табеля из JSON",
+            "",
+            "JSON files (*.json)"
+        )
+        
+        if file_path:
+            reply = QMessageBox.question(
+                self,
+                "Подтверждение импорта",
+                "Импорт заменит все существующие данные в табличной части.\nПродолжить?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                try:
+                    success, message = self.export_import_service.import_timesheet_from_json_file(file_path, self.timesheet_id)
+                    if success:
+                        QMessageBox.information(self, "Успешно", message)
+                        self.load_timesheet()  # Reload data
+                    else:
+                        QMessageBox.critical(self, "Ошибка", message)
+                except Exception as e:
+                    QMessageBox.critical(self, "Ошибка", f"Ошибка импорта: {str(e)}")

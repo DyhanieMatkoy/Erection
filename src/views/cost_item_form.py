@@ -29,6 +29,19 @@ class CostItemForm(QDialog):
         
         if cost_item_id:
             self.load_cost_item()
+        elif self.parent_id or self.is_folder_init:
+            self.setup_new_item()
+
+    def setup_new_item(self):
+        """Setup new item defaults"""
+        if self.parent_id:
+             for i in range(self.parent_combo.count()):
+                if self.parent_combo.itemData(i) == self.parent_id:
+                    self.parent_combo.setCurrentIndex(i)
+                    break
+        
+        if self.is_folder_init:
+            self.is_folder_check.setChecked(True)
     
     def setup_ui(self):
         """Setup UI"""
@@ -250,9 +263,7 @@ class CostItemForm(QDialog):
                     if self.unit_combo.itemData(i) == self.cost_item.unit_id:
                         self.unit_combo.setCurrentIndex(i)
                         break
-            elif self.cost_item.unit:
-                # Set custom text for backward compatibility
-                self.unit_combo.setCurrentText(self.cost_item.unit)
+            # Legacy unit column removed - only use unit_id foreign key
             
             self.labor_spin.setValue(self.cost_item.labor_coefficient or 0)
             
@@ -316,11 +327,9 @@ class CostItemForm(QDialog):
         unit_id = self.unit_combo.currentData()
         if unit_id:
             self.cost_item.unit_id = unit_id
-            # Also set unit text for backward compatibility
-            self.cost_item.unit = self.unit_combo.currentText()
+            # Legacy unit column removed - only use unit_id foreign key
         else:
-            # Custom unit text
-            self.cost_item.unit = self.unit_combo.currentText().strip()
+            # Custom unit - should create a new unit record instead of using legacy column
             self.cost_item.unit_id = None
         
         self.cost_item.labor_coefficient = self.labor_spin.value()

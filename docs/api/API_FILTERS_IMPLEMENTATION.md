@@ -170,7 +170,7 @@ async def list_works(
     
     # НОВЫЕ параметры
     category: Optional[str] = None,        # Категория
-    unit: Optional[str] = None,            # Единица измерения
+    unit: Optional[str] = None,            # Единица измерения (по unit_id foreign key)
     price_from: Optional[float] = None,    # Стоимость от
     price_to: Optional[float] = None,      # Стоимость до
     is_deleted: Optional[bool] = None,     # Статус (активен/удален)

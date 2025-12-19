@@ -77,7 +77,7 @@ class SyncService(QObject):
         self.status_callbacks: List[Callable[[str], None]] = []
         
         # Initialize node registration
-        self._register_node()
+        # self._register_node()
     
     def _register_node(self) -> None:
         """Register this client node with the server"""

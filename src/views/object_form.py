@@ -8,17 +8,20 @@ from ..data.database_manager import DatabaseManager
 
 
 class ObjectForm(QWidget):
-    def __init__(self, object_id=0, is_group=False):
+    def __init__(self, object_id=0, is_group=False, parent_id=None):
         super().__init__()
         self.object_id = object_id
         self.is_group = is_group
         self.db = DatabaseManager().get_connection()
         self.is_modified = False
         self.owner_id = 0
+        self.parent_id = parent_id # Initial parent_id
         self.setup_ui()
         
         if self.object_id > 0:
             self.load_data()
+        elif self.parent_id:
+             self.load_parent(self.parent_id)
     
     def setup_ui(self):
         """Setup UI"""
@@ -42,7 +45,7 @@ class ObjectForm(QWidget):
         parent_layout = QHBoxLayout()
         self.parent_edit = QLineEdit()
         self.parent_edit.setReadOnly(True)
-        self.parent_id = None
+        # self.parent_id = None # Do not overwrite initialized value
         parent_layout.addWidget(self.parent_edit)
         self.parent_button = QPushButton("...")
         self.parent_button.setMaximumWidth(30)
@@ -170,7 +173,7 @@ class ObjectForm(QWidget):
             if self.object_id > 0:
                 cursor.execute("""
                     UPDATE objects
-                    SET name = ?, owner_id = ?, address = ?, parent_id = ?, is_group = ?
+                    SET name = ?, owner_id = ?, address = ?, parent_id = ?, is_group = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 """, (self.name_edit.text(),
                       self.owner_id if self.owner_id > 0 else None,
@@ -179,14 +182,17 @@ class ObjectForm(QWidget):
                       1 if self.is_group else 0,
                       self.object_id))
             else:
+                import uuid
+                new_uuid = str(uuid.uuid4())
                 cursor.execute("""
-                    INSERT INTO objects (name, owner_id, address, parent_id, is_group)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO objects (name, owner_id, address, parent_id, is_group, uuid, updated_at, is_deleted)
+                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0)
                 """, (self.name_edit.text(),
                       self.owner_id if self.owner_id > 0 else None,
                       self.address_edit.text(),
                       self.parent_id,
-                      1 if self.is_group else 0))
+                      1 if self.is_group else 0,
+                      new_uuid))
                 self.object_id = cursor.lastrowid
             
             self.db.commit()

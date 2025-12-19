@@ -1,0 +1,39 @@
+================================================================================
+AUTOMATED UNIT MIGRATION EXECUTION REPORT
+Generated: 2025-12-19T01:33:21.903315
+================================================================================
+
+MIGRATION EXECUTION SUMMARY
+--------------------------------------------------------------------------------
+Batches executed: 0
+Total works processed: 0
+Processing time: 0.01 seconds
+
+FINAL STATISTICS
+--------------------------------------------------------------------------------
+Total migration entries: 0
+Average confidence score: 0.0
+Completion percentage: 0.0%
+
+Status breakdown:
+
+AUTO-APPLICATION RESULTS
+--------------------------------------------------------------------------------
+Migrations applied: 0
+Threshold used: 0.9
+Errors: 0
+
+CURRENT SYSTEM STATE
+--------------------------------------------------------------------------------
+Works with legacy units: 0
+Migration entries: 0
+Overall completion: 0.0%
+
+NEXT STEPS
+--------------------------------------------------------------------------------
+1. Review manual review items and resolve them
+2. Validate migration results using validation script
+3. Update all systems to use new unit structure
+4. Remove legacy unit column after validation
+
+================================================================================

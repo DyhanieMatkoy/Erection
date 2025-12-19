@@ -121,7 +121,7 @@ class ExcelImportService:
                 
                 line.work_id = work_id
                 line.quantity = quantity
-                line.unit = unit
+                line.unit = unit  # This is EstimateLine.unit, not Work.unit
                 line.price = price
                 line.labor_rate = labor_rate
                 line.sum = quantity * price

@@ -3,20 +3,26 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QFormLayout, QHBoxLayout,
                               QLineEdit, QPushButton, QMessageBox)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
+import uuid
+from datetime import datetime
 from ..data.database_manager import DatabaseManager
+from .components.reference_field import ReferenceField
 
 
 class CounterpartyForm(QWidget):
-    def __init__(self, counterparty_id=0, is_group=False):
+    def __init__(self, counterparty_id=0, is_group=False, parent_id=None):
         super().__init__()
         self.counterparty_id = counterparty_id
         self.is_group = is_group
         self.db = DatabaseManager().get_connection()
         self.is_modified = False
+        self.parent_id = parent_id
         self.setup_ui()
         
         if self.counterparty_id > 0:
             self.load_data()
+        elif self.parent_id:
+            self.load_parent(self.parent_id)
     
     def setup_ui(self):
         """Setup UI"""
@@ -37,20 +43,10 @@ class CounterpartyForm(QWidget):
         form_layout.addRow("Наименование*:", self.name_edit)
         
         # Parent group
-        parent_layout = QHBoxLayout()
-        self.parent_edit = QLineEdit()
-        self.parent_edit.setReadOnly(True)
-        self.parent_id = None
-        parent_layout.addWidget(self.parent_edit)
-        self.parent_button = QPushButton("...")
-        self.parent_button.setMaximumWidth(30)
-        self.parent_button.clicked.connect(self.on_select_parent)
-        parent_layout.addWidget(self.parent_button)
-        self.clear_parent_button = QPushButton("✕")
-        self.clear_parent_button.setMaximumWidth(30)
-        self.clear_parent_button.clicked.connect(self.on_clear_parent)
-        parent_layout.addWidget(self.clear_parent_button)
-        form_layout.addRow("Родитель:", parent_layout)
+        self.parent_field = ReferenceField()
+        self.parent_field.set_reference("counterparties", "Выбор родительской группы")
+        self.parent_field.value_changed.connect(self.on_parent_changed)
+        form_layout.addRow("Родитель:", self.parent_field)
         
         self.inn_edit = QLineEdit()
         self.inn_edit.textChanged.connect(lambda: setattr(self, 'is_modified', True))
@@ -94,7 +90,7 @@ class CounterpartyForm(QWidget):
         cursor.execute("""
             SELECT name, inn, contact_person, phone, parent_id, is_group
             FROM counterparties
-            WHERE id = ?
+            WHERE id = ? AND marked_for_deletion = 0
         """, (self.counterparty_id,))
         
         row = cursor.fetchone()
@@ -118,28 +114,21 @@ class CounterpartyForm(QWidget):
         row = cursor.fetchone()
         if row:
             self.parent_id = parent_id
-            self.parent_edit.setText(row['name'])
+            self.parent_field.set_value(parent_id, row['name'])
     
-    def on_select_parent(self):
-        """Select parent"""
-        from .reference_picker_dialog import ReferencePickerDialog
-        dialog = ReferencePickerDialog("counterparties", "Выбор родительской группы", self, current_id=self.parent_id)
-        if dialog.exec():
-            selected_id, selected_name = dialog.get_selected()
-            
-            # Check for circular reference
-            if self.counterparty_id > 0 and selected_id == self.counterparty_id:
-                QMessageBox.warning(self, "Ошибка", "Нельзя выбрать элемент в качестве родителя самого себя")
-                return
-            
-            self.parent_id = selected_id
-            self.parent_edit.setText(selected_name)
-            self.is_modified = True
-    
-    def on_clear_parent(self):
-        """Clear parent"""
-        self.parent_id = None
-        self.parent_edit.setText("")
+    def on_parent_changed(self, ref_id: int, name: str):
+        """Handle parent field value change"""
+        # Check for circular reference
+        if self.counterparty_id > 0 and ref_id == self.counterparty_id:
+            QMessageBox.warning(self, "Ошибка", "Нельзя выбрать элемент в качестве родителя самого себя")
+            # Reset to previous value
+            if self.parent_id:
+                self.load_parent(self.parent_id)
+            else:
+                self.parent_field.clear_value()
+            return
+        
+        self.parent_id = ref_id if ref_id > 0 else None
         self.is_modified = True
     
     def save_data(self):
@@ -155,18 +144,21 @@ class CounterpartyForm(QWidget):
             if self.counterparty_id > 0:
                 cursor.execute("""
                     UPDATE counterparties
-                    SET name = ?, inn = ?, contact_person = ?, phone = ?, parent_id = ?, is_group = ?
+                    SET name = ?, inn = ?, contact_person = ?, phone = ?, parent_id = ?, is_group = ?, 
+                        uuid = ?, updated_at = ?
                     WHERE id = ?
                 """, (self.name_edit.text(), self.inn_edit.text(),
                       self.contact_person_edit.text(), self.phone_edit.text(),
-                      self.parent_id, 1 if self.is_group else 0, self.counterparty_id))
+                      self.parent_id, 1 if self.is_group else 0,
+                      str(uuid.uuid4()), datetime.now(), self.counterparty_id))
             else:
                 cursor.execute("""
-                    INSERT INTO counterparties (name, inn, contact_person, phone, parent_id, is_group)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO counterparties (name, inn, contact_person, phone, parent_id, is_group, uuid, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (self.name_edit.text(), self.inn_edit.text(),
                       self.contact_person_edit.text(), self.phone_edit.text(),
-                      self.parent_id, 1 if self.is_group else 0))
+                      self.parent_id, 1 if self.is_group else 0, 
+                      str(uuid.uuid4()), datetime.now()))
                 self.counterparty_id = cursor.lastrowid
             
             self.db.commit()
@@ -223,5 +215,17 @@ class CounterpartyForm(QWidget):
             self.on_save_and_close()
         elif event.key() == Qt.Key.Key_Escape:
             self.on_close()
+        elif event.key() == Qt.Key.Key_F2:
+            # F2 - if parent field has focus, start search editing
+            if self.parent_field.hasFocus():
+                self.parent_field.start_search_edit()
+            else:
+                super().keyPressEvent(event)
+        elif event.key() == Qt.Key.Key_F4:
+            # F4 - if parent field has focus, open selector
+            if self.parent_field.hasFocus():
+                self.parent_field.open_selector()
+            else:
+                super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)

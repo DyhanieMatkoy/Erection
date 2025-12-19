@@ -17,6 +17,7 @@ from src.data.connection_string_builder import ConnectionStringBuilder
 
 # Import all models to register them with Base
 from src.data.models import sqlalchemy_models  # noqa: F401
+from src.data.models import ui_settings  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

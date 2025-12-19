@@ -29,10 +29,11 @@ from .reference_picker_dialog import ReferencePickerDialog
 from .cost_item_form import CostItemForm
 
 class WorkForm(QWidget):
-    def __init__(self, work_id=0, is_group=False):
+    def __init__(self, work_id=0, is_group=False, parent_id=None):
         super().__init__()
         self.work_id = work_id
         self.is_group = is_group
+        self.parent_id = parent_id
         
         self.db_manager = DatabaseManager()
         self.db = self.db_manager.get_connection()
@@ -69,6 +70,8 @@ class WorkForm(QWidget):
         
         if self.work_id > 0:
             self.load_data()
+        elif self.parent_id:
+            self.load_parent(self.parent_id)
 
     def setup_ui(self):
         if self.work_id == 0:
@@ -133,7 +136,7 @@ class WorkForm(QWidget):
         parent_layout = QHBoxLayout()
         self.parent_edit = QLineEdit()
         self.parent_edit.setReadOnly(True)
-        self.parent_id = None
+        # self.parent_id = None
         parent_layout.addWidget(self.parent_edit)
         self.parent_button = QPushButton("...")
         self.parent_button.setMaximumWidth(30)
@@ -817,7 +820,7 @@ class WorkForm(QWidget):
             
             work.name = self.name_edit.text()
             work.code = self.code_edit.text()
-            work.unit = self.unit_edit.text() # Keep legacy string populated for now
+            # Legacy unit column removed - only use unit_id foreign key
             work.unit_id = self.unit_id
             work.price = self.price_spinbox.value()
             work.labor_rate = self.labor_rate_spinbox.value()

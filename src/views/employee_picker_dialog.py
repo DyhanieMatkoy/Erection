@@ -1,8 +1,9 @@
 """Employee picker dialog with brigade filter"""
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTableWidget,
-                              QTableWidgetItem, QHeaderView, QPushButton, QCheckBox)
+                              QTableWidgetItem, QHeaderView, QPushButton, QCheckBox, QMessageBox)
 from PyQt6.QtCore import Qt
 from ..data.database_manager import DatabaseManager
+from ..data.models.sqlalchemy_models import Person, UserSetting
 
 
 class EmployeePickerDialog(QDialog):
@@ -21,7 +22,8 @@ class EmployeePickerDialog(QDialog):
             show_all: Override for show all setting (None = load from settings)
         """
         super().__init__(parent)
-        self.db = DatabaseManager().get_connection()
+        self.db_manager = DatabaseManager()
+        self.session = self.db_manager.get_session()
         self.foreman_id = foreman_id
         self.selected_id = None
         self.selected_name = None
@@ -35,6 +37,9 @@ class EmployeePickerDialog(QDialog):
         
         self.setup_ui()
         self.load_data()
+        
+        # Ensure session is closed
+        self.finished.connect(lambda: self.session.close())
     
     def setup_ui(self):
         """Setup UI with table, filter checkbox, and buttons"""
@@ -86,55 +91,39 @@ class EmployeePickerDialog(QDialog):
         self.load_data()
     
     def load_data(self):
-        """Load employees based on filter setting
-        
-        If show_all is False and foreman_id is set:
-            - Show employees where parent_id = foreman_id (brigade members)
-            - Show employees where parent_id IS NULL (employees without supervisor)
-        
-        If show_all is True or foreman_id is not set:
-            - Show all employees
-        """
-        cursor = self.db.cursor()
-        
-        if self.show_all or not self.foreman_id:
-            # Show all employees
-            cursor.execute("""
-                SELECT id, full_name, position, hourly_rate
-                FROM persons
-                WHERE marked_for_deletion = 0
-                ORDER BY full_name
-            """)
-        else:
-            # Show only brigade members (where foreman is supervisor) or employees without supervisor
-            cursor.execute("""
-                SELECT id, full_name, position, hourly_rate
-                FROM persons
-                WHERE marked_for_deletion = 0
-                  AND (parent_id = ? OR parent_id IS NULL)
-                ORDER BY full_name
-            """, (self.foreman_id,))
-        
-        rows = cursor.fetchall()
-        self.table.setRowCount(len(rows))
-        
-        for row_idx, row in enumerate(rows):
-            # Column 0: Name
-            self.table.setItem(row_idx, 0, QTableWidgetItem(row['full_name'] or ""))
+        """Load employees based on filter setting"""
+        try:
+            query = self.session.query(Person).filter(Person.marked_for_deletion == False)
             
-            # Column 1: Position
-            self.table.setItem(row_idx, 1, QTableWidgetItem(row['position'] or ""))
+            if not self.show_all and self.foreman_id:
+                # Show only brigade members (parent_id = foreman_id) OR those with no parent (parent_id IS NULL)
+                from sqlalchemy import or_
+                query = query.filter(or_(Person.parent_id == self.foreman_id, Person.parent_id == None))
             
-            # Column 2: Rate
-            rate = row['hourly_rate'] if row['hourly_rate'] else 0.0
-            self.table.setItem(row_idx, 2, QTableWidgetItem(f"{rate:.2f}"))
+            persons = query.order_by(Person.full_name).all()
             
-            # Column 3: ID (hidden)
-            self.table.setItem(row_idx, 3, QTableWidgetItem(str(row['id'])))
-        
-        # Select first row if available
-        if self.table.rowCount() > 0:
-            self.table.selectRow(0)
+            self.table.setRowCount(len(persons))
+            
+            for row_idx, person in enumerate(persons):
+                # Column 0: Name
+                self.table.setItem(row_idx, 0, QTableWidgetItem(person.full_name or ""))
+                
+                # Column 1: Position
+                self.table.setItem(row_idx, 1, QTableWidgetItem(person.position or ""))
+                
+                # Column 2: Rate
+                rate = person.hourly_rate if person.hourly_rate else 0.0
+                self.table.setItem(row_idx, 2, QTableWidgetItem(f"{rate:.2f}"))
+                
+                # Column 3: ID (hidden)
+                self.table.setItem(row_idx, 3, QTableWidgetItem(str(person.id)))
+            
+            # Select first row if available
+            if self.table.rowCount() > 0:
+                self.table.selectRow(0)
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить сотрудников: {e}")
     
     def on_row_double_clicked(self, index):
         """Handle row double click - select employee"""
@@ -161,68 +150,53 @@ class EmployeePickerDialog(QDialog):
                 self.accept()
     
     def get_selected(self):
-        """Get selected employee as tuple (id, name, rate)
-        
-        Returns:
-            Tuple of (employee_id, employee_name, hourly_rate)
-        """
+        """Get selected employee as tuple (id, name, rate)"""
         return self.selected_id, self.selected_name, self.selected_rate
     
     def _load_filter_preference(self):
-        """Load filter preference from user settings
+        """Load filter preference from user settings"""
+        # For simplicity, let's use a fixed user ID (e.g., 1) or assume global settings if user_id is not available easily.
+        # Ideally, we should pass user_id to the dialog or use AuthService.
+        # But UserSetting has (user_id, form_name, setting_key) as PK.
+        # Let's try to get current user from AuthService if possible, or fallback to admin user.
         
-        Returns:
-            bool: True if show all employees, False if show only brigade
-        """
-        cursor = self.db.cursor()
+        user_id = 4  # Use admin user as fallback
+        # TODO: integrate auth service properly
         
-        # Check if settings table exists
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name='user_settings'
-        """)
+        setting = self.session.query(UserSetting).filter_by(
+            user_id=user_id,
+            form_name='EmployeePickerDialog',
+            setting_key='show_all'
+        ).first()
         
-        if not cursor.fetchone():
-            # Settings table doesn't exist, return default (False = show only brigade)
-            return False
+        if setting:
+            return setting.setting_value == '1'
         
-        # Load setting
-        cursor.execute("""
-            SELECT setting_value FROM user_settings
-            WHERE setting_key = 'employee_picker_show_all'
-        """)
-        
-        row = cursor.fetchone()
-        if row:
-            return row['setting_value'] == '1' or row['setting_value'].lower() == 'true'
-        
-        # Default: show only brigade
         return False
     
     def _save_filter_preference(self, show_all):
-        """Save filter preference to user settings
+        """Save filter preference to user settings"""
+        user_id = 1
         
-        Args:
-            show_all: True if show all employees, False if show only brigade
-        """
-        cursor = self.db.cursor()
-        
-        # Ensure settings table exists
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS user_settings (
-                setting_key TEXT PRIMARY KEY,
-                setting_value TEXT
-            )
-        """)
-        
-        # Save or update setting
-        setting_value = '1' if show_all else '0'
-        cursor.execute("""
-            INSERT OR REPLACE INTO user_settings (setting_key, setting_value)
-            VALUES ('employee_picker_show_all', ?)
-        """, (setting_value,))
-        
-        self.db.commit()
+        try:
+            setting = self.session.query(UserSetting).filter_by(
+                user_id=user_id,
+                form_name='EmployeePickerDialog',
+                setting_key='show_all'
+            ).first()
+            
+            if not setting:
+                setting = UserSetting(
+                    user_id=user_id,
+                    form_name='EmployeePickerDialog',
+                    setting_key='show_all'
+                )
+                self.session.add(setting)
+            
+            setting.setting_value = '1' if show_all else '0'
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
     
     def keyPressEvent(self, event):
         """Handle key press events"""

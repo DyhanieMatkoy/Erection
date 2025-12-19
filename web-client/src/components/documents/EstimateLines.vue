@@ -292,9 +292,9 @@ function handleWorkSelect(work: Work) {
       const unit = props.units.find(u => u.id === work.unit_id)
       unitName = unit?.name || ''
     }
-    // Final fallback to legacy unit field
+    // Legacy unit column removed - only use unit_id foreign key
     if (!unitName) {
-      unitName = work.unit || ''
+      unitName = ''
     }
     line.unit = unitName
     line.price = work.price || 0

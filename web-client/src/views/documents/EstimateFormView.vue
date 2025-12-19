@@ -49,6 +49,45 @@
             :error="errors.date"
           />
 
+          <!-- Estimate Type Selection -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Тип сметы</label>
+            <div class="flex items-center space-x-4">
+              <label class="inline-flex items-center">
+                <input
+                  type="radio"
+                  v-model="formData.estimate_type"
+                  value="General"
+                  :disabled="formData.is_posted || (!!formData.base_document_id && formData.base_document_id > 0) || !canCreateGeneralEstimate"
+                  class="form-radio h-4 w-4 text-blue-600"
+                />
+                <span class="ml-2 text-sm text-gray-700">Генеральная</span>
+              </label>
+              <label class="inline-flex items-center">
+                <input
+                  type="radio"
+                  v-model="formData.estimate_type"
+                  value="Plan"
+                  :disabled="formData.is_posted || !canCreatePlanEstimate"
+                  class="form-radio h-4 w-4 text-blue-600"
+                />
+                <span class="ml-2 text-sm text-gray-700">Плановая</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Base Document Selection -->
+          <Picker
+            v-model="formData.base_document_id"
+            label="Основание (Генеральная смета)"
+            :items="generalEstimates"
+            display-key="number"
+            :disabled="formData.is_posted || !canModifyHierarchy"
+            :error="errors.base_document_id"
+            @update:model-value="handleBaseDocumentChange"
+            :required="!canCreateGeneralEstimate"
+          />
+
           <Picker
             v-model="formData.customer_id"
             label="Заказчик"
@@ -185,7 +224,7 @@ import PrintDialog from '@/components/documents/PrintDialog.vue'
 const router = useRouter()
 const route = useRoute()
 const referencesStore = useReferencesStore()
-const { isAdmin } = useAuth()
+const { isAdmin, canModifyHierarchy, canCreateGeneralEstimate, canCreatePlanEstimate } = useAuth()
 const { printEstimate } = usePrint()
 
 const isNew = computed(() => route.params.id === 'new')
@@ -202,10 +241,13 @@ const formData = ref<Estimate>({
   total_labor: 0,
   is_posted: false,
   posted_at: null,
+  base_document_id: null,
+  estimate_type: 'General',
   is_deleted: false,
   lines: [],
 })
 
+const generalEstimates = ref<Estimate[]>([])
 const errors = ref<Record<string, string>>({})
 const submitError = ref('')
 const submitting = ref(false)
@@ -232,6 +274,18 @@ function handleTotalsUpdate(totals: { sum: number; labor: number }) {
 }
 
 async function loadData() {
+  // Load general estimates for picker
+  try {
+    const response = await documentsApi.getEstimates({
+      estimate_type: 'General',
+      page: 1,
+      page_size: 1000 // Load all general estimates
+    })
+    generalEstimates.value = response.data
+  } catch (e) {
+    console.error('Failed to load general estimates', e)
+  }
+
   if (isNew.value) return
 
   try {
@@ -276,6 +330,39 @@ async function loadFromTimesheet(timesheetId: number) {
   } catch (error: unknown) {
     const apiError = error as { response?: { data?: { detail?: string } } }
     alert(apiError.response?.data?.detail || 'Ошибка при загрузке ежедневного отчета')
+  }
+}
+
+function handleBaseDocumentChange(newValue: number | null) {
+  if (newValue) {
+    formData.value.estimate_type = 'Plan'
+    // Optional: Ask to copy works
+    if (confirm('Скопировать работы из генеральной сметы?')) {
+      copyWorksFromBase(newValue)
+    }
+  } else {
+    formData.value.estimate_type = 'General'
+  }
+}
+
+async function copyWorksFromBase(baseId: number) {
+  // Simple implementation: fetch base estimate and copy all lines
+  try {
+    const baseEstimate = await documentsApi.getEstimate(baseId)
+    if (baseEstimate.lines) {
+      formData.value.lines = baseEstimate.lines.map(line => ({
+        ...line,
+        id: undefined, // Clear ID to create new lines
+        estimate_id: undefined
+      }))
+      
+      // Update totals
+      formData.value.total_sum = baseEstimate.total_sum
+      formData.value.total_labor = baseEstimate.total_labor
+    }
+  } catch (e) {
+    console.error('Failed to copy works', e)
+    alert('Ошибка при копировании работ')
   }
 }
 
@@ -376,6 +463,11 @@ onMounted(async () => {
   const timesheetId = route.query.timesheet_id
   if (isNew.value && timesheetId) {
     await loadFromTimesheet(Number(timesheetId))
+  }
+
+  // Set default type based on permissions
+  if (isNew.value && !canCreateGeneralEstimate.value && canCreatePlanEstimate.value) {
+    formData.value.estimate_type = 'Plan'
   }
 })
 </script>

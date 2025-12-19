@@ -77,41 +77,37 @@
         </template>
         <template #bulk-actions="{ selected }">
           <div v-if="selected.length > 0" class="flex gap-2">
-            <button
+            <ActionButton
               @click="handleBulkPost"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+              icon="POST"
+              variant="success"
             >
               Провести ({{ selected.length }})
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
               @click="handleBulkUnpost"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
+              icon="UNPOST"
+              variant="warning"
             >
               Отменить проведение ({{ selected.length }})
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
               @click="handleBulkDelete"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+              icon="DELETE"
+              variant="danger"
             >
               Удалить ({{ selected.length }})
-            </button>
+            </ActionButton>
           </div>
         </template>
         <template #header-actions>
-          <button
+          <ActionButton
             @click="handleCreate"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            icon="CREATE"
+            variant="primary"
           >
-            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
             Создать табель
-          </button>
+          </ActionButton>
         </template>
 
         <template #cell-date="{ value }">
@@ -169,6 +165,7 @@ import type { Timesheet, Estimate } from '@/types/models'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
+import ActionButton from '@/components/common/ActionButton.vue'
 
 const router = useRouter()
 const table = useTable()

@@ -61,12 +61,15 @@ def get_estimate_with_joins(db, estimate_id: int) -> Optional[dict]:
             c.name as customer_name,
             o.name as object_name,
             org.name as contractor_name,
-            p.full_name as responsible_name
+            p.full_name as responsible_name,
+            base.number as base_document_number,
+            base.number as base_document_name
         FROM estimates e
         LEFT JOIN counterparties c ON e.customer_id = c.id
         LEFT JOIN objects o ON e.object_id = o.id
         LEFT JOIN organizations org ON e.contractor_id = org.id
         LEFT JOIN persons p ON e.responsible_id = p.id
+        LEFT JOIN estimates base ON e.base_document_id = base.id
         WHERE e.id = ?
     """, (estimate_id,))
     
@@ -97,12 +100,14 @@ def get_estimate_lines_with_joins(db, estimate_id: int) -> List[dict]:
 @router.get("/estimates")
 async def list_estimates(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=100),
+    page_size: int = Query(50, ge=1, le=1000),
     search: Optional[str] = None,
     object_id: Optional[int] = None,
     responsible_id: Optional[int] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
+    estimate_type: Optional[str] = Query(None, regex="^(General|Plan)$"),
+    base_document_id: Optional[int] = None,
     sort_by: str = Query("date", regex="^(date|number|id)$"),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
     current_user: UserInfo = Depends(get_current_user),
@@ -119,6 +124,14 @@ async def list_estimates(
         where_clauses.append("(e.number LIKE ? OR c.name LIKE ? OR o.name LIKE ?)")
         search_param = f"%{search}%"
         params.extend([search_param, search_param, search_param])
+    
+    if estimate_type:
+        where_clauses.append("e.estimate_type = ?")
+        params.append(estimate_type)
+        
+    if base_document_id:
+        where_clauses.append("e.base_document_id = ?")
+        params.append(base_document_id)
     
     if object_id:
         where_clauses.append("e.object_id = ?")
@@ -157,12 +170,15 @@ async def list_estimates(
             c.name as customer_name,
             o.name as object_name,
             org.name as contractor_name,
-            p.full_name as responsible_name
+            p.full_name as responsible_name,
+            base.number as base_document_number,
+            base.number as base_document_name
         FROM estimates e
         LEFT JOIN counterparties c ON e.customer_id = c.id
         LEFT JOIN objects o ON e.object_id = o.id
         LEFT JOIN organizations org ON e.contractor_id = org.id
         LEFT JOIN persons p ON e.responsible_id = p.id
+        LEFT JOIN estimates base ON e.base_document_id = base.id
         WHERE {where_sql}
         ORDER BY e.{sort_by} {sort_order.upper()}
         LIMIT ? OFFSET ?
@@ -401,6 +417,23 @@ async def create_estimate(
     db = Depends(get_db_connection)
 ):
     """Create new estimate with lines"""
+    # Permission checks
+    from api.services.auth_service import AuthService
+    auth_service = AuthService()
+    
+    if data.estimate_type == 'General':
+        if not auth_service.has_permission(current_user.role, 'create_general', 'estimate'):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Permission denied: Cannot create General Estimate"
+            )
+    elif data.estimate_type == 'Plan':
+        if not auth_service.has_permission(current_user.role, 'create_plan', 'estimate'):
+             raise HTTPException(
+                 status_code=status.HTTP_403_FORBIDDEN, 
+                 detail="Permission denied: Cannot create Plan Estimate"
+             )
+    
     cursor = db.cursor()
     
     try:
@@ -411,12 +444,13 @@ async def create_estimate(
         cursor.execute("""
             INSERT INTO estimates (
                 number, date, customer_id, object_id, contractor_id, 
-                responsible_id, total_sum, total_labor
+                responsible_id, total_sum, total_labor, base_document_id, estimate_type
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data.number, data.date.isoformat(), data.customer_id, data.object_id,
-            data.contractor_id, data.responsible_id, total_sum, total_labor
+            data.contractor_id, data.responsible_id, total_sum, total_labor,
+            data.base_document_id, data.estimate_type
         ))
         
         estimate_id = cursor.lastrowid
@@ -436,7 +470,22 @@ async def create_estimate(
                 1 if line.is_group else 0, line.group_name, line.parent_group_id,
                 1 if line.is_collapsed else 0
             ))
-        
+            
+        # Log audit
+        try:
+            from src.services.audit_service import AuditService
+            audit_service = AuditService()
+            audit_service.log(
+                user_id=current_user.id,
+                username=current_user.username,
+                action="create",
+                resource_type="estimate",
+                resource_id=estimate_id,
+                details=f"Created {data.estimate_type} estimate {data.number}"
+            )
+        except Exception as e:
+            print(f"Audit log error: {e}")
+
         db.commit()
         
         # Get created estimate with joins
@@ -485,10 +534,33 @@ async def update_estimate(
     cursor = db.cursor()
     
     # Check if estimate exists
-    cursor.execute("SELECT id FROM estimates WHERE id = ? AND marked_for_deletion = 0", (estimate_id,))
-    if not cursor.fetchone():
+    cursor.execute("SELECT id, base_document_id, estimate_type FROM estimates WHERE id = ? AND marked_for_deletion = 0", (estimate_id,))
+    existing = cursor.fetchone()
+    if not existing:
         raise HTTPException(status_code=404, detail="Estimate not found")
     
+    # Permission checks
+    from api.services.auth_service import AuthService
+    auth_service = AuthService()
+    
+    # Check hierarchy modification
+    hierarchy_changes = []
+    if data.base_document_id != existing['base_document_id']:
+        hierarchy_changes.append(f"Base document changed from {existing['base_document_id']} to {data.base_document_id}")
+        if not auth_service.has_permission(current_user.role, 'modify_hierarchy', 'estimate'):
+             raise HTTPException(
+                 status_code=status.HTTP_403_FORBIDDEN, 
+                 detail="Permission denied: Cannot modify hierarchy (change base document)"
+             )
+
+    if data.estimate_type != existing['estimate_type']:
+        hierarchy_changes.append(f"Type changed from {existing['estimate_type']} to {data.estimate_type}")
+        if not auth_service.has_permission(current_user.role, 'modify_hierarchy', 'estimate'):
+             raise HTTPException(
+                 status_code=status.HTTP_403_FORBIDDEN, 
+                 detail="Permission denied: Cannot change estimate type"
+             )
+
     try:
         # Calculate totals if lines provided
         if data.lines is not None:
@@ -504,11 +576,13 @@ async def update_estimate(
             UPDATE estimates
             SET number = ?, date = ?, customer_id = ?, object_id = ?,
                 contractor_id = ?, responsible_id = ?, total_sum = ?, total_labor = ?,
+                base_document_id = ?, estimate_type = ?,
                 modified_at = CURRENT_TIMESTAMP
             WHERE id = ?
         """, (
             data.number, data.date.isoformat(), data.customer_id, data.object_id,
             data.contractor_id, data.responsible_id, total_sum, total_labor,
+            data.base_document_id, data.estimate_type,
             estimate_id
         ))
         
@@ -533,6 +607,29 @@ async def update_estimate(
                     1 if line.is_collapsed else 0
                 ))
         
+        # Log audit
+        try:
+            from src.services.audit_service import AuditService
+            audit_service = AuditService()
+            
+            action = "update"
+            details = f"Updated estimate {data.number}"
+            
+            if hierarchy_changes:
+                action = "modify_hierarchy"
+                details += f". Hierarchy changes: {'; '.join(hierarchy_changes)}"
+                
+            audit_service.log(
+                user_id=current_user.id,
+                username=current_user.username,
+                action=action,
+                resource_type="estimate",
+                resource_id=estimate_id,
+                details=details
+            )
+        except Exception as e:
+            print(f"Audit log error: {e}")
+
         db.commit()
         
         # Get updated estimate with joins
@@ -1194,6 +1291,63 @@ async def print_estimate(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate print form: {str(e)}"
         )
+
+
+@router.get("/estimates/{estimate_id}/hierarchy-report")
+async def get_estimate_hierarchy_report(
+    estimate_id: int,
+    current_user: UserInfo = Depends(get_current_user),
+    db = Depends(get_db_connection)
+):
+    """Generate hierarchy report for general estimate"""
+    # Check if estimate exists and is General
+    cursor = db.cursor()
+    cursor.execute("SELECT number, estimate_type FROM estimates WHERE id = ? AND marked_for_deletion = 0", (estimate_id,))
+    row = cursor.fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Estimate not found")
+        
+    if row['estimate_type'] != 'General':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Hierarchy report is only available for General Estimates"
+        )
+    
+    estimate_number = row['number']
+    
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from src.services.hierarchy_report_service import HierarchyReportService
+    
+    try:
+        report_service = HierarchyReportService()
+        content = report_service.generate_excel_report(estimate_id)
+        
+        if not content:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate hierarchy report"
+            )
+        
+        filename = f"hierarchy_report_{estimate_number}.xlsx"
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate report: {str(e)}"
+        )
+
 
 
 @router.get("/daily-reports/{report_id}/print")

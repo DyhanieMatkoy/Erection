@@ -615,6 +615,18 @@ class DatabaseManager:
         cursor = self._connection.cursor()
         
         tables = [
+            # Audit Logs
+            """CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username TEXT,
+                action TEXT,
+                resource_type TEXT,
+                resource_id INTEGER,
+                details TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+            
             # Users
             """CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -873,6 +885,13 @@ class DatabaseManager:
         
         if 'marked_for_deletion' not in columns:
             cursor.execute("ALTER TABLE estimates ADD COLUMN marked_for_deletion INTEGER DEFAULT 0")
+            
+        if 'estimate_type' not in columns:
+            cursor.execute("ALTER TABLE estimates ADD COLUMN estimate_type TEXT DEFAULT 'General'")
+            cursor.execute("UPDATE estimates SET estimate_type = 'General'")
+            
+        if 'base_document_id' not in columns:
+            cursor.execute("ALTER TABLE estimates ADD COLUMN base_document_id INTEGER REFERENCES estimates(id)")
         
         # Check if fields exist in daily_reports
         cursor.execute("PRAGMA table_info(daily_reports)")
@@ -942,6 +961,9 @@ class DatabaseManager:
             "CREATE INDEX IF NOT EXISTS idx_estimates_responsible ON estimates(responsible_id)",
             "CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(date)",
             "CREATE INDEX IF NOT EXISTS idx_daily_reports_estimate ON daily_reports(estimate_id)",
+            # Audit Logs
+            "CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id)",
             # Register indices
             "CREATE INDEX IF NOT EXISTS idx_register_recorder ON work_execution_register(recorder_type, recorder_id)",
             "CREATE INDEX IF NOT EXISTS idx_register_dimensions ON work_execution_register(period, object_id, estimate_id, work_id)",

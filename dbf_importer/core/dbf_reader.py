@@ -139,6 +139,18 @@ class DBFReader:
                             transformed_record[db_field] = value
                         elif db_field == "marked_for_deletion" and isinstance(value, str):
                             transformed_record[db_field] = value.lower() in ["true", "1", "t", "y", "yes"]
+                        # Преобразование unit_name_ref (ссылка на единицу измерения)
+                        elif db_field == "unit_name_ref" and isinstance(value, str):
+                            try:
+                                # Преобразуем строковый reference в число
+                                clean_value = value.strip()
+                                if clean_value:
+                                    transformed_record[db_field] = int(clean_value, 16)
+                                else:
+                                    transformed_record[db_field] = None
+                            except (ValueError, TypeError):
+                                # Если не удалось преобразовать, используем детерминированный хеш
+                                transformed_record[db_field] = zlib.crc32(clean_value.encode(self.encoding, errors='ignore')) & 0x7FFFFFFF
                         else:
                             transformed_record[db_field] = value
                 

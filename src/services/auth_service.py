@@ -118,6 +118,14 @@ class AuthService:
             if resource == "estimate":
                 if action in ["view", "create"]:
                     return True
+                # Can create plan estimates, but not general ones
+                if action == "create_plan":
+                    return True
+                if action == "create_general":
+                    return False
+                if action == "modify_hierarchy":
+                    return False
+                    
                 if action in ["edit", "delete", "post"] and resource_id:
                     return self._can_access_estimate(resource_id)
                 return False
@@ -174,6 +182,18 @@ class AuthService:
     def can_post_estimate(self, estimate_id: int) -> bool:
         """Check if user can post a specific estimate"""
         return self.has_permission("post", "estimate", estimate_id)
+    
+    def can_create_general_estimate(self) -> bool:
+        """Check if user can create general estimates"""
+        return self.has_permission("create_general", "estimate")
+
+    def can_create_plan_estimate(self) -> bool:
+        """Check if user can create plan estimates"""
+        return self.has_permission("create_plan", "estimate")
+
+    def can_modify_estimate_hierarchy(self) -> bool:
+        """Check if user can modify estimate hierarchy (change base document)"""
+        return self.has_permission("modify_hierarchy", "estimate")
     
     def can_create_daily_report(self) -> bool:
         """Check if user can create daily reports"""

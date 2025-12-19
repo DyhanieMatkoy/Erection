@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Counterparty, Object, Work, Person, Organization, Unit } from '@/types/models'
 import * as referencesApi from '@/api/references'
+import type { WorksParams } from '@/api/references'
 
 export const useReferencesStore = defineStore('references', () => {
   // Cache for reference data
@@ -77,7 +78,7 @@ export const useReferencesStore = defineStore('references', () => {
   }
 
   // Fetch works
-  async function fetchWorks(force = false) {
+  async function fetchWorks(force = false, params?: WorksParams) {
     if (works.value.length > 0 && !force) {
       return works.value
     }
@@ -85,7 +86,13 @@ export const useReferencesStore = defineStore('references', () => {
     loading.value.works = true
     try {
       // Load all works in a single request (limit increased on backend)
-      const response = await referencesApi.getWorks({ page: 1, page_size: 10000 })
+      const response = await referencesApi.getWorks({ 
+        page: 1, 
+        page_size: 10000,
+        include_unit_info: true,
+        hierarchy_mode: 'flat',
+        ...params
+      })
       works.value = response.data
       return works.value
     } finally {

@@ -12,6 +12,7 @@ class ReferenceBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=500)
     parent_id: Optional[int] = None
     is_deleted: bool = False
+    uuid: Optional[str] = None
 
 
 class ReferenceCreate(ReferenceBase):
@@ -37,7 +38,10 @@ class Reference(ReferenceBase):
 # Counterparty models
 class CounterpartyBase(ReferenceBase):
     """Base model for counterparty"""
-    pass
+    inn: Optional[str] = None
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    is_group: bool = False
 
 
 class CounterpartyCreate(CounterpartyBase):
@@ -106,13 +110,32 @@ class WorkUpdate(WorkBase):
 
 
 class Work(WorkBase):
-    """Model for work with ID"""
+    """Model for work with ID and enhanced unit information"""
     id: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
+    # Enhanced unit information
+    unit_display: Optional[str] = None
+    unit_name: Optional[str] = None
+    unit_description: Optional[str] = None
+    
+    # Hierarchy information
+    hierarchy_path: Optional[List[str]] = None
+    level: Optional[int] = None
+    children_count: Optional[int] = None
+    
     class Config:
         from_attributes = True
+
+
+class WorkListResponse(BaseModel):
+    """Enhanced response model for work list"""
+    success: bool = True
+    data: List[Work]
+    pagination: "PaginationInfo"
+    hierarchy_mode: Optional[str] = None
+    parent_id: Optional[int] = None
 
 
 # Person models

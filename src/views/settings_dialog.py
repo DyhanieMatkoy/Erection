@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
                              QWidget, QFormLayout, QLineEdit, QPushButton,
                              QMessageBox, QGroupBox, QRadioButton, QButtonGroup,
                              QFileDialog, QLabel)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 
 
 class SettingsDialog(QDialog):
@@ -16,7 +16,8 @@ class SettingsDialog(QDialog):
         self.config = configparser.ConfigParser()
         self.config_file = 'env.ini'
         self.init_ui()
-        self.load_settings()
+        # load_settings() будет вызван после создания всех вкладок
+        QTimer.singleShot(0, self.load_settings)
     
     def init_ui(self):
         """Initialize UI"""
@@ -36,6 +37,10 @@ class SettingsDialog(QDialog):
         # Print forms tab
         print_tab = self.create_print_forms_tab()
         self.tabs.addTab(print_tab, "Печатные формы")
+        
+        # Interface tab
+        interface_tab = self.create_interface_tab()
+        self.tabs.addTab(interface_tab, "Интерфейс")
         
         layout.addWidget(self.tabs)
         
@@ -154,6 +159,81 @@ class SettingsDialog(QDialog):
         widget.setLayout(layout)
         return widget
     
+    def create_interface_tab(self):
+        """Create interface settings tab"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Button appearance group
+        button_group = QGroupBox("Внешний вид кнопок")
+        button_layout = QVBoxLayout()
+        
+        # Font icons checkbox
+        self.use_font_icons_checkbox = QRadioButton("Использовать иконки шрифтов для кнопок")
+        self.use_text_icons_checkbox = QRadioButton("Использовать текстовые подписи для кнопок")
+        self.use_both_icons_checkbox = QRadioButton("Использовать иконки и текст")
+        
+        self.icon_button_group = QButtonGroup(self)
+        self.icon_button_group.addButton(self.use_font_icons_checkbox, 0)
+        self.icon_button_group.addButton(self.use_text_icons_checkbox, 1)
+        self.icon_button_group.addButton(self.use_both_icons_checkbox, 2)
+        
+        button_layout.addWidget(self.use_font_icons_checkbox)
+        button_layout.addWidget(self.use_text_icons_checkbox)
+        button_layout.addWidget(self.use_both_icons_checkbox)
+        
+        # Icon mappings info
+        icons_info = QLabel(
+            "Иконки шрифтов будут использоваться для стандартных команд:\n"
+            "➕ Создать (Insert)\n"
+            "📋 Копировать (F9)\n"
+            "✏️ Изменить (F2)\n"
+            "🗑️ Удалить (Delete)\n"
+            "🔄 Обновить (F5)\n"
+            "🖨️ Печать (F8)\n\n"
+            "При выборе 'только иконки' всплывающие подсказки покажут назначение кнопок."
+        )
+        icons_info.setWordWrap(True)
+        icons_info.setStyleSheet("color: gray; font-size: 9pt; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;")
+        button_layout.addWidget(icons_info)
+        
+        button_group.setLayout(button_layout)
+        
+        # Button position group
+        position_group = QGroupBox("Расположение кнопок в документах")
+        position_layout = QVBoxLayout()
+        
+        self.top_radio = QRadioButton("Кнопки вверху формы")
+        self.bottom_radio = QRadioButton("Кнопки внизу формы (стандарт)")
+        self.both_radio = QRadioButton("Кнопки и вверху, и внизу")
+        
+        self.position_button_group = QButtonGroup(self)
+        self.position_button_group.addButton(self.top_radio, 0)
+        self.position_button_group.addButton(self.bottom_radio, 1)
+        self.position_button_group.addButton(self.both_radio, 2)
+        
+        position_layout.addWidget(self.top_radio)
+        position_layout.addWidget(self.bottom_radio)
+        position_layout.addWidget(self.both_radio)
+        
+        # Button order info
+        position_info = QLabel(
+            "Настройка определяет расположение кнопок действий:\n"
+            "• Сохранить, Сохранить и закрыть, Провести, Отменить проведение, Печать, Закрыть\n"
+            "• 'Кнопки вверху' - удобство при работе с формами\n"
+            "• 'Кнопки и вверху, и внизу' - максимальная гибкость"
+        )
+        position_info.setWordWrap(True)
+        position_info.setStyleSheet("color: gray; font-size: 9pt; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;")
+        position_layout.addWidget(position_info)
+        
+        position_group.setLayout(position_layout)
+        layout.addWidget(position_group)
+        
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+    
     def load_settings(self):
         """Load settings from env.ini"""
         if not os.path.exists(self.config_file):
@@ -204,6 +284,56 @@ class SettingsDialog(QDialog):
             else:
                 self.pdf_radio.setChecked(True)
                 self.templates_path_edit.setText('PrnForms')
+            
+            # Load interface settings
+            try:
+                if self.config.has_section('Interface'):
+                    if self.config.has_option('Interface', 'button_style'):
+                        button_style = self.config.get('Interface', 'button_style')
+                        if button_style == 'text':
+                            if hasattr(self, 'use_text_icons_checkbox'):
+                                self.use_text_icons_checkbox.setChecked(True)
+                        elif button_style == 'both':
+                            if hasattr(self, 'use_both_icons_checkbox'):
+                                self.use_both_icons_checkbox.setChecked(True)
+                        else:
+                            if hasattr(self, 'use_font_icons_checkbox'):
+                                self.use_font_icons_checkbox.setChecked(True)
+                    else:
+                        if hasattr(self, 'use_text_icons_checkbox'):
+                            self.use_text_icons_checkbox.setChecked(True)  # Default
+                        
+                    # Load button position setting
+                    if self.config.has_option('Interface', 'button_position'):
+                        button_position = self.config.get('Interface', 'button_position')
+                        if button_position == 'top':
+                            if hasattr(self, 'top_radio'):
+                                self.top_radio.setChecked(True)
+                        elif button_position == 'both':
+                            if hasattr(self, 'both_radio'):
+                                self.both_radio.setChecked(True)
+                        else:
+                            if hasattr(self, 'bottom_radio'):
+                                self.bottom_radio.setChecked(True)  # Default
+                    else:
+                        if hasattr(self, 'bottom_radio'):
+                            self.bottom_radio.setChecked(True)  # Default
+                else:
+                    if hasattr(self, 'use_text_icons_checkbox'):
+                        self.use_text_icons_checkbox.setChecked(True)  # Default
+                    if hasattr(self, 'bottom_radio'):
+                        self.bottom_radio.setChecked(True)  # Default
+            except Exception as e:
+                print(f"Warning: Could not load interface settings: {e}")
+                # Set safe defaults
+                if hasattr(self, 'use_text_icons_checkbox'):
+                    self.use_text_icons_checkbox.setChecked(True)
+                if hasattr(self, 'bottom_radio'):
+                    self.bottom_radio.setChecked(True)
+                
+                # Ensure button_position option exists
+                if not self.config.has_option('Interface', 'button_position'):
+                    self.config.set('Interface', 'button_position', 'bottom')
                 
         except Exception as e:
             QMessageBox.warning(
@@ -225,6 +355,8 @@ class SettingsDialog(QDialog):
                 self.config.add_section('Auth')
             if not self.config.has_section('PrintForms'):
                 self.config.add_section('PrintForms')
+            if not self.config.has_section('Interface'):
+                self.config.add_section('Interface')
             
             # Save auth settings
             self.config.set('Auth', 'login', self.login_edit.text())
@@ -240,6 +372,24 @@ class SettingsDialog(QDialog):
             if not templates_path:
                 templates_path = 'PrnForms'
             self.config.set('PrintForms', 'templates_path', templates_path)
+            
+            # Save interface settings
+            if self.use_font_icons_checkbox.isChecked():
+                button_style = 'icons'
+            elif self.use_both_icons_checkbox.isChecked():
+                button_style = 'both'
+            else:
+                button_style = 'text'
+            self.config.set('Interface', 'button_style', button_style)
+            
+            # Save button position setting
+            if self.top_radio.isChecked():
+                button_position = 'top'
+            elif self.both_radio.isChecked():
+                button_position = 'both'
+            else:
+                button_position = 'bottom'
+            self.config.set('Interface', 'button_position', button_position)
             
             # Write to file
             with open(self.config_file, 'w', encoding='utf-8') as f:

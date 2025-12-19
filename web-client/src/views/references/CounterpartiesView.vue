@@ -378,6 +378,41 @@ function getTypeLabel(type: string): string {
   return labels[type] || type
 }
 
+function handleCopy() {
+  if (selectedItems.value.length !== 1) return
+  
+  const item = selectedItems.value[0]
+  editingItem.value = null // Create mode
+  formData.value = {
+    name: item.name, // Copy name
+    parent_id: item.parent_id,
+    // Copy other fields if they exist in formData (currently only name/parent_id in this view's form)
+  }
+  errors.value = {}
+  submitError.value = ''
+  modalOpen.value = true
+}
+
+function handlePrint() {
+  if (selectedItems.value.length === 0) return
+  alert(`Печать ${selectedItems.value.length} элементов (Функционал в разработке)`)
+}
+
+// Shortcuts
+useListShortcuts({
+  enabled: computed(() => !modalOpen.value),
+  onCreate: handleCreate,
+  onCopy: handleCopy,
+  onEdit: () => {
+    if (selectedItems.value.length === 1) {
+      handleEdit(selectedItems.value[0])
+    }
+  },
+  onDelete: handleBulkDelete,
+  onRefresh: loadData,
+  onPrint: handlePrint
+})
+
 onMounted(() => {
   loadData()
 })

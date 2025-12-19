@@ -6,17 +6,22 @@ from PyQt6.QtCore import Qt, QDate
 from ..data.database_manager import DatabaseManager
 from ..data.repositories.work_execution_register_repository import WorkExecutionRegisterRepository
 from ..services.auth_service import AuthService
+from ..data.models.sqlalchemy_models import Object, Estimate, Work, Person
 
 
 class WorkExecutionReportForm(QWidget):
     def __init__(self):
         super().__init__()
-        self.db = DatabaseManager().get_connection()
+        self.db_manager = DatabaseManager()
+        self.session = self.db_manager.get_session()
         self.register_repo = WorkExecutionRegisterRepository()
-        self.auth_service = AuthService()
+        self.auth_service = AuthService(self.session)
         self.setup_ui()
         self.setWindowTitle("Отчет: Выполнение работ")
         self.resize(1200, 700)
+        
+        # Ensure session is closed when widget is destroyed
+        self.destroyed.connect(lambda: self.session.close())
     
     def setup_ui(self):
         """Setup UI"""
@@ -128,55 +133,41 @@ class WorkExecutionReportForm(QWidget):
     
     def load_objects(self):
         """Load objects for filter"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT id, name
-            FROM objects
-            WHERE marked_for_deletion = 0
-            ORDER BY name
-        """)
-        
-        for row in cursor.fetchall():
-            self.object_combo.addItem(row['name'], row['id'])
+        try:
+            objects = self.session.query(Object).filter(Object.marked_for_deletion == False).order_by(Object.name).all()
+            for obj in objects:
+                self.object_combo.addItem(obj.name, obj.id)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить объекты: {e}")
     
     def load_estimates(self):
         """Load estimates for filter"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT id, number, date
-            FROM estimates
-            ORDER BY date DESC, number
-        """)
-        
-        for row in cursor.fetchall():
-            display = f"{row['number']} от {row['date']}"
-            self.estimate_combo.addItem(display, row['id'])
+        try:
+            estimates = self.session.query(Estimate).filter(Estimate.marked_for_deletion == False).order_by(Estimate.date.desc(), Estimate.number).all()
+            for est in estimates:
+                display = f"{est.number} от {est.date}"
+                self.estimate_combo.addItem(display, est.id)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить сметы: {e}")
     
     def load_works(self):
         """Load works for filter"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT id, name
-            FROM works
-            WHERE marked_for_deletion = 0
-            ORDER BY name
-        """)
-        
-        for row in cursor.fetchall():
-            self.work_combo.addItem(row['name'], row['id'])
+        try:
+            works = self.session.query(Work).filter(Work.marked_for_deletion == False).order_by(Work.name).all()
+            for work in works:
+                self.work_combo.addItem(work.name, work.id)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить виды работ: {e}")
     
     def load_executors(self):
         """Load executors for filter"""
-        cursor = self.db.cursor()
-        cursor.execute("""
-            SELECT id, full_name
-            FROM persons
-            WHERE marked_for_deletion = 0
-            ORDER BY full_name
-        """)
-        
-        for row in cursor.fetchall():
-            self.executor_combo.addItem(row['full_name'], row['id'])
+        try:
+            # Filter persons who are executors (maybe add role check if needed, but for now showing all persons)
+            persons = self.session.query(Person).filter(Person.marked_for_deletion == False).order_by(Person.full_name).all()
+            for person in persons:
+                self.executor_combo.addItem(person.full_name, person.id)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить исполнителей: {e}")
     
     def generate_report(self):
         """Generate report"""

@@ -11,6 +11,13 @@ The models follow a pattern of Base -> Create/Update -> Full model with ID.
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import date, datetime
+from enum import Enum
+
+
+class EstimateType(Enum):
+    """Estimate type enumeration"""
+    GENERAL = "General"
+    PLAN = "Plan"
 
 
 # Estimate Line Models
@@ -54,6 +61,10 @@ class EstimateBase(BaseModel):
     object_id: Optional[int] = None
     contractor_id: Optional[int] = None
     responsible_id: Optional[int] = None
+    
+    # Hierarchy fields
+    base_document_id: Optional[int] = None
+    estimate_type: str = Field(default="General", pattern="^(General|Plan)$")
 
 
 class EstimateCreate(EstimateBase):
@@ -83,6 +94,21 @@ class Estimate(EstimateBase):
     object_name: Optional[str] = None
     contractor_name: Optional[str] = None
     responsible_name: Optional[str] = None
+    
+    # Hierarchy relationship fields (populated when needed)
+    base_document_number: Optional[str] = None
+    base_document_name: Optional[str] = None
+    plan_estimates_count: int = 0
+    
+    @property
+    def is_general(self) -> bool:
+        """Check if this is a general estimate"""
+        return self.estimate_type == "General"
+    
+    @property
+    def is_plan(self) -> bool:
+        """Check if this is a plan estimate"""
+        return self.estimate_type == "Plan"
     
     class Config:
         from_attributes = True
