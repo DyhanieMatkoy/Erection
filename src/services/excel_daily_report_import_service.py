@@ -171,9 +171,9 @@ class ExcelDailyReportImportService:
                         planned_labor = self._get_planned_labor_from_estimate(daily_report.estimate_id, work_id)
                 
                 # Calculate deviation if we have planned labor
-                deviation_percent = 0.0
+                labor_deviation_percent = 0.0
                 if planned_labor and planned_labor > 0:
-                    deviation_percent = ((actual_labor - planned_labor) / planned_labor) * 100
+                    labor_deviation_percent = ((actual_labor - planned_labor) / planned_labor) * 100
                 
                 # Create dataclass DailyReportLine
                 line = DailyReportLine(
@@ -181,7 +181,7 @@ class ExcelDailyReportImportService:
                     work_id=work_id or 0,
                     planned_labor=planned_labor,
                     actual_labor=actual_labor,
-                    deviation_percent=deviation_percent,
+                    labor_deviation_percent=labor_deviation_percent,
                     executor_ids=[]  # Empty list for now, can be filled later
                 )
                 

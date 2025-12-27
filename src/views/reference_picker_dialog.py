@@ -322,6 +322,11 @@ class ReferencePickerDialog(QDialog):
             if id_item:
                 selected_id = int(id_item.text())
                 
+                # For estimates, always select (never drill down or edit)
+                if self.table_name == "estimates":
+                    self.on_select()
+                    return
+                
                 has_children = False
                 if self.is_hierarchical:
                     # Check if this item has children
@@ -337,7 +342,7 @@ class ReferencePickerDialog(QDialog):
                     self.current_parent_id = selected_id
                     self.load_data()
                 else:
-                    # Select
+                    # Select - for non-hierarchical tables like estimates, always select
                     self.on_select()
     
     def update_navigation_state(self):
@@ -410,6 +415,9 @@ class ReferencePickerDialog(QDialog):
                 elif self.table_name == "persons":
                     from .person_form import PersonForm
                     form = PersonForm(selected_id)
+                elif self.table_name == "estimates":
+                    from .estimate_document_form import EstimateDocumentForm
+                    form = EstimateDocumentForm(selected_id)
                 
                 if form:
                     # Store reference to prevent garbage collection
@@ -453,6 +461,9 @@ class ReferencePickerDialog(QDialog):
         elif self.table_name == "persons":
             from .person_form import PersonForm
             form = PersonForm(0)
+        elif self.table_name == "estimates":
+            from .estimate_document_form import EstimateDocumentForm
+            form = EstimateDocumentForm(0)
         
         if form:
             # Store reference to prevent garbage collection
@@ -490,6 +501,11 @@ class ReferencePickerDialog(QDialog):
                     id_item = self.table_view.item(current_row, 0)
                     if id_item:
                         selected_id = int(id_item.text())
+                        
+                        # For estimates, always select (never drill down)
+                        if self.table_name == "estimates":
+                            self.on_select()
+                            return
                         
                         # Check if this item has children
                         cursor = self.db.cursor()

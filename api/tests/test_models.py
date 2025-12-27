@@ -592,7 +592,7 @@ class TestDocumentModels:
         }
         model = DailyReportLine(**data)
         
-        assert model.deviation_percent == -20.0
+        assert model.labor_deviation_percent == -20.0
         assert model.planned_labor == 10.0
     
     # Timesheet Tests
@@ -912,7 +912,7 @@ class TestModelDefaults:
         
         assert model.planned_labor == 0  # Default
         assert model.actual_labor == 0  # Default
-        assert model.deviation_percent == 0  # Default
+        assert model.labor_deviation_percent == 0  # Default
         assert model.executor_ids == []  # Default
         assert model.is_group is False  # Default
     

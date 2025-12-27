@@ -42,7 +42,7 @@ class DailyReportService:
             ORDER BY line_number
         """, (report_id,))
         
-        from ..data.models.daily_report import DailyReportLine
+        from ..data.models.sqlalchemy_models import DailyReportLine
         for line_row in cursor.fetchall():
             line = DailyReportLine()
             line.id = line_row['id']
@@ -62,9 +62,9 @@ class DailyReportService:
                 line.actual_labor = 0.0
             
             try:
-                line.deviation_percent = float(line_row['labor_deviation_percent']) if line_row['labor_deviation_percent'] else 0.0
+                line.labor_deviation_percent = float(line_row['labor_deviation_percent']) if line_row['labor_deviation_percent'] else 0.0
             except (ValueError, TypeError):
-                line.deviation_percent = 0.0
+                line.labor_deviation_percent = 0.0
             
             line.is_group = bool(line_row['is_group'] if 'is_group' in line_row.keys() else 0)
             line.group_name = line_row['group_name'] if 'group_name' in line_row.keys() else ''
@@ -126,7 +126,7 @@ class DailyReportService:
                                                    parent_group_id, is_collapsed, uuid)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (report.id, line.line_number, line.work_id, line.planned_labor,
-                      line.actual_labor, line.deviation_percent, 1 if line.is_group else 0,
+                      line.actual_labor, line.labor_deviation_percent, 1 if line.is_group else 0,
                       line.group_name, line.parent_group_id or None, 1 if line.is_collapsed else 0, line.uuid))
                 
                 line_id = cursor.lastrowid
@@ -200,7 +200,7 @@ class DailyReportService:
                 ORDER BY el.line_number
             """, selected_line_ids)
             
-            from ..data.models.daily_report import DailyReportLine
+            from ..data.models.sqlalchemy_models import DailyReportLine
             
             # Clear existing lines
             report.lines = []
@@ -219,7 +219,7 @@ class DailyReportService:
                     line.planned_labor = 0.0
                 
                 line.actual_labor = 0.0
-                line.deviation_percent = 0.0
+                line.labor_deviation_percent = 0.0
                 line.is_group = bool(row['is_group'])
                 line.group_name = row['group_name'] or ""
                 line.parent_group_id = row['parent_group_id'] or 0

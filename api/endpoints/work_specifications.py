@@ -12,9 +12,9 @@ from src.data.repositories.work_repository import WorkRepository
 from src.data.database_manager import DatabaseManager
 from api.models.auth import UserInfo
 
-router = APIRouter(prefix="/works", tags=["Work Specifications"])
+router = APIRouter(tags=["Work Specifications"])
 
-@router.get("/{work_id}/specifications", response_model=WorkSpecificationSummary)
+@router.get("/works/{work_id}/specifications", response_model=WorkSpecificationSummary)
 async def get_work_specifications(
     work_id: int,
     current_user: UserInfo = Depends(get_current_user),
@@ -46,7 +46,7 @@ async def get_work_specifications(
         total_cost=total_cost
     )
 
-@router.post("/{work_id}/specifications", response_model=int)
+@router.post("/works/{work_id}/specifications", response_model=int)
 async def create_specification(
     work_id: int,
     spec: WorkSpecificationCreate,
@@ -65,7 +65,7 @@ async def create_specification(
         raise HTTPException(status_code=500, detail="Failed to create specification")
     return spec_id
 
-@router.put("/{work_id}/specifications/{spec_id}", response_model=bool)
+@router.put("/works/{work_id}/specifications/{spec_id}", response_model=bool)
 async def update_specification(
     work_id: int,
     spec_id: int,
@@ -81,7 +81,7 @@ async def update_specification(
         raise HTTPException(status_code=404, detail="Specification not found or update failed")
     return True
 
-@router.delete("/{work_id}/specifications/{spec_id}", response_model=bool)
+@router.delete("/works/{work_id}/specifications/{spec_id}", response_model=bool)
 async def delete_specification(
     work_id: int,
     spec_id: int,
@@ -95,7 +95,7 @@ async def delete_specification(
         raise HTTPException(status_code=404, detail="Specification not found or delete failed")
     return True
 
-@router.post("/{work_id}/specifications/copy-from/{source_work_id}", response_model=bool)
+@router.post("/works/{work_id}/specifications/copy-from/{source_work_id}", response_model=bool)
 async def copy_specifications(
     work_id: int,
     source_work_id: int,

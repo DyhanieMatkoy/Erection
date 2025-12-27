@@ -78,3 +78,13 @@ class BaseListForm(QWidget):
         """Handle select all (Ctrl+A)"""
         if hasattr(self, 'table_view') and self.table_view:
             self.table_view.selectAll()
+    
+    def showEvent(self, event):
+        """Handle show event - set focus to table"""
+        super().showEvent(event)
+        # Set focus to the table when the form is shown
+        if hasattr(self, 'table_view') and self.table_view:
+            self.table_view.setFocus()
+            # Select first row if available and no selection exists
+            if self.table_view.rowCount() > 0 and self.table_view.currentRow() < 0:
+                self.table_view.selectRow(0)

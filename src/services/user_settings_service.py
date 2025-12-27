@@ -31,7 +31,20 @@ class UserSettingsService:
                 try:
                     return json.loads(result[0][0])
                 except (json.JSONDecodeError, TypeError):
-                    return result[0][0]
+                    # Handle boolean strings
+                    value_str = result[0][0]
+                    if value_str.lower() == 'true':
+                        return True
+                    elif value_str.lower() == 'false':
+                        return False
+                    # Try to convert to int/float
+                    try:
+                        if '.' in value_str:
+                            return float(value_str)
+                        else:
+                            return int(value_str)
+                    except ValueError:
+                        return value_str
             
             return default_value
             
@@ -101,4 +114,23 @@ class UserSettingsService:
             return True
         except Exception as e:
             print(f"Error setting delete marked settings: {e}")
+            return False
+    
+    def get_work_selector_settings(self, user_id: int) -> Dict[str, Any]:
+        """Get settings for work selector dialog"""
+        return {
+            'open_modal': self.get_setting(user_id, 'work_selector.open_modal', True),
+            'default_hierarchy_mode': self.get_setting(user_id, 'work_selector.default_hierarchy_mode', 'tree'),
+            'show_hierarchy_controls': self.get_setting(user_id, 'work_selector.show_hierarchy_controls', True),
+            'auto_expand_groups': self.get_setting(user_id, 'work_selector.auto_expand_groups', True),
+        }
+    
+    def set_work_selector_settings(self, user_id: int, settings: Dict[str, Any]) -> bool:
+        """Set settings for work selector dialog"""
+        try:
+            for key, value in settings.items():
+                self.set_setting(user_id, f'work_selector.{key}', value)
+            return True
+        except Exception as e:
+            print(f"Error setting work selector settings: {e}")
             return False

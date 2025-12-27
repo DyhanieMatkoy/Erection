@@ -10,6 +10,7 @@ class WorksImporter:
     def __init__(self, db_path: str = 'construction.db'):
         self.db_path = db_path
         self.work_groups: Dict[str, int] = {}  # Кэш групп работ
+        self.unit_cache: Dict[str, int] = {}   # Кэш единиц измерения
     
     def parse_price(self, price_str: str) -> float:
         """Парсит цену из строки, удаляя текст"""
@@ -46,6 +47,89 @@ class WorksImporter:
             return ""
         
         return unit
+    
+    def parse_hierarchy_path(self, hierarchy_str: str, separator: str = ' > ') -> List[str]:
+        """Парсит путь иерархии из строки"""
+        if not hierarchy_str:
+            return []
+        
+        # Пробуем разные разделители
+        parts = hierarchy_str.split(separator)
+        if len(parts) <= 1:
+            # Пробуем альтернативные разделители
+            alt_separators = [' | ', ' / ', '->', '|', '/', '|']
+            for alt_sep in alt_separators:
+                parts = hierarchy_str.split(alt_sep)
+                if len(parts) > 1:
+                    break
+        
+        # Очищаем части и удаляем пустые строки
+        return [part.strip() for part in parts if part.strip()]
+    
+    def get_or_create_hierarchy(self, conn: sqlite3.Connection, hierarchy_parts: List[str], 
+                               root_parent_id: int = None) -> int:
+        """Создает или получает уровни иерархии и возвращает финальный parent_id"""
+        current_parent_id = root_parent_id
+        cursor = conn.cursor()
+        
+        for part in hierarchy_parts:
+            # Проверяем кэш
+            cache_key = f"{current_parent_id}:{part}"
+            if cache_key in self.work_groups:
+                current_parent_id = self.work_groups[cache_key]
+                continue
+            
+            # Проверяем существование уровня
+            cursor.execute(
+                "SELECT id FROM works WHERE name = ? AND parent_id IS ? AND marked_for_deletion = 0",
+                (part, current_parent_id)
+            )
+            result = cursor.fetchone()
+            
+            if result:
+                current_parent_id = result[0]
+            else:
+                # Создаем новый уровень (группу)
+                cursor.execute(
+                    """INSERT INTO works (name, parent_id, marked_for_deletion, is_group)
+                       VALUES (?, ?, 0, 1)""",
+                    (part, current_parent_id)
+                )
+                current_parent_id = cursor.lastrowid
+                conn.commit()
+            
+            # Кэшируем результат
+            self.work_groups[cache_key] = current_parent_id
+        
+        return current_parent_id
+    
+    def get_or_create_unit(self, cursor, conn: sqlite3.Connection, unit_str: str) -> int:
+        """Получает или создает единицу измерения"""
+        if not unit_str:
+            return None
+        
+        if unit_str in self.unit_cache:
+            return self.unit_cache[unit_str]
+        
+        cursor.execute(
+            "SELECT id FROM units WHERE name = ? AND marked_for_deletion = 0",
+            (unit_str,)
+        )
+        result = cursor.fetchone()
+        
+        if result:
+            unit_id = result[0]
+        else:
+            # Создаем новую единицу
+            cursor.execute(
+                "INSERT INTO units (name, description, marked_for_deletion) VALUES (?, ?, 0)",
+                (unit_str, f"Автоматически создана при импорте из CSV")
+            )
+            unit_id = cursor.lastrowid
+            conn.commit()
+        
+        self.unit_cache[unit_str] = unit_id
+        return unit_id
     
     def get_or_create_work_group(self, group_name: str, conn: sqlite3.Connection) -> int:
         """Получает или создает группу работ"""
@@ -87,7 +171,7 @@ class WorksImporter:
     
     def import_from_csv(self, csv_path: str, skip_existing: bool = True) -> Tuple[int, int, List[str]]:
         """
-        Импортирует работы из CSV файла
+        Импортирует работы из CSV файла с поддержкой иерархии и справочника единиц
         
         Args:
             csv_path: Путь к CSV файлу
@@ -101,6 +185,7 @@ class WorksImporter:
         errors = []
         
         conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
         
         try:
             with open(csv_path, 'r', encoding='utf-8') as f:
@@ -112,13 +197,24 @@ class WorksImporter:
                         work_name = (row.get('Наименование работы') or '').strip()
                         price_str = (row.get('Цена') or '0').strip()
                         unit_str = (row.get('Единица измерения') or '').strip()
+                        hierarchy_str = (row.get('Иерархия') or '').strip()
                         
                         if not work_name:
                             errors.append(f"Строка {row_num}: Пустое наименование работы")
                             continue
                         
-                        # Получаем или создаем группу
-                        parent_id = self.get_or_create_work_group(work_type, conn) if work_type else None
+                        # Определяем parent_id с поддержкой иерархии
+                        parent_id = None
+                        
+                        # Приоритет: Иерархия > Тип работ
+                        if hierarchy_str:
+                            # Парсим и создаем путь иерархии
+                            hierarchy_parts = self.parse_hierarchy_path(hierarchy_str)
+                            if hierarchy_parts:
+                                parent_id = self.get_or_create_hierarchy(conn, hierarchy_parts)
+                        elif work_type:
+                            # Legacy поддержка: создаем группу одного уровня
+                            parent_id = self.get_or_create_work_group(work_type, conn)
                         
                         # Проверяем существование
                         if skip_existing and self.work_exists(work_name, parent_id, conn):
@@ -127,23 +223,21 @@ class WorksImporter:
                         
                         # Парсим данные
                         price = self.parse_price(price_str)
-                        unit = self.parse_unit(unit_str)
+                        unit_id = self.get_or_create_unit(cursor, conn, unit_str)
                         
                         # Добавляем работу
-                        cursor = conn.cursor()
-                        
                         if skip_existing:
                             cursor.execute(
-                                """INSERT INTO works (name, unit, price, labor_rate, parent_id, marked_for_deletion)
+                                """INSERT INTO works (name, unit_id, price, labor_rate, parent_id, marked_for_deletion)
                                    VALUES (?, ?, ?, 0, ?, 0)""",
-                                (work_name, unit, price, parent_id)
+                                (work_name, unit_id, price, parent_id)
                             )
                         else:
                             # Обновляем если существует
                             cursor.execute(
-                                """INSERT OR REPLACE INTO works (name, unit, price, labor_rate, parent_id, marked_for_deletion)
+                                """INSERT OR REPLACE INTO works (name, unit_id, price, labor_rate, parent_id, marked_for_deletion)
                                    VALUES (?, ?, ?, 0, ?, 0)""",
-                                (work_name, unit, price, parent_id)
+                                (work_name, unit_id, price, parent_id)
                             )
                         
                         conn.commit()

@@ -58,6 +58,10 @@ class SettingsDialog(QDialog):
         interface_tab = self.create_interface_tab()
         self.tabs.addTab(interface_tab, "Интерфейс")
         
+        # Sync tab
+        sync_tab = self.create_sync_tab()
+        self.tabs.addTab(sync_tab, "Синхронизация")
+        
         layout.addWidget(self.tabs)
         
         # Buttons
@@ -256,6 +260,34 @@ class SettingsDialog(QDialog):
         widget.setLayout(layout)
         return widget
     
+    def create_sync_tab(self):
+        """Create synchronization settings tab"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        
+        
+        # Alternative methods group
+        alt_group = QGroupBox("Альтернативные способы отключения")
+        alt_layout = QVBoxLayout()
+        
+        alt_info = QLabel(
+            "Для временного отключения синхронизации также можно:\n"
+            "1. Использовать файл disable_sync.bat (устанавливает переменную окружения)\n"
+            "2. Использовать файл start_app_no_sync.bat (запуск с отключенной синхронизацией)\n"
+            "3. Установить переменную окружения DISABLE_SYNC=true перед запуском"
+        )
+        alt_info.setWordWrap(True)
+        alt_info.setStyleSheet("color: #6c757d; font-size: 9pt; margin-top: 10px; padding: 10px; background: #e9ecef; border-radius: 4px;")
+        alt_layout.addWidget(alt_info)
+        
+        alt_group.setLayout(alt_layout)
+        layout.addWidget(alt_group)
+        
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+    
     def validate_and_load_settings(self):
         """Validate UI components are ready and load settings with multiple retry attempts"""
         try:
@@ -350,6 +382,21 @@ class SettingsDialog(QDialog):
                 ('excel_radio', 'Excel radio button'),
                 ('format_button_group', 'Format button group')
             ]
+            
+            missing_components = []
+            for attr_name, description in required_components:
+                if not hasattr(self, attr_name) or getattr(self, attr_name) is None:
+                    missing_components.append(f"{description} ({attr_name})")
+            
+            if missing_components:
+                print(f"Warning: Missing UI components during load_settings: {missing_components}")
+                self.set_safe_defaults()
+                return
+            
+            # Add sync checkbox to required components
+            required_components.extend([
+                ('enable_sync_checkbox', 'Enable sync checkbox')
+            ])
             
             missing_components = []
             for attr_name, description in required_components:
@@ -551,6 +598,8 @@ class SettingsDialog(QDialog):
                     self.config.set('Interface', 'button_position', 'bottom')
             except Exception as config_e:
                 print(f"Warning: Could not update config: {config_e}")
+    
+    
     
     def safe_set_radio_button(self, radio_button, button_name):
         """Safely set a radio button with comprehensive error handling"""

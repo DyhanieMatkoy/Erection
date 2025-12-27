@@ -400,7 +400,7 @@ class DailyReportLine(Base):
     work_id = Column(Integer, ForeignKey('works.id'))
     planned_labor = Column(Float, default=0.0)
     actual_labor = Column(Float, default=0.0)
-    deviation_percent = Column(Float, default=0.0)
+    labor_deviation_percent = Column(Float, default=0.0)
     is_group = Column(Boolean, default=False)
     group_name = Column(String(500))
     parent_group_id = Column(Integer, ForeignKey('daily_report_lines.id'))

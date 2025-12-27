@@ -13,7 +13,7 @@ class DailyReportLine:
     work_id: int = 0
     planned_labor: float = 0.0
     actual_labor: float = 0.0
-    deviation_percent: float = 0.0
+    labor_deviation_percent: float = 0.0
     executor_ids: List[int] = field(default_factory=list)
     is_group: bool = False
     group_name: str = ""

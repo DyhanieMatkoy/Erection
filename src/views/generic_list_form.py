@@ -326,6 +326,18 @@ class GenericListForm(QWidget):
             sel = self.controller.get_selection()
             if len(sel) == 1:
                 self.open_document_requested.emit(sel[0])
+        elif event.key() == Qt.Key.Key_PageUp:
+            # Page Up - scroll up one page
+            self.on_page_up(None)
+        elif event.key() == Qt.Key.Key_PageDown:
+            # Page Down - scroll down one page  
+            self.on_page_down(None)
+        elif event.key() == Qt.Key.Key_Home:
+            # Home - go to first item
+            self.on_go_to_first(None)
+        elif event.key() == Qt.Key.Key_End:
+            # End - go to last item
+            self.on_go_to_last(None)
         else:
             super().keyPressEvent(event)
 
@@ -511,6 +523,16 @@ class GenericListForm(QWidget):
             self.controller.set_filter('parent_id', None)
             if hasattr(self.filter_bar, 'set_navigation_state'):
                 self.filter_bar.set_navigation_state(False, "Корень")
+
+    def showEvent(self, event):
+        """Handle show event - set focus to table"""
+        super().showEvent(event)
+        # Set focus to the table when the form is shown
+        if hasattr(self, 'table') and self.table:
+            self.table.setFocus()
+            # Select first row if available and no selection exists
+            if self.table.rowCount() > 0 and self.table.currentRow() < 0:
+                self.table.selectRow(0)
 
     def closeEvent(self, event):
         if hasattr(self, 'keyboard_handler'):

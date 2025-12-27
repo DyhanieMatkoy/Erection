@@ -13,10 +13,10 @@ from datetime import datetime
 
 from ..dependencies.database import get_db
 from ..dependencies.auth import get_current_user
-from ...src.services.table_part_settings_service import TablePartSettingsService
-from ...src.services.table_part_settings_migration import TablePartSettingsMigrator
-from ...src.data.models.table_part_models import TablePartSettingsData
-from ...src.data.models.sqlalchemy_models import User
+from src.services.table_part_settings_service import TablePartSettingsService
+from src.services.table_part_settings_migration import TablePartSettingsMigrator
+from src.data.models.table_part_models import TablePartSettingsData
+from src.data.models.sqlalchemy_models import User
 
 router = APIRouter(prefix="/table-part-settings", tags=["table-part-settings"])
 

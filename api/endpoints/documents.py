@@ -357,7 +357,7 @@ async def import_daily_report_from_excel(
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 report_id, line.line_number, line.work_id, 
-                line.planned_labor, line.actual_labor, line.deviation_percent
+                line.planned_labor, line.actual_labor, line.labor_deviation_percent
             ))
         
         db.commit()
@@ -382,7 +382,7 @@ async def import_daily_report_from_excel(
             cursor.execute("""
                 SELECT 
                     drl.id, drl.line_number, drl.work_id, drl.planned_labor, 
-                    drl.actual_labor, drl.deviation_percent,
+                    drl.actual_labor, drl.labor_deviation_percent,
                     w.name as work_name, w.code as work_code
                 FROM daily_report_lines drl
                 LEFT JOIN works w ON drl.work_id = w.id

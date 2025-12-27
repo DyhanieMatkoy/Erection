@@ -81,7 +81,7 @@ class ExcelDailyReportPrintForm(ExcelPrintFormGenerator):
                 w.name as work_name,
                 drl.planned_labor,
                 drl.actual_labor,
-                drl.deviation_percent,
+                drl.labor_deviation_percent,
                 drl.id as line_id,
                 '' as unit,
                 0 as quantity
@@ -110,7 +110,7 @@ class ExcelDailyReportPrintForm(ExcelPrintFormGenerator):
                 'quantity': line_row['quantity'] or 0,
                 'planned_labor': line_row['planned_labor'],
                 'actual_labor': line_row['actual_labor'],
-                'deviation_percent': line_row['deviation_percent'],
+                'labor_deviation_percent': line_row['labor_deviation_percent'],
                 'executors': executors
             })
         
@@ -159,7 +159,7 @@ class ExcelDailyReportPrintForm(ExcelPrintFormGenerator):
             self.set_cell_value(sheet, current_row, 4, self.safe_float(line.get('quantity', 0) or 0))
             self.set_cell_value(sheet, current_row, 5, self.safe_float(line['planned_labor'] or 0))
             self.set_cell_value(sheet, current_row, 6, self.safe_float(line['actual_labor'] or 0))
-            self.set_cell_value(sheet, current_row, 7, self.safe_float(line['deviation_percent'] or 0))
+            self.set_cell_value(sheet, current_row, 7, self.safe_float(line['labor_deviation_percent'] or 0))
             self.set_cell_value(sheet, current_row, 8, executors_str)
             
             current_row += 1
@@ -227,7 +227,7 @@ class ExcelDailyReportPrintForm(ExcelPrintFormGenerator):
             self.set_cell_value(sheet, current_row, 4, self.safe_float(line.get('quantity', 0) or 0))
             self.set_cell_value(sheet, current_row, 5, self.safe_float(line['planned_labor'] or 0))
             self.set_cell_value(sheet, current_row, 6, self.safe_float(line['actual_labor'] or 0))
-            self.set_cell_value(sheet, current_row, 7, self.safe_float(line['deviation_percent'] or 0))
+            self.set_cell_value(sheet, current_row, 7, self.safe_float(line['labor_deviation_percent'] or 0))
             self.set_cell_value(sheet, current_row, 8, executors_str)
             
             # Apply styles

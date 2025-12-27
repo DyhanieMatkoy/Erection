@@ -108,7 +108,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 # Include routers
-from api.endpoints import references, documents, registers, costs_materials, work_specifications, sync, audit, bulk_work_operations, panel_configuration, table_part_settings
+from api.endpoints import references, documents, registers, costs_materials, work_specifications, sync, audit, bulk_work_operations, panel_configuration, table_part_settings, work_selector_settings
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(references.router, prefix=settings.API_PREFIX)
 app.include_router(documents.router, prefix=settings.API_PREFIX)
@@ -120,6 +120,7 @@ app.include_router(audit.router, prefix=settings.API_PREFIX)
 app.include_router(bulk_work_operations.router, prefix=settings.API_PREFIX)
 app.include_router(panel_configuration.router, prefix=settings.API_PREFIX)
 app.include_router(table_part_settings.router, prefix=settings.API_PREFIX)
+app.include_router(work_selector_settings.router, prefix=settings.API_PREFIX)
 
 
 

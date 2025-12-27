@@ -2,52 +2,78 @@
 
 Welcome to the Erection project documentation. This directory contains all project documentation organized by category.
 
-## Documentation Structure
+## 📚 Documentation Structure
 
 ### 📖 [User Guide](user-guide/)
 Documentation for end users including:
-- Installation guides
-- Quick start instructions
-- Troubleshooting
-- User manuals
+- **Quick Start** - Installation and basic usage
+- **Features** - Daily reports, estimates, timesheets, work composition, bulk operations
+- **Russian Documentation** - Russian language guides and instructions
+- **Troubleshooting** - Common issues and solutions
 
 ### 👨‍💻 [Developer Guide](developer-guide/)
 Technical documentation for developers including:
-- API documentation
-- Architecture overview
-- Development setup
-- Coding standards
+- **Setup** - Development environment, project structure, contributing
+- **Architecture** - System architecture, data model, sync system, design patterns
+- **API** - REST API documentation, endpoints, authentication, examples
+- **Deployment** - Production deployment, configuration, distribution
+- **Testing** - Unit tests, integration tests, debugging guide
+
+### 🛠️ [Administration Guide](administration/)
+System administration documentation:
+- **Installation** - Server setup, database migration, configuration
+- **Maintenance** - Backup procedures, monitoring, performance tuning
+- **Security** - User management, access control, security policies
+
+### 📋 [Reference Documentation](reference/)
+Detailed technical references:
+- **Database** - Schema, tables, relationships, migration guides
+- **Configuration** - env.ini settings, sync settings, UI configuration
+- **API** - Complete API reference with endpoints and examples
 
 ### 🚀 [Deployment](deployment/)
 Deployment-related documentation:
 - Production deployment guides
-- Configuration management
-- Infrastructure setup
-- Deployment checklists
+- Distribution checklists
+- Migration tools
+- Offline distribution
 
 ### ✨ [Features](features/)
-Feature-specific documentation:
-- Feature implementation details
-- User interface guides
-- Feature changelogs
+Feature implementation details:
+- Feature specifications and implementation notes
+- User interface improvements
+- New feature announcements
 - Technical specifications
 
 ### 📝 [Changelogs](changelogs/)
-Version history and change documentation:
-- Release notes
-- Bug fix summaries
-- Feature updates
-- Migration guides
+Version history and changes:
+- **Latest** - Current release notes and updates
+- **2025** - Year-specific changelogs
+- Release notes and bug fix summaries
 
 ### 🇷🇺 [Russian Documentation](russian/)
 Russian language documentation:
-- User guides in Russian
-- Technical documentation
-- Installation instructions
-- User manuals
+- User guides and instructions
+- Feature documentation in Russian
+- Installation and setup guides
+
+### 📋 [Tasks](tasks/)
+Development task documentation:
+- **Completed** - Finished development tasks
+- **In Progress** - Current work items
 
 ### 📦 [Archived Documentation](archived/)
-Old or obsolete documentation:
+Historical documentation:
+- **Old Versions** - Documentation from previous releases
+- **Deprecated** - Outdated features and documentation
+
+### 🗃️ Additional Resources
+- **Analysis** - Data model analysis and optimizations
+- **Fixes** - Bug fix documentation and solutions
+- **Guides** - Various technical guides and tutorials
+- **Legacy** - Historical development documentation
+- **Misc** - Miscellaneous documentation and references
+- **Reports** - Testing reports and implementation summaries
 - Deprecated features
 - Historical information
 - Previous versions

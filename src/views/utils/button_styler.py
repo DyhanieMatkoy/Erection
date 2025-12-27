@@ -24,6 +24,7 @@ class ButtonStyler:
         'yes': '✅',
         'no': '❌',
         'add': '➕',
+        'add_group': '📁➕',  # Folder with plus
         'remove': '➖',
         'search': '🔍',
         'filter': '🔽',
@@ -91,7 +92,8 @@ class ButtonStyler:
         'save_and_close': 'Сохранить и закрыть',
         'close': 'Закрыть',
         'cancel': 'Отмена',
-        'add': 'Добавить',
+        'add': 'Добавить строку',
+        'add_group': 'Добавить группу',
         'remove': 'Удалить',
         'search': 'Поиск',
         'filter': 'Фильтр',

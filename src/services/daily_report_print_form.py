@@ -104,7 +104,7 @@ class DailyReportPrintForm(PrintFormGenerator):
                 w.name as work_name,
                 drl.planned_labor,
                 drl.actual_labor,
-                drl.deviation_percent,
+                drl.labor_deviation_percent,
                 drl.id as line_id,
                 '' as unit,
                 0 as quantity
@@ -121,7 +121,7 @@ class DailyReportPrintForm(PrintFormGenerator):
         #         w.name as work_name,
         #         drl.planned_labor,
         #         drl.actual_labor,
-        #         drl.deviation_percent,
+        #         drl.labor_deviation_percent,
         #         drl.id as line_id,
         #         w.unit,
         #         0 as quantity
@@ -150,7 +150,7 @@ class DailyReportPrintForm(PrintFormGenerator):
                 'quantity': line_row['quantity'] or 0,
                 'planned_labor': line_row['planned_labor'],
                 'actual_labor': line_row['actual_labor'],
-                'deviation_percent': line_row['deviation_percent'],
+                'labor_deviation_percent': line_row['labor_deviation_percent'],
                 'executors': executors
             })
         
@@ -185,7 +185,7 @@ class DailyReportPrintForm(PrintFormGenerator):
                 self.format_number(line.get('quantity', 0), 2),
                 self.format_number(line['planned_labor'], 2),
                 self.format_number(line['actual_labor'], 2),
-                self.format_number(line['deviation_percent'], 1),
+                self.format_number(line['labor_deviation_percent'], 1),
                 executors_str
             ]
             table_data.append(row)

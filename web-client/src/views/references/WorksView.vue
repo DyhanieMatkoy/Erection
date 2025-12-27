@@ -201,6 +201,16 @@
                   Импорт CSV
                 </button>
                 <button
+                  @click="loadExampleCSV; showMoreMenu = false"
+                  class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-gray-100 flex items-center"
+                  role="menuitem"
+                >
+                  <svg class="h-4 w-4 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Загрузить пример иерархии
+                </button>
+                <button
                   v-if="hasDeletedItems"
                   @click="handlePermanentDelete; showMoreMenu = false"
                   class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-gray-100 flex items-center"
@@ -334,7 +344,10 @@
                 hover:file:bg-blue-100"
             />
             <p class="mt-1 text-xs text-gray-500">
-              Формат: Тип работ; Наименование работы; Цена; Единица измерения
+              Формат: Тип работ; Наименование работы; Цена; Единица измерения; Иерархия
+            </p>
+            <p class="mt-1 text-xs text-gray-400">
+              Поддерживается многоуровневая иерархия через " > " (например: Строительство > Отделка > Штукатурка)
             </p>
           </div>
 
@@ -864,6 +877,30 @@ function handleDeleteModeChange() {
   if (importDeleteMode.value) {
     importSkipExisting.value = false
   }
+}
+
+async function loadExampleCSV() {
+  // Создаем файл с примером иерархии
+  const csvContent = `Тип работ;Наименование работы;Цена;Единица измерения;Иерархия
+Строительные работы;Земляные работы;1500;м3;Строительство > Общестроительные работы > Земляные работы
+Строительные работы;Фундаментные работы;2800;м3;Строительство > Общестроительные работы > Фундаментные работы
+Отделочные работы;Штукатурные работы;450;м2;Строительство > Отделочные работы > Штукатурные работы
+Отделочные работы;Малярные работы;320;м2;Строительство > Отделочные работы > Малярные работы
+Инженерные системы;Вентиляция;1800;м2;Строительство > Инженерные системы > Вентиляция
+Инженерные системы;Отопление;2200;м2;Строительство > Инженерные системы > Отопление
+Электромонтажные работы;Прокладка кабеля;120;м.п.;Строительство > Электромонтаж > Прокладка кабеля
+Электромонтажные работы;Монтаж розеток;350;шт.;Строительство > Электромонтаж > Монтаж розеток
+Спецработы;Гидроизоляция;680;м2;Строительство > Спецработы > Гидроизоляция
+Спецработы;Теплоизоляция;520;м2;Строительство > Спецработы > Теплоизоляция`
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const file = new File([blob], 'пример_иерархии.csv', { type: 'text/csv' })
+  
+  // Открываем модальное окно и устанавливаем файл
+  selectedFile.value = file
+  showImportModal.value = true
+  importError.value = null
+  importResult.value = null
 }
 
 function closeImportModal() {

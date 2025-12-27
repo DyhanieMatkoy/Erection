@@ -476,10 +476,16 @@ class DatabaseManager:
                     self._schema_manager.initialize_schema(use_alembic=True)
                     logger.info("Database schema initialized successfully using schema manager")
                 except Exception as e:
-                    logger.error(f"Schema manager initialization failed: {e}")
-                    raise DatabaseOperationError(
-                        f"Failed to initialize database schema: {e}"
-                    )
+                    logger.warning(f"Schema manager initialization failed: {e}")
+                    logger.info("Falling back to direct SQLAlchemy table creation")
+                    try:
+                        Base.metadata.create_all(bind=self._engine)
+                        logger.info("Database tables created successfully using SQLAlchemy fallback")
+                    except Exception as fallback_error:
+                        logger.error(f"Direct table creation failed: {fallback_error}")
+                        raise DatabaseOperationError(
+                            f"Failed to initialize database schema with both Alembic and direct creation: {e}"
+                        )
             else:
                 # Fallback to direct table creation
                 try:
@@ -741,7 +747,7 @@ class DatabaseManager:
                 work_id INTEGER REFERENCES works(id),
                 planned_labor REAL,
                 actual_labor REAL,
-                deviation_percent REAL,
+                labor_deviation_percent REAL,
                 is_group INTEGER DEFAULT 0,
                 group_name TEXT,
                 parent_group_id INTEGER REFERENCES daily_report_lines(id),

@@ -35,11 +35,11 @@ class DailyReportViewModel(QObject):
         
         for line in self.report.lines:
             if line.planned_labor > 0:
-                line.deviation_percent = CalculatorService.calculate_deviation(
+                line.labor_deviation_percent = CalculatorService.calculate_deviation(
                     line.planned_labor, 
                     line.actual_labor
                 )
             else:
-                line.deviation_percent = 0.0
+                line.labor_deviation_percent = 0.0
         
         self.modified.emit()

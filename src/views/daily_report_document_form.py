@@ -460,7 +460,7 @@ class DailyReportDocumentForm(BaseDocumentForm):
             self.table_part.setItem(row, 0, QTableWidgetItem(work_name))
             self.table_part.setItem(row, 1, QTableWidgetItem(f"{line.planned_labor or 0:.2f}" if not line.is_group else ""))
             self.table_part.setItem(row, 2, QTableWidgetItem(f"{line.actual_labor or 0:.2f}" if not line.is_group else ""))
-            self.table_part.setItem(row, 3, QTableWidgetItem(f"{line.deviation_percent or 0:.2f}" if not line.is_group else ""))
+            self.table_part.setItem(row, 3, QTableWidgetItem(f"{line.labor_deviation_percent or 0:.2f}" if not line.is_group else ""))
             self.table_part.setItem(row, 4, QTableWidgetItem(", ".join(executor_names)))
             self.table_part.setItem(row, 5, QTableWidgetItem(str(line.work_id or 0)))
             self.table_part.setItem(row, 6, QTableWidgetItem(",".join(map(str, executor_ids))))
@@ -669,9 +669,9 @@ class DailyReportDocumentForm(BaseDocumentForm):
                     line.actual_labor = 0.0
                 
                 try:
-                    line.deviation_percent = float(deviation_item.text().strip()) if deviation_item and deviation_item.text() else 0.0
+                    line.labor_deviation_percent = float(deviation_item.text().strip()) if deviation_item and deviation_item.text() else 0.0
                 except (ValueError, AttributeError):
-                    line.deviation_percent = 0.0
+                    line.labor_deviation_percent = 0.0
                 
                 # Handle groups
                 if is_group:

@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict
 import uuid
 from api.models.auth import UserInfo
 from api.models.references import (
@@ -1522,6 +1522,90 @@ def parse_unit(unit_str: str) -> str:
     return unit
 
 
+def parse_hierarchy_path(hierarchy_str: str, separator: str = ' > ') -> List[str]:
+    """Parse hierarchy path from string"""
+    if not hierarchy_str:
+        return []
+    
+    # Try different separators
+    parts = hierarchy_str.split(separator)
+    if len(parts) <= 1:
+        # Try alternative separators
+        alt_separators = [' | ', ' / ', '->', '|', '/', '|']
+        for alt_sep in alt_separators:
+            parts = hierarchy_str.split(alt_sep)
+            if len(parts) > 1:
+                break
+    
+    # Clean up parts and remove empty strings
+    return [part.strip() for part in parts if part.strip()]
+
+
+def get_or_create_hierarchy(cursor, db, hierarchy_parts: List[str], root_parent_id: Optional[int], cache: Dict) -> int:
+    """Get or create hierarchy levels and return final parent_id"""
+    current_parent_id = root_parent_id
+    
+    for part in hierarchy_parts:
+        # Check cache first
+        cache_key = f"{current_parent_id}:{part}"
+        if cache_key in cache:
+            current_parent_id = cache[cache_key]
+            continue
+        
+        # Check if hierarchy level exists
+        cursor.execute(
+            "SELECT id FROM works WHERE name = ? AND parent_id IS ? AND marked_for_deletion = 0",
+            (part, current_parent_id)
+        )
+        result = cursor.fetchone()
+        
+        if result:
+            current_parent_id = result['id']
+        else:
+            # Create new hierarchy level (group)
+            cursor.execute(
+                """INSERT INTO works (name, parent_id, marked_for_deletion, is_group)
+                   VALUES (?, ?, 0, 1)""",
+                (part, current_parent_id)
+            )
+            current_parent_id = cursor.lastrowid
+            db.commit()
+        
+        # Cache the result
+        cache[cache_key] = current_parent_id
+    
+    return current_parent_id
+
+
+def get_or_create_unit(cursor, db, unit_str: str, cache: Dict) -> Optional[int]:
+    """Get or create unit from string and return unit_id"""
+    if not unit_str:
+        return None
+    
+    if unit_str in cache:
+        return cache[unit_str]
+    
+    cursor.execute(
+        "SELECT id FROM units WHERE name = ? AND marked_for_deletion = 0",
+        (unit_str,)
+    )
+    result = cursor.fetchone()
+    
+    if result:
+        unit_id = result['id']
+    else:
+        # Create new unit
+        cursor.execute(
+            "INSERT INTO units (name, description, marked_for_deletion) VALUES (?, ?, 0)",
+            (unit_str, f"Автоматически создана при импорте из CSV")
+        )
+        unit_id = cursor.lastrowid
+        db.commit()
+    
+    cache[unit_str] = unit_id
+    return unit_id
+
+
 @router.post("/works/import-csv")
 async def import_works_from_csv(
     file: UploadFile = File(...),
@@ -1544,6 +1628,7 @@ async def import_works_from_csv(
     skipped = 0
     errors = []
     work_groups = {}  # Cache for work groups
+    unit_cache = {}   # Cache for units
     
     try:
         # Read file content
@@ -1560,6 +1645,7 @@ async def import_works_from_csv(
                 work_name = (row.get('Наименование работы') or '').strip()
                 price_str = (row.get('Цена') or '0').strip()
                 unit_str = (row.get('Единица измерения') or '').strip()
+                hierarchy_str = (row.get('Иерархия') or '').strip()
                 
                 if not work_name:
                     errors.append(f"Строка {row_num}: Пустое наименование работы")
@@ -1579,12 +1665,19 @@ async def import_works_from_csv(
                     continue
                 
                 # IMPORT MODE: Add or update works
-                # Determine parent_id
+                # Determine parent_id with hierarchy support
                 work_parent_id = parent_id
                 
-                # If work_type is specified, create/get subgroup
-                if work_type:
-                    # Create cache key based on parent_id and work_type
+                # Priority: Hierarchy > Path > Type
+                if hierarchy_str:
+                    # Parse and create hierarchy path
+                    hierarchy_parts = parse_hierarchy_path(hierarchy_str)
+                    if hierarchy_parts:
+                        work_parent_id = get_or_create_hierarchy(
+                            cursor, db, hierarchy_parts, parent_id, work_groups
+                        )
+                elif work_type:
+                    # Legacy support: create/get single level subgroup
                     cache_key = f"{parent_id}:{work_type}"
                     
                     if cache_key in work_groups:
@@ -1592,7 +1685,7 @@ async def import_works_from_csv(
                     else:
                         # Check if subgroup exists
                         cursor.execute(
-                            "SELECT id FROM works WHERE name = ? AND parent_id IS ?",
+                            "SELECT id FROM works WHERE name = ? AND parent_id IS ? AND marked_for_deletion = 0",
                             (work_type, parent_id)
                         )
                         result = cursor.fetchone()
@@ -1600,10 +1693,10 @@ async def import_works_from_csv(
                         if result:
                             work_parent_id = result['id']
                         else:
-                            # Create new subgroup
+                            # Create new subgroup (is_group=True)
                             cursor.execute(
-                                """INSERT INTO works (name, unit, price, labor_rate, parent_id, marked_for_deletion)
-                                   VALUES (?, '', 0, 0, ?, 0)""",
+                                """INSERT INTO works (name, parent_id, marked_for_deletion, is_group)
+                                   VALUES (?, ?, 0, 1)""",
                                 (work_type, parent_id)
                             )
                             work_parent_id = cursor.lastrowid
@@ -1623,13 +1716,13 @@ async def import_works_from_csv(
                 
                 # Parse data
                 price = parse_price(price_str)
-                unit = parse_unit(unit_str)
+                unit_id = get_or_create_unit(cursor, db, unit_str, unit_cache)
                 
                 # Add work
                 cursor.execute(
-                    """INSERT INTO works (name, unit, price, labor_rate, parent_id, marked_for_deletion)
+                    """INSERT INTO works (name, unit_id, price, labor_rate, parent_id, marked_for_deletion)
                        VALUES (?, ?, ?, 0, ?, 0)""",
-                    (work_name, unit, price, work_parent_id)
+                    (work_name, unit_id, price, work_parent_id)
                 )
                 db.commit()
                 added += 1

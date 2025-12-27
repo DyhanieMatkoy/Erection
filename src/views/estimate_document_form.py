@@ -18,6 +18,22 @@ from ..services.hierarchy_service import HierarchyService
 from .utils.button_styler import get_button_styler
 
 
+class ReferenceLineEdit(QLineEdit):
+    """Custom QLineEdit that opens reference selector on focus when empty"""
+    
+    def __init__(self, parent=None, selector_callback=None):
+        super().__init__(parent)
+        self.selector_callback = selector_callback
+        self.setReadOnly(True)
+    
+    def focusInEvent(self, event):
+        """Handle focus in event - open selector if empty"""
+        super().focusInEvent(event)
+        if self.selector_callback and not self.text().strip():
+            # Use QTimer to defer the callback to avoid focus issues
+            QTimer.singleShot(0, self.selector_callback)
+
+
 class EstimateDocumentForm(BaseDocumentForm):
     def __init__(self, estimate_id: int = 0):
         super().__init__()
@@ -94,8 +110,7 @@ class EstimateDocumentForm(BaseDocumentForm):
         
         # Customer
         customer_layout = QHBoxLayout()
-        self.customer_edit = QLineEdit()
-        self.customer_edit.setReadOnly(True)
+        self.customer_edit = ReferenceLineEdit(self, self.on_select_customer)
         self.customer_id = 0
         customer_layout.addWidget(self.customer_edit)
         self.customer_button = QPushButton("...")
@@ -106,8 +121,7 @@ class EstimateDocumentForm(BaseDocumentForm):
         
         # Object
         object_layout = QHBoxLayout()
-        self.object_edit = QLineEdit()
-        self.object_edit.setReadOnly(True)
+        self.object_edit = ReferenceLineEdit(self, self.on_select_object)
         self.object_id = 0
         object_layout.addWidget(self.object_edit)
         self.object_button = QPushButton("...")
@@ -118,8 +132,7 @@ class EstimateDocumentForm(BaseDocumentForm):
         
         # Contractor
         contractor_layout = QHBoxLayout()
-        self.contractor_edit = QLineEdit()
-        self.contractor_edit.setReadOnly(True)
+        self.contractor_edit = ReferenceLineEdit(self, self.on_select_contractor)
         self.contractor_id = 0
         contractor_layout.addWidget(self.contractor_edit)
         self.contractor_button = QPushButton("...")
@@ -130,8 +143,7 @@ class EstimateDocumentForm(BaseDocumentForm):
         
         # Responsible
         responsible_layout = QHBoxLayout()
-        self.responsible_edit = QLineEdit()
-        self.responsible_edit.setReadOnly(True)
+        self.responsible_edit = ReferenceLineEdit(self, self.on_select_responsible)
         self.responsible_id = 0
         responsible_layout.addWidget(self.responsible_edit)
         self.responsible_button = QPushButton("...")
@@ -146,6 +158,37 @@ class EstimateDocumentForm(BaseDocumentForm):
         # Table part section
         table_group = QGroupBox("Табличная часть")
         table_layout = QVBoxLayout()
+        
+        # Table buttons (moved above table)
+        table_button_layout = QHBoxLayout()
+        
+        # Get button styler for consistent styling
+        styler = get_button_styler()
+        
+        self.add_row_button = QPushButton()
+        styler.apply_style(self.add_row_button, 'add')
+        self.add_row_button.clicked.connect(self.on_add_row)
+        table_button_layout.addWidget(self.add_row_button)
+        
+        self.add_group_button = QPushButton()
+        styler.apply_style(self.add_group_button, 'add_group')
+        self.add_group_button.clicked.connect(self.on_add_group)
+        table_button_layout.addWidget(self.add_group_button)
+        
+        self.delete_row_button = QPushButton()
+        styler.apply_style(self.delete_row_button, 'delete')
+        self.delete_row_button.clicked.connect(self.on_delete_row)
+        table_button_layout.addWidget(self.delete_row_button)
+        
+        # Work selector settings button
+        self.work_selector_settings_button = QPushButton()
+        styler.apply_style(self.work_selector_settings_button, 'settings')
+        self.work_selector_settings_button.clicked.connect(self.on_work_selector_settings)
+        self.work_selector_settings_button.setToolTip("Настройки селектора работ")
+        table_button_layout.addWidget(self.work_selector_settings_button)
+        
+        table_button_layout.addStretch()
+        table_layout.addLayout(table_button_layout)
         
         # Table
         self.table_part = QTableWidget()
@@ -164,23 +207,6 @@ class EstimateDocumentForm(BaseDocumentForm):
         self.table_part.customContextMenuRequested.connect(self.on_table_context_menu)
         
         table_layout.addWidget(self.table_part)
-        
-        # Table buttons
-        table_button_layout = QHBoxLayout()
-        self.add_row_button = QPushButton("Добавить строку (Insert)")
-        self.add_row_button.clicked.connect(self.on_add_row)
-        table_button_layout.addWidget(self.add_row_button)
-        
-        self.add_group_button = QPushButton("Добавить группу")
-        self.add_group_button.clicked.connect(self.on_add_group)
-        table_button_layout.addWidget(self.add_group_button)
-        
-        self.delete_row_button = QPushButton("Удалить строку (Delete)")
-        self.delete_row_button.clicked.connect(self.on_delete_row)
-        table_button_layout.addWidget(self.delete_row_button)
-        
-        table_button_layout.addStretch()
-        table_layout.addLayout(table_button_layout)
         
         table_group.setLayout(table_layout)
         layout.addWidget(table_group)
@@ -258,14 +284,37 @@ class EstimateDocumentForm(BaseDocumentForm):
         self.estimate_type_label.setText("Генеральная смета")
         self.base_document_edit.setText("")
         
+        # Clear foreign key fields
+        self.customer_id = None
+        self.object_id = None
+        self.contractor_id = None
+        self.responsible_id = None
+        
+        # Clear corresponding UI fields
+        self.customer_edit.setText("")
+        self.object_edit.setText("")
+        self.contractor_edit.setText("")
+        self.responsible_edit.setText("")
+        
         # Load default contractor and responsible from constants
         try:
+            # Load default contractor
             constant = self.session.query(Constant).filter_by(key='default_organization_id').first()
             if constant:
                 org_id = int(constant.value)
                 self.load_organization(org_id)
+            
+            # Load default responsible person
+            constant = self.session.query(Constant).filter_by(key='default_responsible_id').first()
+            if constant:
+                person_id = int(constant.value)
+                self.load_responsible(person_id)
+                
         except Exception:
             pass # Ignore errors here
+        
+        # Clear table part
+        self.table_part.setRowCount(0)
     
     def load_estimate(self):
         """Load estimate from database"""
@@ -372,6 +421,14 @@ class EstimateDocumentForm(BaseDocumentForm):
         """Handle add row"""
         self.add_table_row()
         self.modified = True
+        
+        # Automatically open work selector for the new row
+        new_row = self.table_part.rowCount() - 1
+        self.table_part.selectRow(new_row)
+        self.table_part.setCurrentCell(new_row, 0)  # Set focus to work column
+        
+        # Open work selector for the new row
+        self.on_select_work(new_row)
     
     def on_add_group(self):
         """Handle add group row"""
@@ -515,7 +572,7 @@ class EstimateDocumentForm(BaseDocumentForm):
     
     def on_select_customer(self):
         """Select customer"""
-        dialog = ReferencePickerDialog("counterparties", "Выбор заказчика", self, current_id=self.customer_id if self.customer_id > 0 else None)
+        dialog = ReferencePickerDialog("counterparties", "Выбор заказчика", self, current_id=self.customer_id if self.customer_id and self.customer_id > 0 else None)
         if dialog.exec():
             selected_id, selected_name = dialog.get_selected()
             self.customer_id = selected_id
@@ -528,7 +585,7 @@ class EstimateDocumentForm(BaseDocumentForm):
             QMessageBox.warning(self, "Предупреждение", "Сначала выберите заказчика")
             return
         
-        dialog = ReferencePickerDialog("objects", "Выбор объекта", self, owner_id=self.customer_id, current_id=self.object_id if self.object_id > 0 else None)
+        dialog = ReferencePickerDialog("objects", "Выбор объекта", self, owner_id=self.customer_id, current_id=self.object_id if self.object_id and self.object_id > 0 else None)
         if dialog.exec():
             selected_id, selected_name = dialog.get_selected()
             self.object_id = selected_id
@@ -537,7 +594,7 @@ class EstimateDocumentForm(BaseDocumentForm):
     
     def on_select_contractor(self):
         """Select contractor"""
-        dialog = ReferencePickerDialog("organizations", "Выбор подрядчика", self, current_id=self.contractor_id if self.contractor_id > 0 else None)
+        dialog = ReferencePickerDialog("organizations", "Выбор подрядчика", self, current_id=self.contractor_id if self.contractor_id and self.contractor_id > 0 else None)
         if dialog.exec():
             selected_id, selected_name = dialog.get_selected()
             self.contractor_id = selected_id
@@ -546,7 +603,7 @@ class EstimateDocumentForm(BaseDocumentForm):
     
     def on_select_responsible(self):
         """Select responsible"""
-        dialog = ReferencePickerDialog("persons", "Выбор ответственного", self, current_id=self.responsible_id if self.responsible_id > 0 else None)
+        dialog = ReferencePickerDialog("persons", "Выбор ответственного", self, current_id=self.responsible_id if self.responsible_id and self.responsible_id > 0 else None)
         if dialog.exec():
             selected_id, selected_name = dialog.get_selected()
             self.responsible_id = selected_id
@@ -633,6 +690,14 @@ class EstimateDocumentForm(BaseDocumentForm):
         work_id_item = self.table_part.item(row, 7)
         current_work_id = int(work_id_item.text()) if work_id_item and work_id_item.text() and work_id_item.text() not in ["0", "-1"] else None
         
+        # Use enhanced work selector with user settings
+        from .dialogs.enhanced_work_selector_dialog import EnhancedWorkSelectorDialog
+        
+        # Get user ID (you might want to get this from a proper user session)
+        user_id = 4  # Default admin user, replace with actual user session
+        
+        dialog = EnhancedWorkSelectorDialog(self, current_work_id, user_id)
+        
         # Use substring search if user typed something
         work_name_item = self.table_part.item(row, 0)
         search_text = ""
@@ -641,18 +706,16 @@ class EstimateDocumentForm(BaseDocumentForm):
              if not (text.startswith("[") and "]" in text) and current_work_id is None:
                  search_text = text
 
-        dialog = ReferencePickerDialog("works", "Выбор работы", self, current_id=current_work_id)
         if search_text:
             dialog.search_edit.setText(search_text)
-            
-        if dialog.exec():
-            selected_id, selected_name = dialog.get_selected()
-            
+        
+        # Connect signal to handle selection
+        def on_work_selected(work_id, work_name):
             # Load work details
-            work = self.session.query(Work).filter_by(id=selected_id).first()
+            work = self.session.query(Work).filter_by(id=work_id).first()
             if work:
                 # Format name with code if available
-                display_name = f"[{work.code}] {selected_name}" if work.code else selected_name
+                display_name = f"[{work.code}] {work_name}" if work.code else work_name
                 
                 self.table_part.blockSignals(True)
                 self.table_part.setItem(row, 0, QTableWidgetItem(display_name))
@@ -667,11 +730,37 @@ class EstimateDocumentForm(BaseDocumentForm):
                 self.table_part.setItem(row, 2, QTableWidgetItem(unit_name))
                 self.table_part.setItem(row, 3, QTableWidgetItem(str(work.price or 0)))
                 self.table_part.setItem(row, 4, QTableWidgetItem(str(work.labor_rate or 0)))
-                self.table_part.setItem(row, 7, QTableWidgetItem(str(selected_id)))
+                self.table_part.setItem(row, 7, QTableWidgetItem(str(work_id)))
                 self.table_part.blockSignals(False)
                 
                 self.schedule_recalculation()
                 self.modified = True
+        
+        dialog.work_selected.connect(on_work_selected)
+        
+        # Check user settings to determine how to show the dialog
+        is_modal = dialog.settings.get('open_modal', True)
+        
+        if is_modal:
+            # Use modal dialog
+            dialog.exec()
+        else:
+            # Use non-modal dialog
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+            # Store reference to prevent garbage collection
+            self._work_selector_dialog = dialog
+    
+    def on_work_selector_settings(self):
+        """Open work selector settings dialog"""
+        from .dialogs.work_selector_settings_dialog import WorkSelectorSettingsDialog
+        
+        # Get user ID (you might want to get this from a proper user session)
+        user_id = 4  # Default admin user, replace with actual user session
+        
+        dialog = WorkSelectorSettingsDialog(self, user_id)
+        dialog.exec()
     
     def load_customer(self, customer_id):
         """Load customer by ID"""
@@ -738,6 +827,10 @@ class EstimateDocumentForm(BaseDocumentForm):
             estimate.responsible_id = self.responsible_id
             estimate.base_document_id = self.base_document_id
             estimate.estimate_type = self.estimate_type
+            
+            # Flush first to get estimate ID for new estimates
+            if self.estimate_id == 0:
+                self.session.flush()  # Get the ID for the new estimate
             
             # Calculate totals and Rebuild lines
             total_sum = 0.0

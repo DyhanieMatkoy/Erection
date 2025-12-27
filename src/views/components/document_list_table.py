@@ -109,7 +109,12 @@ class DocumentListTable(QTableWidget):
                 val = get_value(item, col_id)
                 
                 # Formatting
-                text = str(val) if val is not None else ""
+                if isinstance(val, bool):
+                    # For boolean values, use empty string for False, checkmark for True
+                    text = "☑" if val else ""
+                else:
+                    text = str(val) if val is not None else ""
+                
                 if 'format' in col:
                      # Implement custom formatters if needed
                      pass

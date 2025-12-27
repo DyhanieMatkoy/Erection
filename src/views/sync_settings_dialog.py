@@ -5,6 +5,8 @@ in the desktop client application.
 """
 
 import logging
+import os
+from configparser import ConfigParser
 from typing import Optional
 
 from PyQt6.QtWidgets import (
@@ -34,6 +36,12 @@ class SyncSettingsDialog(QDialog):
         """
         super().__init__(parent)
         self.sync_service = sync_service
+        
+        # Initialize config
+        self.config_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'config', 'env.ini')
+        self.config = ConfigParser()
+        if os.path.exists(self.config_file):
+            self.config.read(self.config_file, encoding='utf-8')
         
         self.setWindowTitle("Synchronization Settings")
         self.setModal(True)
@@ -243,6 +251,44 @@ class SyncSettingsDialog(QDialog):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         
+        # Sync control group
+        sync_control_group = QGroupBox("Synchronization Control")
+        sync_control_layout = QVBoxLayout(sync_control_group)
+        
+        # Enable/disable sync checkbox
+        self.enable_sync_checkbox = QCheckBox("Включить синхронизацию данных")
+        self.enable_sync_checkbox.setChecked(True)  # Default enabled
+        self.enable_sync_checkbox.setToolTip(
+            "Отключение синхронизации предотвратит ошибки 'database is locked'\n"
+            "и ошибки регистрации изменений в sync_changes\n"
+            "Работа с данными будет продолжена локально без синхронизации"
+        )
+        sync_control_layout.addWidget(self.enable_sync_checkbox)
+        
+        # Sync info
+        sync_info = QLabel(
+            "Синхронизация позволяет обмениваться данными между несколькими рабочими местами.\n"
+            "При отключении синхронизации:\n"
+            "• Изменения не будут регистрироваться в таблице sync_changes\n"
+            "• Исключены ошибки 'database is locked' при работе с sync_changes\n"
+            "• Данные сохраняются только в локальной базе данных\n"
+            "• Возможность включения синхронизации в любой момент"
+        )
+        sync_info.setWordWrap(True)
+        sync_info.setStyleSheet("color: gray; font-size: 9pt; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;")
+        sync_control_layout.addWidget(sync_info)
+        
+        # Warning info
+        warning_info = QLabel(
+            "⚠️ Внимание: При отключенной синхронизации изменения не будут передаваться\n"
+            "на другие рабочие места и не будут синхронизированы с сервером."
+        )
+        warning_info.setWordWrap(True)
+        warning_info.setStyleSheet("color: #856404; font-size: 9pt; margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;")
+        sync_control_layout.addWidget(warning_info)
+        
+        layout.addWidget(sync_control_group)
+        
         # Advanced options group
         advanced_group = QGroupBox("Advanced Options")
         advanced_layout = QFormLayout(advanced_group)
@@ -311,6 +357,24 @@ class SyncSettingsDialog(QDialog):
         # Schedule settings
         self.sync_interval_spin.setValue(self.sync_service.sync_interval)
         
+        # Load sync enabled setting
+        try:
+            if self.config.has_section('Sync'):
+                if self.config.has_option('Sync', 'enabled'):
+                    sync_enabled = self.config.getboolean('Sync', 'enabled')
+                    self.enable_sync_checkbox.setChecked(sync_enabled)
+                    # Apply setting to sync manager
+                    from ..data.sync_manager import SyncManager
+                    sync_manager = SyncManager()
+                    if not sync_enabled:
+                        sync_manager.disable_sync()
+            else:
+                # Default to enabled
+                self.enable_sync_checkbox.setChecked(True)
+        except Exception as e:
+            print(f"Warning: Could not load sync settings: {e}")
+            self.enable_sync_checkbox.setChecked(True)  # Default to enabled
+        
         # Update status
         self._update_status_display()
     
@@ -321,7 +385,30 @@ class SyncSettingsDialog(QDialog):
         self.sync_service.node_code = self.node_code_edit.text().strip()
         self.sync_service.set_sync_interval(self.sync_interval_spin.value())
         
-        # Save settings (would integrate with app settings)
+        # Save sync enabled setting
+        try:
+            if not self.config.has_section('Sync'):
+                self.config.add_section('Sync')
+            
+            sync_enabled = self.enable_sync_checkbox.isChecked()
+            self.config.set('Sync', 'enabled', str(sync_enabled))
+            
+            # Apply setting to sync manager
+            from ..data.sync_manager import SyncManager
+            sync_manager = SyncManager()
+            if sync_enabled:
+                # Re-enable sync if it was disabled
+                sync_manager.sync_enabled = True
+            else:
+                sync_manager.disable_sync()
+            
+            # Write to file
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                self.config.write(f)
+                
+        except Exception as e:
+            print(f"Warning: Could not save sync settings: {e}")
+        
         logger.info("Applied sync settings")
     
     @pyqtSlot()

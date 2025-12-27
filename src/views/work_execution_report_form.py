@@ -15,7 +15,7 @@ class WorkExecutionReportForm(QWidget):
         self.db_manager = DatabaseManager()
         self.session = self.db_manager.get_session()
         self.register_repo = WorkExecutionRegisterRepository()
-        self.auth_service = AuthService(self.session)
+        self.auth_service = AuthService()
         self.setup_ui()
         self.setWindowTitle("Отчет: Выполнение работ")
         self.resize(1200, 700)
