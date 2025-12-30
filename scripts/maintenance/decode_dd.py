@@ -14,4 +14,4 @@ def decode_dd(filepath):
         print(f"Error reading file: {e}")
 
 if __name__ == "__main__":
-    decode_dd(r"F:\traeRepo\Vibe1Co\Erection\8-NSM320-1Cv7\1Cv7.DD")
+    decode_dd(r"F:\traeRepo\Vibe1Co\CTM\8-NSM320-1Cv7\1Cv7.DD")

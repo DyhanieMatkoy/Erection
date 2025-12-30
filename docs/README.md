@@ -1,6 +1,6 @@
 # Project Documentation
 
-Welcome to the Erection project documentation. This directory contains all project documentation organized by category.
+Welcome to the CTM project documentation. This directory contains all project documentation organized by category.
 
 ## 📚 Documentation Structure
 

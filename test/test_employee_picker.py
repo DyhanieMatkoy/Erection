@@ -16,7 +16,7 @@ def test_employee_picker():
     import os
     db_path = "construction.db"
     if not os.path.exists(db_path):
-        db_path = "erection.db"
+        db_path = "CTM.db"
     
     if not os.path.exists(db_path):
         print(f"Error: Database file not found. Please run the application first.")

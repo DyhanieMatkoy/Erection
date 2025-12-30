@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo Скачивание проекта Erection с GitHub
+echo Скачивание проекта CTM с GitHub
 echo ========================================
 
 :: Проверяем наличие git
@@ -13,8 +13,8 @@ if errorlevel 1 (
 )
 
 :: Устанавливаем переменные
-set REPO_URL=https://github.com/DyhanieMatkoy/Erection.git
-set TARGET_DIR=C:\Erection
+set REPO_URL=https://github.com/DyhanieMatkoy/CTM.git
+set TARGET_DIR=C:\CTM
 set BRANCH=main
 
 echo Репозиторий: %REPO_URL%

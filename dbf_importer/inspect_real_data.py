@@ -4,7 +4,7 @@ import sys
 from dbfread import DBF
 
 # Path to DBF files
-DBF_DIR = r"F:\traeRepo\Vibe1Co\Erection\8-NSM320-1Cv7"
+DBF_DIR = r"F:\traeRepo\Vibe1Co\CTM\8-NSM320-1Cv7"
 SC12_PATH = os.path.join(DBF_DIR, "SC12.DBF") # Works
 SC46_PATH = os.path.join(DBF_DIR, "SC46.DBF") # Units
 

@@ -22,7 +22,7 @@ def test_import():
     
     # Импортируем только 5 записей для теста
     result = importer.import_entity(
-        'F:/traeRepo/Vibe1Co/Erection/8-NSM320-1Cv7', 
+        'F:/traeRepo/Vibe1Co/CTM/8-NSM320-1Cv7', 
         'nomenclature', 
         clear_existing=False, 
         limit=5

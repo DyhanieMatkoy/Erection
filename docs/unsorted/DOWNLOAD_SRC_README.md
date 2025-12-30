@@ -65,7 +65,7 @@ python download_src_files.py C:\MyProject\src
 **В batch скрипте:**
 ```batch
 set REPO_OWNER=DyhanieMatkoy
-set REPO_NAME=Erection
+set REPO_NAME=CTM
 set BRANCH=main
 set SOURCE_PATH=src
 ```
@@ -73,7 +73,7 @@ set SOURCE_PATH=src
 **В Python скрипте:**
 ```python
 REPO_OWNER = "DyhanieMatkoy"
-REPO_NAME = "Erection"
+REPO_NAME = "CTM"
 BRANCH = "main"
 SOURCE_PATH = "src"
 ```
@@ -92,10 +92,10 @@ python download_src_files.py
 ### Скачивание в другую папку
 ```cmd
 # Batch
-download_src_files.bat D:\Projects\Erection\src
+download_src_files.bat D:\Projects\CTM\src
 
 # Python
-python download_src_files.py D:\Projects\Erection\src
+python download_src_files.py D:\Projects\CTM\src
 ```
 
 ### Скачивание с последующей установкой

@@ -40,6 +40,9 @@ class CompactReferenceField(QLineEdit):
         self.button_spacing = 2
         self.right_margin = 4
         
+        # Flag to prevent double opening
+        self._opening = False
+        
         self.setup_ui()
         self.setup_buttons()
     
@@ -221,23 +224,39 @@ class CompactReferenceField(QLineEdit):
         if not self.reference_table:
             return
         
-        self.selector_requested.emit()
-        
-        from ..reference_picker_dialog import ReferencePickerDialog
-        dialog = ReferencePickerDialog(
-            self.reference_table, 
-            self.reference_title, 
-            self.parentWidget(),
-            current_id=self.reference_id
-        )
-        
-        if dialog.exec():
-            selected_id, selected_name = dialog.get_selected()
-            self.set_value(selected_id, selected_name)
+        # Prevent double opening
+        if getattr(self, '_opening', False):
+            return
             
-            # Fill related fields if configured
-            if self.related_fields:
-                self.fill_related_fields(selected_id)
+        self._opening = True
+        
+        try:
+            self.selector_requested.emit()
+            
+            from ..reference_picker_dialog import ReferencePickerDialog
+            dialog = ReferencePickerDialog(
+                self.reference_table, 
+                self.reference_title, 
+                self.parentWidget(),
+                current_id=self.reference_id
+            )
+            
+            if dialog.exec():
+                selected_id, selected_name = dialog.get_selected()
+                self.set_value(selected_id, selected_name)
+                
+                # Fill related fields if configured
+                if self.related_fields:
+                    self.fill_related_fields(selected_id)
+        finally:
+            # Use QTimer to reset _opening flag to prevent re-triggering from focus event
+            # that might happen immediately after dialog closes
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(200, self._reset_opening_flag)
+
+    def _reset_opening_flag(self):
+        """Reset the opening flag"""
+        self._opening = False
     
     def fill_related_fields(self, reference_id: int):
         """Fill related fields based on selected reference"""

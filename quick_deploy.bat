@@ -1,18 +1,18 @@
 @echo off
-echo Быстрое развертывание проекта Erection...
+echo Быстрое развертывание проекта CTM...
 
 :: Переходим в корень C:\
 cd /d C:\
 
 :: Удаляем старую версию если есть
-if exist "C:\Erection" (
+if exist "C:\CTM" (
     echo Удаляем старую версию...
-    rmdir /s /q "C:\Erection"
+    rmdir /s /q "C:\CTM"
 )
 
 :: Клонируем проект
 echo Скачиваем проект с GitHub...
-git clone https://github.com/DyhanieMatkoy/Erection.git
+git clone https://github.com/DyhanieMatkoy/CTM.git
 
 if errorlevel 1 (
     echo ОШИБКА: Не удалось скачать проект
@@ -20,10 +20,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Проект успешно скачан в C:\Erection
+echo Проект успешно скачан в C:\CTM
 echo Переходим в папку проекта...
-cd /d "C:\Erection"
+cd /d "C:\CTM"
 
 echo.
-echo Готово! Проект находится в C:\Erection
+echo Готово! Проект находится в C:\CTM
 pause

@@ -38,7 +38,7 @@ class SyncSettingsDialog(QDialog):
         self.sync_service = sync_service
         
         # Initialize config
-        self.config_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'config', 'env.ini')
+        self.config_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'env.ini')
         self.config = ConfigParser()
         if os.path.exists(self.config_file):
             self.config.read(self.config_file, encoding='utf-8')
@@ -364,10 +364,10 @@ class SyncSettingsDialog(QDialog):
                     sync_enabled = self.config.getboolean('Sync', 'enabled')
                     self.enable_sync_checkbox.setChecked(sync_enabled)
                     # Apply setting to sync manager
-                    from ..data.sync_manager import SyncManager
-                    sync_manager = SyncManager()
-                    if not sync_enabled:
-                        sync_manager.disable_sync()
+                    if hasattr(self.sync_service, 'sync_manager'):
+                        sync_manager = self.sync_service.sync_manager
+                        if not sync_enabled:
+                            sync_manager.disable_sync()
             else:
                 # Default to enabled
                 self.enable_sync_checkbox.setChecked(True)
@@ -394,13 +394,13 @@ class SyncSettingsDialog(QDialog):
             self.config.set('Sync', 'enabled', str(sync_enabled))
             
             # Apply setting to sync manager
-            from ..data.sync_manager import SyncManager
-            sync_manager = SyncManager()
-            if sync_enabled:
-                # Re-enable sync if it was disabled
-                sync_manager.sync_enabled = True
-            else:
-                sync_manager.disable_sync()
+            if hasattr(self.sync_service, 'sync_manager'):
+                sync_manager = self.sync_service.sync_manager
+                if sync_enabled:
+                    # Re-enable sync if it was disabled
+                    sync_manager.enable_sync()
+                else:
+                    sync_manager.disable_sync()
             
             # Write to file
             with open(self.config_file, 'w', encoding='utf-8') as f:

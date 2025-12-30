@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to migrate costs and materials data from DBF files to the Erection database
+Script to migrate costs and materials data from DBF files to the CTM database
 """
 import sys
 import os

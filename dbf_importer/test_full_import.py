@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 def test_full_import():
     importer = DBFImporter()
-    dbf_dir = r"F:\traeRepo\Vibe1Co\Erection\8-NSM320-1Cv7"
+    dbf_dir = r"F:\traeRepo\Vibe1Co\CTM\8-NSM320-1Cv7"
     
     print(f"Starting import from {dbf_dir}")
     results = importer.import_all_entities(dbf_dir, clear_existing=True, limit=100) # Limit for testing

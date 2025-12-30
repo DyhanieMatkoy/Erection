@@ -1,10 +1,10 @@
 # Costs & Materials Integration Guide
 
-This guide explains how to integrate the new Costs & Materials functionality into the Erection project.
+This guide explains how to integrate the new Costs & Materials functionality into the CTM project.
 
 ## Overview
 
-The Erection project has been enhanced to support Costs (Затраты) and Materials (Материалы) based on the 1C DBF schema. This integration allows for:
+The CTM project has been enhanced to support Costs (Затраты) and Materials (Материалы) based on the 1C DBF schema. This integration allows for:
 
 1. Hierarchical cost items structure
 2. Materials catalog with pricing
@@ -44,7 +44,7 @@ The Erection project has been enhanced to support Costs (Затраты) and Mat
 Run the Alembic migration to create the new tables:
 
 ```bash
-cd f:\traeRepo\Vibe1Co\Erection\Erection
+cd f:\traeRepo\Vibe1Co\CTM\CTM
 python -m alembic upgrade head
 ```
 

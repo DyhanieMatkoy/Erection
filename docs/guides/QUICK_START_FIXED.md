@@ -128,7 +128,7 @@ run_with_logging.bat
 ## Структура проекта
 
 ```
-Erection/
+CTM/
 ├── main.py                 # Точка входа
 ├── construction.db         # База данных
 ├── env.ini                # Конфигурация

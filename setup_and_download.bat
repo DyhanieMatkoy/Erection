@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 echo ========================================
-echo Установка и скачивание проекта Erection
+echo Установка и скачивание проекта CTM
 echo ========================================
 
 :: Проверяем Python

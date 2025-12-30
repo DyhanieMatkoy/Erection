@@ -1,6 +1,6 @@
 # Developer Guide
 
-This section contains comprehensive documentation for developers working with the Erection application codebase.
+This section contains comprehensive documentation for developers working with the CTM application codebase.
 
 ## Getting Started
 

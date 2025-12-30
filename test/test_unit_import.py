@@ -19,7 +19,7 @@ def test_unit_import():
     importer = DBFImporter()
     
     # Test path
-    dbf_dir = r"F:\traeRepo\Vibe1Co\Erection\8-NSM320-1Cv7"
+    dbf_dir = r"F:\traeRepo\Vibe1Co\CTM\8-NSM320-1Cv7"
     
     # Import only units first to create mapping
     print("Step 1: Importing units...")

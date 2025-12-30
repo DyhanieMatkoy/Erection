@@ -8,7 +8,7 @@ from dbfread import DBF
 
 def test_encoding_methods():
     """Тестирует различные методы кодирования"""
-    file_path = "F:/traeRepo/Vibe1Co/Erection/8-NSM320-1Cv7/SC12.DBF"
+    file_path = "F:/traeRepo/Vibe1Co/CTM/8-NSM320-1Cv7/SC12.DBF"
     
     if not os.path.exists(file_path):
         print(f"Файл не найден: {file_path}")

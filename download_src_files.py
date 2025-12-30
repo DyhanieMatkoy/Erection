@@ -12,7 +12,7 @@ from urllib.parse import urljoin
 
 # Настройки репозитория
 REPO_OWNER = "DyhanieMatkoy"
-REPO_NAME = "Erection"
+REPO_NAME = "CTM"
 BRANCH = "main"
 SOURCE_PATH = "src"
 

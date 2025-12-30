@@ -1,6 +1,6 @@
 # Administration Guide
 
-This section provides comprehensive documentation for system administrators managing Erection application deployments.
+This section provides comprehensive documentation for system administrators managing CTM application deployments.
 
 ## Installation & Setup
 

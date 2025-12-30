@@ -23,13 +23,13 @@
 ## Recommended New Structure
 
 ```
-Erection/
+CTM/
 ├── README.md                          # Main project README
 ├── .gitignore
 ├── requirements.txt
 ├── alembic.ini
 ├── env.ini
-├── erection.db                        # OldMain database 
+├── CTM.db                        # OldMain database 
 ├── construction.db                    # Construction database
 │
 ├── src/                              # Core application source

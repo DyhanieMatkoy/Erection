@@ -1,10 +1,10 @@
-# Schema Change Guide for Erection Project
+# Schema Change Guide for CTM Project
 
-This guide provides a standardized process for implementing database schema changes in the Erection project.
+This guide provides a standardized process for implementing database schema changes in the CTM project.
 
 ## Overview
 
-The Erection project uses SQLAlchemy with Alembic for database migrations. This guide outlines the complete process for making schema changes, from planning to implementation.
+The CTM project uses SQLAlchemy with Alembic for database migrations. This guide outlines the complete process for making schema changes, from planning to implementation.
 
 ## Process Overview
 
@@ -59,10 +59,10 @@ The Erection project uses SQLAlchemy with Alembic for database migrations. This 
 cp construction.db construction_backup_YYYYMMDD.db
 
 # For PostgreSQL
-pg_dump erection_db > erection_backup_YYYYMMDD.sql
+pg_dump CTM_db > CTM_backup_YYYYMMDD.sql
 
 # For MSSQL
-sqlcmd -S server_name -Q "BACKUP DATABASE erection_db TO DISK='C:\backup\erection_backup_YYYYMMDD.bak'"
+sqlcmd -S server_name -Q "BACKUP DATABASE CTM_db TO DISK='C:\backup\CTM_backup_YYYYMMDD.bak'"
 ```
 
 #### 2.2. Generate Alembic Migration

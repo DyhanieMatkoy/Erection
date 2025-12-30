@@ -27,4 +27,4 @@ def inspect_dbfs(directory):
                 print(f"Error reading {filename}: {e}")
 
 if __name__ == "__main__":
-    inspect_dbfs(r"F:\traeRepo\Vibe1Co\Erection\8-NSM320-1Cv7")
+    inspect_dbfs(r"F:\traeRepo\Vibe1Co\CTM\8-NSM320-1Cv7")

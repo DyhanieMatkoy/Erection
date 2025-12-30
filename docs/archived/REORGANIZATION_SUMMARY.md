@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Erection project has been successfully reorganized to improve file structure, remove duplicates, and create a more maintainable and scalable directory layout.
+The CTM project has been successfully reorganized to improve file structure, remove duplicates, and create a more maintainable and scalable directory layout.
 
 ## Completed Actions
 
@@ -13,7 +13,7 @@ The Erection project has been successfully reorganized to improve file structure
 ### ✅ New Directory Structure Created
 
 ```
-Erection/
+CTM/
 ├── scripts/                    # All utility and maintenance scripts
 │   ├── database/              # Database-related scripts
 │   ├── auth/                 # Authentication scripts
@@ -136,7 +136,7 @@ Essential files that should remain in root:
 - `requirements.txt`
 - `alembic.ini`
 - `env.ini`
-- `erection.db` (main database)
+- `CTM.db` (main database)
 - `construction.db` (construction database)
 - `main.py`, `main_no_auth.py` (core application files)
 - `start_server.py` (server startup)

@@ -15,7 +15,7 @@ if errorlevel 1 (
 
 :: Устанавливаем переменные
 set REPO_OWNER=DyhanieMatkoy
-set REPO_NAME=Erection
+set REPO_NAME=CTM
 set BRANCH=main
 set SOURCE_PATH=src
 set API_URL=https://api.github.com/repos/%REPO_OWNER%/%REPO_NAME%/contents/%SOURCE_PATH%

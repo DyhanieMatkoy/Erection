@@ -21,6 +21,10 @@ class ReferenceField(QWidget):
         self.reference_name = ""
         self.reference_table = ""
         self.reference_title = "Выбор из справочника"
+        
+        # Flag to prevent double opening and loops
+        self._opening = False
+        
         self.setup_ui()
     
     def setup_ui(self):
@@ -89,17 +93,32 @@ class ReferenceField(QWidget):
         if not self.reference_table:
             return
         
-        from ..reference_picker_dialog import ReferencePickerDialog
-        dialog = ReferencePickerDialog(
-            self.reference_table, 
-            self.reference_title, 
-            self.parentWidget(),
-            current_id=self.reference_id
-        )
+        # Prevent double opening
+        if getattr(self, '_opening', False):
+            return
+            
+        self._opening = True
         
-        if dialog.exec():
-            selected_id, selected_name = dialog.get_selected()
-            self.set_value(selected_id, selected_name)
+        try:
+            from ..reference_picker_dialog import ReferencePickerDialog
+            dialog = ReferencePickerDialog(
+                self.reference_table, 
+                self.reference_title, 
+                self.parentWidget(),
+                current_id=self.reference_id
+            )
+            
+            if dialog.exec():
+                selected_id, selected_name = dialog.get_selected()
+                self.set_value(selected_id, selected_name)
+        finally:
+            # Reset flag with delay to prevent re-triggering from focus event
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(200, self._reset_opening_flag)
+
+    def _reset_opening_flag(self):
+        """Reset the opening flag"""
+        self._opening = False
     
     def start_search_edit(self):
         """
@@ -108,22 +127,33 @@ class ReferenceField(QWidget):
         """
         if not self.reference_table:
             return
+            
+        # Prevent double opening
+        if getattr(self, '_opening', False):
+            return
+            
+        self._opening = True
         
-        from ..reference_picker_dialog import ReferencePickerDialog
-        dialog = ReferencePickerDialog(
-            self.reference_table, 
-            self.reference_title, 
-            self.parentWidget(),
-            current_id=self.reference_id
-        )
-        
-        # Set focus to search field
-        dialog.search_edit.setFocus()
-        dialog.search_edit.selectAll()
-        
-        if dialog.exec():
-            selected_id, selected_name = dialog.get_selected()
-            self.set_value(selected_id, selected_name)
+        try:
+            from ..reference_picker_dialog import ReferencePickerDialog
+            dialog = ReferencePickerDialog(
+                self.reference_table, 
+                self.reference_title, 
+                self.parentWidget(),
+                current_id=self.reference_id
+            )
+            
+            # Set focus to search field
+            dialog.search_edit.setFocus()
+            dialog.search_edit.selectAll()
+            
+            if dialog.exec():
+                selected_id, selected_name = dialog.get_selected()
+                self.set_value(selected_id, selected_name)
+        finally:
+            # Reset flag with delay
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(200, self._reset_opening_flag)
     
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts"""

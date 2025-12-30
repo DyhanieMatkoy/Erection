@@ -149,7 +149,7 @@ ModuleNotFoundError: No module named 'src'
 ### Решение
 Запускайте из корневой папки проекта:
 ```bash
-cd F:\traeRepo\Vibe1Co\Erection\Erection
+cd F:\traeRepo\Vibe1Co\CTM\CTM
 .\venv\Scripts\python.exe main.py
 ```
 

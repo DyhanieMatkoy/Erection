@@ -25,13 +25,33 @@ class ReferenceLineEdit(QLineEdit):
         super().__init__(parent)
         self.selector_callback = selector_callback
         self.setReadOnly(True)
+        # Flag to prevent double opening
+        self._opening = False
     
     def focusInEvent(self, event):
         """Handle focus in event - open selector if empty"""
         super().focusInEvent(event)
+        
+        # Check flag
+        if getattr(self, '_opening', False):
+            return
+
         if self.selector_callback and not self.text().strip():
+            self._opening = True
             # Use QTimer to defer the callback to avoid focus issues
-            QTimer.singleShot(0, self.selector_callback)
+            QTimer.singleShot(50, self._execute_callback)
+
+    def _execute_callback(self):
+        """Execute callback and reset flag"""
+        try:
+            if self.selector_callback:
+                self.selector_callback()
+        finally:
+            # Reset flag with delay
+            QTimer.singleShot(200, self._reset_opening_flag)
+            
+    def _reset_opening_flag(self):
+        self._opening = False
 
 
 class EstimateDocumentForm(BaseDocumentForm):

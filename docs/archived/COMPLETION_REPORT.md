@@ -50,7 +50,7 @@
 ## Структура проекта
 
 ```
-Erection/
+CTM/
 ├── qt_cpp_version.zip          # Архив C++ версии
 ├── construction.db             # База данных SQLite
 ├── venv/                       # Виртуальное окружение Python

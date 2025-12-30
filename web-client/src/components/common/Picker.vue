@@ -171,6 +171,24 @@ function clearSelection() {
   searchQuery.value = ''
 }
 
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+function toggleDropdown() {
+  if (props.disabled) return
+  open.value = !open.value
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (props.disabled) return
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    open.value = true
+  } else if (event.key === 'Escape') {
+    open.value = false
+  }
+}
+
 watch(open, async (newValue) => {
   if (!newValue) {
     searchQuery.value = ''

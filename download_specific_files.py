@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Настройки репозитория
 REPO_OWNER = "DyhanieMatkoy"
-REPO_NAME = "Erection"
+REPO_NAME = "CTM"
 BRANCH = "main"
 
 def download_file(repo_owner, repo_name, file_path, target_path, branch="main"):

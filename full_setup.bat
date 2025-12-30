@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo Полная установка проекта Erection
+echo Полная установка проекта CTM
 echo ========================================
 
 :: Проверяем права администратора
@@ -30,8 +30,8 @@ if errorlevel 1 (
 )
 
 :: Устанавливаем переменные
-set PROJECT_DIR=C:\Erection
-set REPO_URL=https://github.com/DyhanieMatkoy/Erection.git
+set PROJECT_DIR=C:\CTM
+set REPO_URL=https://github.com/DyhanieMatkoy/CTM.git
 
 :: Создаем папку проекта
 echo Создаем папку проекта...
@@ -78,11 +78,11 @@ if exist "requirements.txt" (
 :: Создаем ярлык на рабочем столе
 echo Создаем ярлык на рабочем столе...
 set DESKTOP=%USERPROFILE%\Desktop
-echo @echo off > "%DESKTOP%\Запуск Erection.bat"
-echo cd /d "%PROJECT_DIR%" >> "%DESKTOP%\Запуск Erection.bat"
-echo call .venv\Scripts\activate.bat >> "%DESKTOP%\Запуск Erection.bat"
-echo python main.py >> "%DESKTOP%\Запуск Erection.bat"
-echo pause >> "%DESKTOP%\Запуск Erection.bat"
+echo @echo off > "%DESKTOP%\Запуск CTM.bat"
+echo cd /d "%PROJECT_DIR%" >> "%DESKTOP%\Запуск CTM.bat"
+echo call .venv\Scripts\activate.bat >> "%DESKTOP%\Запуск CTM.bat"
+echo python main.py >> "%DESKTOP%\Запуск CTM.bat"
+echo pause >> "%DESKTOP%\Запуск CTM.bat"
 
 echo.
 echo ========================================
@@ -92,7 +92,7 @@ echo Проект установлен в: %PROJECT_DIR%
 echo Ярлык создан на рабочем столе
 echo.
 echo Для запуска:
-echo 1. Используйте ярлык "Запуск Erection.bat" на рабочем столе
+echo 1. Используйте ярлык "Запуск CTM.bat" на рабочем столе
 echo 2. Или перейдите в %PROJECT_DIR% и запустите start_app.bat
 echo.
 echo Дополнительная настройка:

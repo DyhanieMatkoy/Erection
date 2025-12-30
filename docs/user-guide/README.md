@@ -1,6 +1,6 @@
 # User Guide
 
-Welcome to the user documentation for the Erection application. This section contains all the information you need to use the application effectively.
+Welcome to the user documentation for the CTM application. This section contains all the information you need to use the application effectively.
 
 ## Getting Started
 

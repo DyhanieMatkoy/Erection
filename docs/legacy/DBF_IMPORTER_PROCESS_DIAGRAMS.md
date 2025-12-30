@@ -56,7 +56,7 @@ sequenceDiagram
     Note over Importer: Initialize _unit_id_mapping = {}
 ```
 
-**Code Location**: [`Erection/dbf_importer/core/importer.py:20-24`](Erection/dbf_importer/core/importer.py:20)
+**Code Location**: [`CTM/dbf_importer/core/importer.py:20-24`](CTM/dbf_importer/core/importer.py:20)
 
 ### Phase 2: Import All Entities Process
 ```mermaid
@@ -83,7 +83,7 @@ sequenceDiagram
     end
 ```
 
-**Code Location**: [`Erection/dbf_importer/core/importer.py:321-363`](Erection/dbf_importer/core/importer.py:321)
+**Code Location**: [`CTM/dbf_importer/core/importer.py:321-363`](CTM/dbf_importer/core/importer.py:321)
 
 ### Phase 3: Unit Mapping Creation
 ```mermaid
@@ -105,7 +105,7 @@ sequenceDiagram
     end
 ```
 
-**Code Location**: [`Erection/dbf_importer/core/importer.py:365-394`](Erection/dbf_importer/core/importer.py:365)
+**Code Location**: [`CTM/dbf_importer/core/importer.py:365-394`](CTM/dbf_importer/core/importer.py:365)
 
 ### Phase 4: Works Import with Unit Mapping
 ```mermaid
@@ -128,7 +128,7 @@ sequenceDiagram
     end
 ```
 
-**Code Location**: [`Erection/dbf_importer/core/importer.py:112-121`](Erection/dbf_importer/core/importer.py:112)
+**Code Location**: [`CTM/dbf_importer/core/importer.py:112-121`](CTM/dbf_importer/core/importer.py:112)
 
 ## 3. Data Flow Diagrams
 
@@ -181,7 +181,7 @@ flowchart TD
 ## 4. Key Code Components
 
 ### 4.1 DBFReader Class
-**File**: [`Erection/dbf_importer/core/dbf_reader.py`](Erection/dbf_importer/core/dbf_reader.py)
+**File**: [`CTM/dbf_importer/core/dbf_reader.py`](CTM/dbf_importer/core/dbf_reader.py)
 
 **Key Methods**:
 - `read_dbf_directory(directory, entity_type)` - Reads specific DBF file based on entity type
@@ -199,7 +199,7 @@ flowchart TD
   ```
 
 ### 4.2 DBFImporter Class
-**File**: [`Erection/dbf_importer/core/importer.py`](Erection/dbf_importer/core/importer.py)
+**File**: [`CTM/dbf_importer/core/importer.py`](CTM/dbf_importer/core/importer.py)
 
 **Key Methods**:
 - `__init__(progress_callback)` - Initializes importer and unit mapping
@@ -221,7 +221,7 @@ if entity_type == "nomenclature":
 ```
 
 ### 4.3 Database Manager
-**File**: [`Erection/dbf_importer/core/database.py`](Erection/dbf_importer/core/database.py)
+**File**: [`CTM/dbf_importer/core/database.py`](CTM/dbf_importer/core/database.py)
 
 **Key Methods**:
 - `update_or_insert_records(table_name, records)` - Handles batch insert/update operations
@@ -229,7 +229,7 @@ if entity_type == "nomenclature":
 - `get_session()` - Creates database session
 
 ### 4.4 Configuration Settings
-**File**: [`Erection/dbf_importer/config/settings.py`](Erection/dbf_importer/config/settings.py)
+**File**: [`CTM/dbf_importer/config/settings.py`](CTM/dbf_importer/config/settings.py)
 
 **Key Configuration**:
 ```python
@@ -260,7 +260,7 @@ DBF_FIELD_MAPPING = {
     }
 }
 
-DBF_DEFAULT_PATH = "F:\\traeRepo\\Vibe1Co\\Erection\\8-NSM320-1Cv7"
+DBF_DEFAULT_PATH = "F:\\traeRepo\\Vibe1Co\\CTM\\8-NSM320-1Cv7"
 ```
 
 ## 5. Problem-Solution Mapping
@@ -342,7 +342,7 @@ from dbf_importer.core.importer import DBFImporter
 
 importer = DBFImporter()
 results = importer.import_all_entities(
-    dbf_directory="F:\\traeRepo\\Vibe1Co\\Erection\\8-NSM320-1Cv7",
+    dbf_directory="F:\\traeRepo\\Vibe1Co\\CTM\\8-NSM320-1Cv7",
     clear_existing=True
 )
 ```
