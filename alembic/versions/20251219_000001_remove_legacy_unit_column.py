@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '20251219000001'
-down_revision: Union[str, Sequence[str], None] = '20251218120000'
+revision: str = '20251219_000001_remove_legacy_unit_column'
+down_revision: Union[str, Sequence[str], None] = '20251218_120000_update_work_model_indexes'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
