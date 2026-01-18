@@ -252,6 +252,9 @@ class DatabaseManager:
                     f"Failed to create database schema: {e}"
                 )
             
+            # Create initial data (admin user, etc.)
+            self._create_initial_data_legacy(db_path)
+            
             logger.info(f"Database initialized (legacy mode): {db_path}")
             return True
             
@@ -876,6 +879,9 @@ class DatabaseManager:
         self._add_posting_fields()
         
         self._connection.commit()
+        
+        # Create initial data (admin user, etc.)
+        self._create_initial_data()
     
     def _add_posting_fields(self):
         """Add posting fields to documents (migration)"""
@@ -990,3 +996,34 @@ class DatabaseManager:
             cursor.execute(index_sql)
         
         self._connection.commit()
+    
+    def _create_initial_data(self):
+        """Create initial data (admin user, etc.) after database initialization"""
+        try:
+            from .initial_data import ensure_admin_user_exists
+            
+            # Get database path for SQLite
+            if hasattr(self, '_config') and self._config and self._config.is_sqlite():
+                db_path = self._config.get_config_data()['db_path']
+            else:
+                # Fallback for legacy initialization
+                db_path = "construction.db"
+            
+            # Ensure admin user exists
+            ensure_admin_user_exists(db_path)
+            
+        except Exception as e:
+            logger.error(f"Failed to create initial data: {e}")
+            # Don't raise exception - this shouldn't prevent database initialization
+    
+    def _create_initial_data_legacy(self, db_path: str):
+        """Create initial data for legacy initialization"""
+        try:
+            from .initial_data import ensure_admin_user_exists
+            
+            # Ensure admin user exists
+            ensure_admin_user_exists(db_path)
+            
+        except Exception as e:
+            logger.error(f"Failed to create initial data (legacy): {e}")
+            # Don't raise exception - this shouldn't prevent database initialization

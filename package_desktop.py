@@ -86,6 +86,7 @@ a = Analysis(
         'sqlalchemy',
         'alembic',
         'sqlite3',
+        'src.data.initial_data',
     ],
     hookspath=[],
     hooksconfig={},
