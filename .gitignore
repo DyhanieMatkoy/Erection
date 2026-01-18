@@ -155,3 +155,6 @@ cython_debug/
 .vscode/
 *.swp
 *.swo
+
+# Desktop packages
+ConstructionTimeManagement_Desktop_v1.0.zip
