@@ -358,3 +358,42 @@ class SyncNotificationManager(QWidget):
             "Соединение с сервером синхронизации восстановлено.",
             "success"
         )
+    
+    def show_network_error(self, error_type: str, retry_in: int = 0):
+        """Show network error notification
+        
+        Args:
+            error_type: Type of network error
+            retry_in: Seconds until next retry attempt
+        """
+        if error_type == "timeout":
+            title = "Таймаут соединения"
+            message = "Сервер не отвечает в течение установленного времени."
+        elif error_type == "connection_error":
+            title = "Ошибка подключения"
+            message = "Не удается подключиться к серверу синхронизации."
+        elif error_type == "server_error":
+            title = "Ошибка сервера"
+            message = "Сервер синхронизации временно недоступен."
+        else:
+            title = "Сетевая ошибка"
+            message = f"Произошла сетевая ошибка: {error_type}"
+        
+        if retry_in > 0:
+            message += f" Повторная попытка через {retry_in} сек."
+        
+        self.show_notification(title, message, "error")
+    
+    def show_retry_notification(self, attempt: int, max_attempts: int, next_retry: int):
+        """Show retry attempt notification
+        
+        Args:
+            attempt: Current attempt number
+            max_attempts: Maximum number of attempts
+            next_retry: Seconds until next retry
+        """
+        self.show_notification(
+            "Повторная попытка синхронизации",
+            f"Попытка {attempt} из {max_attempts}. Следующая попытка через {next_retry} сек.",
+            "info"
+        )

@@ -106,6 +106,14 @@ class SyncSettingsDialog(QDialog):
         self.test_button.clicked.connect(self.test_connection)
         button_layout.addWidget(self.test_button)
         
+        self.diagnostics_button = QPushButton("Диагностика сети")
+        self.diagnostics_button.clicked.connect(self.show_network_diagnostics)
+        button_layout.addWidget(self.diagnostics_button)
+        
+        self.force_reconnect_button = QPushButton("Переподключиться")
+        self.force_reconnect_button.clicked.connect(self.force_reconnect)
+        button_layout.addWidget(self.force_reconnect_button)
+        
         button_layout.addStretch()
         
         self.save_button = QPushButton("Сохранить")
@@ -599,3 +607,71 @@ ID узла: {status.get('node_id', 'Не зарегистрирован')}
         
         self.status_timer.stop()
         super().closeEvent(event)
+    
+    def show_network_diagnostics(self):
+        """Show network diagnostics dialog"""
+        if not self.sync_service:
+            QMessageBox.warning(self, "Ошибка", "Сервис синхронизации недоступен")
+            return
+        
+        try:
+            diagnostics = self.sync_service.get_network_diagnostics()
+            
+            # Format diagnostics for display
+            info_lines = [
+                f"URL сервера: {diagnostics.get('server_url', 'Не задан')}",
+                f"Статус: {'Онлайн' if diagnostics.get('is_online') else 'Офлайн'}",
+                f"Синхронизация: {'Выполняется' if diagnostics.get('is_syncing') else 'Не выполняется'}",
+                f"Узел зарегистрирован: {'Да' if diagnostics.get('node_registered') else 'Нет'}",
+                "",
+                f"Попытки переподключения: {diagnostics.get('retry_count', 0)} из {diagnostics.get('max_retries', 0)}",
+                f"Интервал повтора: {diagnostics.get('current_retry_interval', 0):.1f} сек",
+                "",
+                f"Тест подключения: {diagnostics.get('connectivity_test', 'Не выполнен')}",
+            ]
+            
+            if diagnostics.get('response_time_ms'):
+                info_lines.append(f"Время отклика: {diagnostics.get('response_time_ms')} мс")
+            
+            if diagnostics.get('server_status_code'):
+                info_lines.append(f"Код ответа сервера: {diagnostics.get('server_status_code')}")
+            
+            if diagnostics.get('error'):
+                info_lines.append(f"Ошибка: {diagnostics.get('error')}")
+            
+            if diagnostics.get('last_sync_time'):
+                info_lines.append(f"Последняя синхронизация: {diagnostics.get('last_sync_time')}")
+            
+            info_text = "\n".join(info_lines)
+            
+            QMessageBox.information(self, "Диагностика сети", info_text)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось получить диагностику: {str(e)}")
+    
+    def force_reconnect(self):
+        """Force reconnection to server"""
+        if not self.sync_service:
+            QMessageBox.warning(self, "Ошибка", "Сервис синхронизации недоступен")
+            return
+        
+        reply = QMessageBox.question(
+            self, 
+            "Переподключение", 
+            "Вы уверены, что хотите принудительно переподключиться к серверу?\n"
+            "Это сбросит текущую аутентификацию и попытается зарегистрировать узел заново.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                success = self.sync_service.force_reconnect()
+                
+                if success:
+                    QMessageBox.information(self, "Успех", "Переподключение инициировано")
+                    self.load_settings()  # Refresh display
+                else:
+                    QMessageBox.warning(self, "Ошибка", "Не удалось инициировать переподключение")
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Ошибка при переподключении: {str(e)}")

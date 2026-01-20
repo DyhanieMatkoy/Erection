@@ -8,11 +8,13 @@ import json
 import logging
 import threading
 import time
+import random
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional, Callable
 from uuid import UUID
 
 import requests
+from requests.exceptions import ConnectionError, Timeout, HTTPError, RequestException
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 
 from ..data.database_manager import DatabaseManager
@@ -60,18 +62,29 @@ class SyncService(QObject):
         self.is_syncing = False
         self.last_sync_time = None
         self.sync_interval = 300  # 5 minutes
-        self.retry_interval = 60  # 1 minute
-        self.max_retries = 3
+        
+        # Enhanced retry configuration
+        self.base_retry_interval = 1  # Start with 1 second
+        self.max_retry_interval = 300  # Maximum 5 minutes
+        self.max_retries = 10  # Increased retry attempts
+        self.retry_multiplier = 2  # Exponential backoff multiplier
+        self.jitter_range = 0.1  # 10% jitter to avoid thundering herd
         
         # Background sync timer
         self.sync_timer = QTimer()
         self.sync_timer.timeout.connect(self._auto_sync)
         self.sync_timer.start(self.sync_interval * 1000)  # Convert to milliseconds
         
-        # Retry timer
+        # Enhanced retry timer with exponential backoff
         self.retry_timer = QTimer()
         self.retry_timer.timeout.connect(self._retry_sync)
         self.retry_count = 0
+        self.current_retry_interval = self.base_retry_interval
+        
+        # Network connectivity check timer
+        self.connectivity_timer = QTimer()
+        self.connectivity_timer.timeout.connect(self._check_connectivity)
+        self.connectivity_timer.start(30000)  # Check every 30 seconds
         
         # Status callbacks
         self.status_callbacks: List[Callable[[str], None]] = []
@@ -101,18 +114,41 @@ class SyncService(QObject):
                 # Update sync manager with node ID
                 self.sync_manager.node_id = self.node_id
                 
+                # Reset retry state on successful registration
+                self._reset_retry_state()
+                
                 # Set online status
                 self._set_status("online")
                 
             else:
                 logger.error(f"Failed to register node: {response.status_code} - {response.text}")
                 self._set_status("offline")
+                self._schedule_retry("Node registration failed")
+        
+        except ConnectionError as e:
+            logger.error(f"Connection error during node registration: {e}")
+            self._set_status("offline")
+            self._schedule_retry("Connection error")
+        
+        except Timeout as e:
+            logger.error(f"Timeout during node registration: {e}")
+            self._set_status("offline")
+            self._schedule_retry("Request timeout")
+        
+        except HTTPError as e:
+            logger.error(f"HTTP error during node registration: {e}")
+            self._set_status("offline")
+            self._schedule_retry("HTTP error")
+        
+        except RequestException as e:
+            logger.error(f"Request error during node registration: {e}")
+            self._set_status("offline")
+            self._schedule_retry("Request error")
         
         except Exception as e:
-            logger.error(f"Error registering node: {e}")
+            logger.error(f"Unexpected error during node registration: {e}")
             self._set_status("offline")
-            # Schedule retry
-            self.retry_timer.start(self.retry_interval * 1000)
+            self._schedule_retry("Unexpected error")
     
     def sync_now(self) -> bool:
         """Trigger immediate synchronization
@@ -154,20 +190,98 @@ class SyncService(QObject):
                 self.sync_now()
     
     def _retry_sync(self) -> None:
-        """Retry node registration or failed sync"""
+        """Retry node registration or failed sync with exponential backoff"""
+        if self.retry_count >= self.max_retries:
+            logger.error(f"Max sync retries ({self.max_retries}) reached, giving up")
+            self.retry_timer.stop()
+            self._reset_retry_state()
+            return
+        
+        self.retry_count += 1
+        logger.info(f"Retrying sync (attempt {self.retry_count}/{self.max_retries})")
+        
         if not self.node_id:
             # Retry node registration
+            logger.info("Retrying node registration...")
             self._register_node()
-        elif self.retry_count < self.max_retries:
-            # Retry failed sync
-            self.retry_count += 1
-            logger.info(f"Retrying sync (attempt {self.retry_count}/{self.max_retries})")
-            self.sync_now()
         else:
-            # Max retries reached, stop trying
-            self.retry_timer.stop()
-            self.retry_count = 0
-            logger.error("Max sync retries reached, giving up")
+            # Retry failed sync
+            logger.info("Retrying synchronization...")
+            self.sync_now()
+        
+        # If we still need to retry, schedule next attempt with exponential backoff
+        if self.retry_count < self.max_retries:
+            self._schedule_next_retry()
+    
+    def _schedule_retry(self, reason: str) -> None:
+        """Schedule retry with exponential backoff
+        
+        Args:
+            reason: Reason for the retry
+        """
+        if self.retry_count >= self.max_retries:
+            logger.error(f"Max retries reached, not scheduling more retries. Reason: {reason}")
+            return
+        
+        # Calculate next retry interval with exponential backoff
+        self.current_retry_interval = min(
+            self.base_retry_interval * (self.retry_multiplier ** self.retry_count),
+            self.max_retry_interval
+        )
+        
+        # Add jitter to avoid thundering herd
+        jitter = random.uniform(-self.jitter_range, self.jitter_range)
+        actual_interval = self.current_retry_interval * (1 + jitter)
+        actual_interval = max(1, actual_interval)  # Minimum 1 second
+        
+        logger.info(f"Scheduling retry in {actual_interval:.1f} seconds (attempt {self.retry_count + 1}/{self.max_retries}). Reason: {reason}")
+        
+        self.retry_timer.start(int(actual_interval * 1000))
+    
+    def _schedule_next_retry(self) -> None:
+        """Schedule next retry attempt"""
+        self._schedule_retry("Previous attempt failed")
+    
+    def _reset_retry_state(self) -> None:
+        """Reset retry state after successful operation"""
+        self.retry_count = 0
+        self.current_retry_interval = self.base_retry_interval
+        self.retry_timer.stop()
+        logger.debug("Retry state reset after successful operation")
+    
+    def _check_connectivity(self) -> None:
+        """Check network connectivity to server"""
+        if self.is_syncing:
+            return  # Don't check during sync
+        
+        try:
+            # Simple connectivity check
+            url = f"{self.server_url}/api/health"
+            response = requests.get(url, timeout=5)
+            
+            if response.status_code == 200:
+                if not self.is_online:
+                    logger.info("Network connectivity restored")
+                    self.is_online = True  # Set online status directly
+                    self.status_changed.emit("online")
+                    # Try to register if not registered
+                    if not self.node_id:
+                        self._register_node()
+            else:
+                if self.is_online:
+                    logger.warning(f"Server returned {response.status_code}, marking as offline")
+                    self.is_online = False  # Set offline status directly
+                    self.status_changed.emit("offline")
+        
+        except (ConnectionError, Timeout, RequestException):
+            if self.is_online:
+                logger.warning("Network connectivity lost")
+                self.is_online = False  # Set offline status directly
+                self.status_changed.emit("offline")
+        
+        except Exception as e:
+            logger.debug(f"Connectivity check failed: {e}")
+            # Don't change status for unexpected errors
     
     def _perform_sync(self) -> None:
         """Perform synchronization with server"""
@@ -211,24 +325,59 @@ class SyncService(QObject):
                         total_errors += 1
                         logger.error(f"Failed to send packet: {result.get('error', 'Unknown error')}")
                 
+                except ConnectionError as e:
+                    total_errors += 1
+                    logger.error(f"Connection error sending packet: {e}")
+                    self._set_status("offline")
+                
+                except Timeout as e:
+                    total_errors += 1
+                    logger.error(f"Timeout sending packet: {e}")
+                
+                except HTTPError as e:
+                    total_errors += 1
+                    logger.error(f"HTTP error sending packet: {e}")
+                
+                except RequestException as e:
+                    total_errors += 1
+                    logger.error(f"Request error sending packet: {e}")
+                
                 except Exception as e:
                     total_errors += 1
-                    logger.error(f"Error sending packet: {e}")
+                    logger.error(f"Unexpected error sending packet: {e}")
             
             self._complete_sync({
                 "processed_count": total_processed,
                 "error_count": total_errors
             })
         
+        except ConnectionError as e:
+            logger.error(f"Connection error during sync: {e}")
+            self._set_status("offline")
+            self._fail_sync(f"Connection error: {str(e)}")
+        
+        except Timeout as e:
+            logger.error(f"Timeout during sync: {e}")
+            self._fail_sync(f"Request timeout: {str(e)}")
+        
+        except HTTPError as e:
+            logger.error(f"HTTP error during sync: {e}")
+            self._fail_sync(f"HTTP error: {str(e)}")
+        
+        except RequestException as e:
+            logger.error(f"Request error during sync: {e}")
+            self._set_status("offline")
+            self._fail_sync(f"Request error: {str(e)}")
+        
         except Exception as e:
-            logger.error(f"Sync failed: {e}")
-            self._fail_sync(str(e))
+            logger.error(f"Unexpected error during sync: {e}")
+            self._fail_sync(f"Unexpected error: {str(e)}")
         
         finally:
             self.is_syncing = False
     
     def _send_packet(self, packet: Dict[str, Any]) -> Dict[str, Any]:
-        """Send a packet to the server
+        """Send a packet to the server with enhanced error handling
         
         Args:
             packet: Packet data to send
@@ -242,31 +391,57 @@ class SyncService(QObject):
             "Content-Type": "application/json"
         }
         
-        # Compress packet
-        compressed_data = self.packet_manager.compress_packet(packet)
+        try:
+            # Compress packet
+            compressed_data = self.packet_manager.compress_packet(packet)
+            
+            # Send request with retry logic
+            response = requests.post(
+                url,
+                json={"packet_data": compressed_data.hex()},  # Send as hex string
+                headers=headers,
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 401:
+                # Authentication failed, try to re-register
+                logger.warning("Authentication failed, attempting re-registration")
+                self._register_node()
+                return {"success": False, "error": "Authentication failed, re-registering"}
+            elif response.status_code == 503:
+                # Service unavailable, server overloaded
+                logger.warning("Server unavailable (503), will retry later")
+                return {"success": False, "error": "Server temporarily unavailable"}
+            else:
+                error_msg = f"HTTP {response.status_code}: {response.text}"
+                logger.error(f"Server error: {error_msg}")
+                return {"success": False, "error": error_msg}
         
-        # Send request
-        response = requests.post(
-            url,
-            json={"packet_data": compressed_data.hex()},  # Send as hex string
-            headers=headers,
-            timeout=60
-        )
+        except ConnectionError as e:
+            logger.error(f"Connection error sending packet: {e}")
+            self._set_status("offline")
+            return {"success": False, "error": f"Connection error: {str(e)}"}
         
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 401:
-            # Authentication failed, try to re-register
-            self._register_node()
-            return {"success": False, "error": "Authentication failed"}
-        else:
-            return {
-                "success": False,
-                "error": f"HTTP {response.status_code}: {response.text}"
-            }
+        except Timeout as e:
+            logger.error(f"Timeout sending packet: {e}")
+            return {"success": False, "error": f"Request timeout: {str(e)}"}
+        
+        except HTTPError as e:
+            logger.error(f"HTTP error sending packet: {e}")
+            return {"success": False, "error": f"HTTP error: {str(e)}"}
+        
+        except RequestException as e:
+            logger.error(f"Request error sending packet: {e}")
+            return {"success": False, "error": f"Request error: {str(e)}"}
+        
+        except Exception as e:
+            logger.error(f"Unexpected error sending packet: {e}")
+            return {"success": False, "error": f"Unexpected error: {str(e)}"}
     
     def _check_incoming_sync(self) -> None:
-        """Check for incoming sync data from server"""
+        """Check for incoming sync data from server with enhanced error handling"""
         try:
             url = f"{self.server_url}/api/sync/exchange"
             headers = {
@@ -286,9 +461,27 @@ class SyncService(QObject):
                 result = response.json()
                 if result.get('packet_data'):
                     self._process_response_packet(result['packet_data'])
+            elif response.status_code == 401:
+                logger.warning("Authentication failed during incoming sync check")
+                self._register_node()
+            else:
+                logger.warning(f"Server returned {response.status_code} during incoming sync check")
+        
+        except ConnectionError as e:
+            logger.debug(f"Connection error checking incoming sync: {e}")
+            self._set_status("offline")
+        
+        except Timeout as e:
+            logger.debug(f"Timeout checking incoming sync: {e}")
+        
+        except HTTPError as e:
+            logger.warning(f"HTTP error checking incoming sync: {e}")
+        
+        except RequestException as e:
+            logger.debug(f"Request error checking incoming sync: {e}")
         
         except Exception as e:
-            logger.error(f"Error checking incoming sync: {e}")
+            logger.error(f"Unexpected error checking incoming sync: {e}")
     
     def _process_response_packet(self, packet_data: Dict[str, Any]) -> None:
         """Process response packet from server
@@ -343,27 +536,70 @@ class SyncService(QObject):
             result: Sync result data
         """
         self.last_sync_time = datetime.now(timezone.utc)
-        self.retry_count = 0
-        self.retry_timer.stop()
+        self._reset_retry_state()  # Reset retry state on success
         
         self.sync_completed.emit(result)
-        self._set_status("online")
         
-        logger.info(f"Sync completed: {result}")
+        # Update status based on current connectivity
+        if self.is_online:
+            self._set_status("online")
+        
+        logger.info(f"Sync completed successfully: {result}")
     
     def _fail_sync(self, error: str) -> None:
-        """Fail synchronization with error
+        """Fail synchronization with error and schedule retry
         
         Args:
             error: Error message
         """
         self.sync_failed.emit(error)
-        self._set_status("online")  # Still online, just sync failed
         
-        # Schedule retry
-        self.retry_timer.start(self.retry_interval * 1000)
+        # Determine if we should retry based on error type
+        should_retry = self._should_retry_on_error(error)
+        
+        if should_retry and self.retry_count < self.max_retries:
+            self._schedule_retry(f"Sync failed: {error}")
+        else:
+            if self.retry_count >= self.max_retries:
+                logger.error(f"Max retries reached for sync. Last error: {error}")
+                self._reset_retry_state()
+            else:
+                logger.info(f"Not retrying sync due to error type: {error}")
         
         logger.error(f"Sync failed: {error}")
+    
+    def _should_retry_on_error(self, error: str) -> bool:
+        """Determine if sync should be retried based on error type
+        
+        Args:
+            error: Error message
+            
+        Returns:
+            True if should retry, False otherwise
+        """
+        error_lower = error.lower()
+        
+        # Don't retry on authentication errors (need manual intervention)
+        if any(keyword in error_lower for keyword in ["authentication", "unauthorized", "forbidden"]):
+            return False
+        
+        # Don't retry on most client errors (4xx except specific ones)
+        if "http 4" in error_lower:
+            # But do retry on these specific client errors
+            retryable_4xx = ["401", "408", "429"]  # Unauthorized, Timeout, Too Many Requests
+            if not any(code in error for code in retryable_4xx):
+                return False
+        
+        # Retry on network errors, timeouts, and server errors
+        retry_keywords = [
+            "connection", "timeout", "network", "dns", "resolve",
+            "http 5", "http 502", "http 503", "http 504",  # Server errors
+            "http 408", "http 429",  # Specific client errors
+            "temporarily unavailable", "service unavailable",
+            "bad gateway", "gateway timeout"
+        ]
+        
+        return any(keyword in error_lower for keyword in retry_keywords)
     
     def _set_status(self, status: str) -> None:
         """Set synchronization status and emit signal
@@ -397,7 +633,7 @@ class SyncService(QObject):
                 logger.error(f"Error in status callback: {e}")
     
     def get_sync_status(self) -> Dict[str, Any]:
-        """Get current synchronization status
+        """Get current synchronization status with enhanced information
         
         Returns:
             Status information dictionary
@@ -406,13 +642,29 @@ class SyncService(QObject):
             "SERVER", limit=10000
         )) if self.node_id else 0
         
+        # Determine detailed status
+        if self.is_syncing:
+            status = 'syncing'
+        elif self.is_online and self.node_id and self.auth_token:
+            status = 'online'
+        elif self.node_id and self.auth_token:
+            status = 'offline'  # Registered but not connected
+        else:
+            status = 'not_registered'  # Not registered
+        
         return {
-            'status': 'syncing' if self.is_syncing else ('online' if self.is_online else 'offline'),
+            'status': status,
             'node_code': self.node_code,
             'node_id': self.node_id,
             'last_sync_time': self.last_sync_time.isoformat() if self.last_sync_time else None,
             'pending_changes': pending_changes,
-            'is_registered': bool(self.node_id and self.auth_token)
+            'is_registered': bool(self.node_id and self.auth_token),
+            'is_online': self.is_online,
+            'is_syncing': self.is_syncing,
+            'retry_count': self.retry_count,
+            'max_retries': self.max_retries,
+            'next_retry_in': self.retry_timer.remainingTime() / 1000 if self.retry_timer.isActive() else 0,
+            'sync_interval': self.sync_interval
         }
     
     def add_status_callback(self, callback: Callable[[str], None]) -> None:
@@ -441,6 +693,78 @@ class SyncService(QObject):
         self.sync_interval = max(60, seconds)  # Minimum 1 minute
         self.sync_timer.setInterval(self.sync_interval * 1000)
         logger.info(f"Set sync interval to {self.sync_interval} seconds")
+    
+    def get_network_diagnostics(self) -> Dict[str, Any]:
+        """Get network diagnostics information
+        
+        Returns:
+            Dictionary with network diagnostic data
+        """
+        diagnostics = {
+            'server_url': self.server_url,
+            'is_online': self.is_online,
+            'is_syncing': self.is_syncing,
+            'retry_count': self.retry_count,
+            'max_retries': self.max_retries,
+            'current_retry_interval': self.current_retry_interval,
+            'last_sync_time': self.last_sync_time.isoformat() if self.last_sync_time else None,
+            'node_registered': bool(self.node_id and self.auth_token)
+        }
+        
+        # Test basic connectivity
+        try:
+            start_time = time.time()
+            response = requests.get(f"{self.server_url}/api/health", timeout=5)
+            response_time = (time.time() - start_time) * 1000  # Convert to ms
+            
+            diagnostics.update({
+                'connectivity_test': 'success',
+                'response_time_ms': round(response_time, 2),
+                'server_status_code': response.status_code
+            })
+        except ConnectionError:
+            diagnostics.update({
+                'connectivity_test': 'connection_error',
+                'error': 'Cannot connect to server'
+            })
+        except Timeout:
+            diagnostics.update({
+                'connectivity_test': 'timeout',
+                'error': 'Server response timeout'
+            })
+        except Exception as e:
+            diagnostics.update({
+                'connectivity_test': 'error',
+                'error': str(e)
+            })
+        
+        return diagnostics
+    
+    def force_reconnect(self) -> bool:
+        """Force reconnection to server
+        
+        Returns:
+            True if reconnection initiated successfully
+        """
+        logger.info("Forcing reconnection to server")
+        
+        # Reset retry state
+        self._reset_retry_state()
+        
+        # Clear authentication
+        self.node_id = None
+        self.auth_token = None
+        
+        # Set offline and try to reconnect
+        self._set_status("offline")
+        
+        # Attempt immediate registration
+        try:
+            self._register_node()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to force reconnect: {e}")
+            return False
     
     def resolve_conflict(self, conflict_id: str, resolution_data: Dict[str, Any]) -> bool:
         """Resolve a conflict manually

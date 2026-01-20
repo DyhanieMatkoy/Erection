@@ -838,11 +838,36 @@ class MainWindow(QMainWindow):
                     result.get('error_count', 0)
                 )
             )
-            self.sync_service.sync_failed.connect(self.notification_manager.show_sync_failed)
+            self.sync_service.sync_failed.connect(self.on_sync_failed_notification)
             self.sync_service.conflict_detected.connect(
                 lambda conflict: self.notification_manager.show_conflict_detected(1)
             )
             self.sync_service.status_changed.connect(self.on_sync_status_changed_for_notifications)
+    
+    def on_sync_failed_notification(self, error: str):
+        """Handle sync failed notification with error type detection"""
+        # Determine error type for appropriate notification
+        error_lower = error.lower()
+        
+        if "connection" in error_lower or "network" in error_lower:
+            error_type = "connection_error"
+        elif "timeout" in error_lower:
+            error_type = "timeout"
+        elif "http 5" in error_lower or "server" in error_lower:
+            error_type = "server_error"
+        else:
+            error_type = "unknown"
+        
+        # Get retry information
+        status = self.sync_service.get_sync_status()
+        retry_in = int(status.get('next_retry_in', 0))
+        
+        # Show appropriate notification
+        if hasattr(self.notification_manager, 'show_network_error'):
+            self.notification_manager.show_network_error(error_type, retry_in)
+        else:
+            # Fallback to generic sync failed notification
+            self.notification_manager.show_sync_failed(error)
     
     def on_sync_status_changed_for_notifications(self, status: str):
         """Handle sync status changes for notifications"""
