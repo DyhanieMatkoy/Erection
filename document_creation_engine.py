@@ -367,7 +367,13 @@ class DocumentCreationEngine:
                 raise ValueError(f"Unsupported document type: {doc_type}")
             
             # Create document in client database
+            self.logger.debug(f"Creating {doc_type} document in database for {client.client_id}")
             created_doc = self._create_document_in_database(client, doc_type, doc_data)
+            self.logger.debug(f"Document created in database: {created_doc}")
+            
+            # Validate created document has required fields
+            if 'id' not in created_doc:
+                raise ValueError(f"Created document missing 'id' field: {created_doc}")
             
             # Track created document
             document_info = {

@@ -250,7 +250,7 @@ class SyncEndToEndTestController:
                 self.test_results['documents_created'].append({
                     'type': template['type'],
                     'client_id': client.client_id,
-                    'document_id': document['id'],
+                    'document_id': document['document_id'],
                     'created_at': document['created_at']
                 })
                 

@@ -67,6 +67,9 @@ class TestDesktopClient:
             if not success:
                 raise Exception(f"Failed to initialize database: {self.database_path}")
             
+            # Initialize sync schema for this client
+            self._initialize_sync_schema()
+            
             # Create sync configuration for this client
             self._create_sync_config()
             
@@ -256,6 +259,24 @@ class TestDesktopClient:
                 'success': False,
                 'error': str(e)
             }
+    
+    def _initialize_sync_schema(self) -> None:
+        """Initialize sync schema in client database"""
+        try:
+            from src.data.models.sync_models import SyncNode, SyncChange, ObjectVersionHistory
+            
+            engine = self.db_manager.get_engine()
+            
+            # Create sync tables
+            SyncNode.__table__.create(engine, checkfirst=True)
+            SyncChange.__table__.create(engine, checkfirst=True)
+            ObjectVersionHistory.__table__.create(engine, checkfirst=True)
+            
+            self.logger.debug(f"Sync schema initialized for client: {self.client_id}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize sync schema for {self.client_id}: {e}")
+            raise
     
     def _create_sync_config(self) -> None:
         """Create sync configuration file for this client"""

@@ -106,8 +106,9 @@ class SyncManager:
                 return str(existing.id)
             
             # Create new node
+            node_uuid = uuid.uuid4()
             node = SyncNode(
-                id=uuid.uuid4(),
+                id=str(node_uuid),  # Convert UUID to string for SQLite compatibility
                 code=code,
                 name=name
             )
@@ -412,7 +413,7 @@ class SyncManager:
             source_node_id: Source node ID
         """
         version = ObjectVersionHistory(
-            id=uuid.uuid4(),
+            id=str(uuid.uuid4()),  # Convert UUID to string for SQLite compatibility
             entity_uuid=entity_uuid,
             entity_type=entity_type,
             source_node_id=source_node_id,
