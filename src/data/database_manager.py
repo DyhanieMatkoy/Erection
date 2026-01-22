@@ -1027,3 +1027,137 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to create initial data (legacy): {e}")
             # Don't raise exception - this shouldn't prevent database initialization
+    
+    def initialize_with_connection_string(self, connection_string: str) -> bool:
+        """Initialize database with a direct connection string
+        
+        Args:
+            connection_string: Database connection string (e.g., postgresql://user:pass@host:port/db)
+            
+        Returns:
+            True if initialization successful, False otherwise
+            
+        Raises:
+            DatabaseConnectionError: If database connection fails
+            DatabaseConfigurationError: If connection string is invalid
+        """
+        try:
+            if not connection_string:
+                raise DatabaseConfigurationError("Connection string cannot be empty")
+            
+            logger.info(f"Initializing database with connection string: {connection_string[:50]}...")
+            
+            # Determine database type from connection string
+            db_type = None
+            if connection_string.startswith('sqlite:'):
+                db_type = 'sqlite'
+            elif connection_string.startswith('postgresql:'):
+                db_type = 'postgresql'
+            elif connection_string.startswith('mysql:'):
+                db_type = 'mysql'
+            elif connection_string.startswith('mssql:'):
+                db_type = 'mssql'
+            else:
+                raise DatabaseConfigurationError(
+                    f"Unsupported database type in connection string: {connection_string[:20]}..."
+                )
+            
+            # Create engine with appropriate settings
+            engine_kwargs = self._get_engine_kwargs_for_type(db_type)
+            
+            try:
+                self._engine = create_engine(connection_string, **engine_kwargs)
+                
+                # Enable foreign key support for SQLite
+                if db_type == 'sqlite':
+                    @event.listens_for(self._engine, "connect")
+                    def set_sqlite_pragma(dbapi_conn, connection_record):
+                        cursor = dbapi_conn.cursor()
+                        cursor.execute("PRAGMA foreign_keys=ON")
+                        cursor.close()
+                
+                # Test the connection by attempting to connect
+                try:
+                    with self._engine.connect() as conn:
+                        conn.execute(text("SELECT 1"))
+                    logger.info(f"Successfully connected to {db_type} database")
+                except Exception as conn_error:
+                    logger.error(f"Failed to connect to {db_type} database: {conn_error}")
+                    raise DatabaseConnectionError(
+                        f"Failed to connect to {db_type} database: {conn_error}"
+                    )
+                
+                # Create session factory
+                self._session_factory = sessionmaker(
+                    bind=self._engine,
+                    autocommit=False,
+                    autoflush=False
+                )
+                
+                # Initialize schema manager
+                self._schema_manager = SchemaManager(self._engine)
+                
+                # Create tables if needed
+                self._create_tables_sqlalchemy()
+                
+            except DatabaseConnectionError:
+                # Re-raise connection errors as-is
+                raise
+            except Exception as e:
+                logger.error(f"Failed to initialize {db_type} database engine: {e}")
+                raise DatabaseConnectionError(
+                    f"Database engine initialization failed for {db_type}: {e}"
+                )
+            
+            # For backward compatibility with SQLite, maintain a connection
+            if db_type == 'sqlite':
+                # Extract database path from SQLite connection string
+                db_path = connection_string.replace('sqlite:///', '').replace('sqlite://', '')
+                try:
+                    self._connection = sqlite3.connect(db_path, check_same_thread=False)
+                    self._connection.row_factory = sqlite3.Row
+                except Exception as e:
+                    logger.error(f"Failed to create SQLite connection for backward compatibility: {e}")
+                    raise DatabaseConnectionError(
+                        f"Failed to create SQLite connection to {db_path}: {e}"
+                    )
+            
+            logger.info(f"Database initialized successfully with connection string: type={db_type}")
+            return True
+            
+        except (DatabaseConfigurationError, DatabaseConnectionError):
+            # Re-raise our custom exceptions
+            raise
+            
+        except Exception as e:
+            logger.error(f"Unexpected error during connection string initialization: {e}")
+            raise DatabaseConnectionError(f"Database initialization failed: {e}")
+    
+    def _get_engine_kwargs_for_type(self, db_type: str) -> dict:
+        """Get engine configuration based on database type (for connection string initialization)
+        
+        Args:
+            db_type: Database type ('sqlite', 'postgresql', 'mysql', 'mssql')
+            
+        Returns:
+            Dictionary of engine configuration options
+        """
+        kwargs = {
+            'echo': False,  # Set to True for SQL query logging
+        }
+        
+        if db_type == 'sqlite':
+            # SQLite doesn't need connection pooling
+            kwargs['poolclass'] = NullPool
+            kwargs['connect_args'] = {'check_same_thread': False}
+            
+        elif db_type in ['postgresql', 'mysql', 'mssql']:
+            # Configure connection pooling for server databases
+            kwargs['poolclass'] = QueuePool
+            kwargs['pool_size'] = 5
+            kwargs['max_overflow'] = 10
+            kwargs['pool_timeout'] = 30
+            kwargs['pool_recycle'] = 3600
+            kwargs['pool_pre_ping'] = True  # Verify connections before using
+        
+        return kwargs

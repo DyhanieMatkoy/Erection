@@ -1,7 +1,7 @@
 # Desktop Sync End-to-End Testing Requirements
 
 ## Overview
-Create a comprehensive end-to-end testing scenario that validates the complete synchronization workflow between a local server and multiple desktop clients. This testing system will simulate real-world usage patterns and verify data consistency across all synchronized nodes.
+Create a comprehensive end-to-end testing scenario that validates the complete synchronization workflow between a local server and multiple desktop clients across different database types. This testing system will simulate real-world usage patterns, verify data consistency across all synchronized nodes, and validate schema migration capabilities using Alembic. The system must support PostgreSQL, MySQL, and SQLite databases in various combinations and ensure that schema changes propagate correctly from server to desktop clients.
 
 ## User Stories
 
@@ -81,6 +81,59 @@ Create a comprehensive end-to-end testing scenario that validates the complete s
 6.5 Final test report includes pass/fail status for each verification step
 6.6 Recommendations for fixing identified issues are included in the report
 
+### US7: Multi-Database Server Configuration Testing
+**As a** system administrator  
+**I want** to test synchronization when the server switches between different database types  
+**So that** I can ensure the sync system works correctly with PostgreSQL, MySQL, and SQLite server databases
+
+**Acceptance Criteria:**
+7.1 Server can be configured to use SQLite database and sync successfully
+7.2 Server can be switched to PostgreSQL (PostgreSQL_1C_17.4_64bit) and maintain sync functionality
+7.3 Server can be switched to MySQL and maintain sync functionality
+7.4 Database type changes are reflected in server configuration without data loss
+7.5 Desktop clients continue to sync correctly after server database type changes
+7.6 All document types sync correctly regardless of server database type
+
+### US8: Desktop Client Multi-Database Support Testing
+**As a** desktop user  
+**I want** to use different local database types on different desktop clients  
+**So that** I can verify sync works with mixed database environments
+
+**Acceptance Criteria:**
+8.1 Desktop Client 1 uses SQLite local database and syncs successfully
+8.2 Desktop Client 2 uses MySQL local database and syncs successfully  
+8.3 Desktop Client 3 uses MySQL local database and syncs successfully
+8.4 All clients can sync with each other regardless of local database type
+8.5 Data integrity is maintained across different database types
+8.6 Performance is acceptable across all database type combinations
+
+### US9: Alembic Schema Migration Testing
+**As a** developer  
+**I want** to test that schema changes applied via Alembic on the server propagate correctly to desktop clients  
+**So that** I can ensure database schema evolution works in production
+
+**Acceptance Criteria:**
+9.1 Schema migration can be applied to server database using Alembic
+9.2 Desktop clients detect schema changes during automatic synchronization
+9.3 Desktop clients detect schema changes during manual synchronization
+9.4 Desktop client local databases are updated to match server schema
+9.5 Existing data is preserved during schema migration on desktop clients
+9.6 New schema features are available on desktop clients after migration
+9.7 Migration process is logged and can be monitored
+
+### US10: Cross-Database Type Migration Verification
+**As a** system administrator  
+**I want** to verify that schema migrations work correctly when server and clients use different database types  
+**So that** I can ensure schema consistency across heterogeneous database environments
+
+**Acceptance Criteria:**
+10.1 Schema migration from PostgreSQL server propagates to SQLite desktop clients
+10.2 Schema migration from MySQL server propagates to SQLite desktop clients
+10.3 Schema migration from SQLite server propagates to MySQL desktop clients
+10.4 Complex schema changes (new tables, columns, indexes) sync correctly
+10.5 Foreign key relationships are maintained across different database types
+10.6 Data type mappings are handled correctly during cross-database migrations
+
 ## Technical Requirements
 
 ### TR1: Test Environment Isolation
@@ -107,6 +160,27 @@ Create a comprehensive end-to-end testing scenario that validates the complete s
 - Sync metadata should be validated for consistency
 - Foreign key relationships should be verified after sync
 
+### TR5: Multi-Database Support Infrastructure
+- Test framework must support PostgreSQL, MySQL, and SQLite databases
+- Database connection strings and drivers must be configurable per test scenario
+- Database-specific SQL syntax differences must be handled transparently
+- Test data generation must be compatible with all supported database types
+- Database performance characteristics must be monitored and compared
+
+### TR6: Alembic Migration Integration
+- Test framework must integrate with Alembic migration system
+- Migration scripts must be executable programmatically during tests
+- Schema version tracking must be verified across all database instances
+- Migration rollback capabilities must be tested
+- Migration performance and timing must be monitored
+
+### TR7: Cross-Database Compatibility Testing
+- Schema synchronization must work between different database types
+- Data type mapping between databases must be verified
+- Index and constraint synchronization must be tested
+- Performance impact of cross-database sync must be measured
+- Error handling for database-specific features must be validated
+
 ## Success Criteria
 
 The test scenario is considered successful when:
@@ -116,6 +190,33 @@ The test scenario is considered successful when:
 4. No sync errors or timeouts occur during normal operation
 5. Test execution completes within 5 minutes total
 6. Comprehensive test report is generated with all verification results
+7. Synchronization works correctly with all database type combinations (PostgreSQL, MySQL, SQLite)
+8. Schema migrations via Alembic propagate successfully to all desktop clients
+9. Cross-database type synchronization maintains data integrity and schema consistency
+10. Migration process completes within acceptable time limits (< 2 minutes per client)
+
+## Multi-Database Test Scenarios
+
+### Scenario 1: PostgreSQL Server with Mixed Desktop Clients
+- Server: PostgreSQL (PostgreSQL_1C_17.4_64bit)
+- Desktop Client 1: SQLite local database
+- Desktop Client 2: MySQL local database  
+- Desktop Client 3: MySQL local database
+- Test: Full sync workflow + Alembic schema migration
+
+### Scenario 2: MySQL Server with Mixed Desktop Clients
+- Server: MySQL
+- Desktop Client 1: SQLite local database
+- Desktop Client 2: SQLite local database
+- Desktop Client 3: MySQL local database
+- Test: Full sync workflow + Alembic schema migration
+
+### Scenario 3: SQLite Server with MySQL Desktop Clients
+- Server: SQLite
+- Desktop Client 1: MySQL local database
+- Desktop Client 2: MySQL local database
+- Desktop Client 3: MySQL local database
+- Test: Full sync workflow + Alembic schema migration
 
 ## Out of Scope
 
@@ -124,3 +225,6 @@ The test scenario is considered successful when:
 - Concurrent modification conflict resolution testing
 - Large file synchronization testing
 - Multi-server synchronization scenarios
+- Database-specific advanced features (stored procedures, triggers)
+- Real-time synchronization testing
+- Backup and restore testing during synchronization

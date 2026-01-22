@@ -684,3 +684,115 @@ class TestReportGenerator:
             summary_lines.append(f"Warnings: {len(report.warnings)}")
         
         return " | ".join(summary_lines)
+    
+    def generate_test_summary(self, test_results: Dict[str, Any]) -> str:
+        """Generate test summary from test results
+        
+        Args:
+            test_results: Test results dictionary
+            
+        Returns:
+            Formatted test summary string
+        """
+        try:
+            lines = []
+            lines.append("=" * 60)
+            lines.append("TEST EXECUTION SUMMARY")
+            lines.append("=" * 60)
+            lines.append("")
+            
+            # Basic information
+            lines.append("BASIC INFORMATION")
+            lines.append("-" * 30)
+            lines.append(f"Test Session ID: {test_results.get('test_session_id', 'Unknown')}")
+            lines.append(f"Test Type: {test_results.get('test_type', 'Unknown')}")
+            lines.append(f"Overall Success: {'YES' if test_results.get('overall_success', False) else 'NO'}")
+            
+            if 'scenario_name' in test_results:
+                lines.append(f"Scenario: {test_results['scenario_name']}")
+            
+            if 'duration' in test_results:
+                lines.append(f"Duration: {test_results['duration']} seconds")
+            
+            lines.append("")
+            
+            # Migration test results
+            if 'migration_test_results' in test_results:
+                migration_results = test_results['migration_test_results']
+                lines.append("MIGRATION TEST RESULTS")
+                lines.append("-" * 30)
+                lines.append(f"Overall Success: {'YES' if migration_results.get('overall_success', False) else 'NO'}")
+                lines.append(f"Duration: {migration_results.get('duration', 0)} seconds")
+                lines.append(f"Migrations Tested: {len(migration_results.get('migrations_tested', []))}")
+                
+                if 'migration_results' in migration_results:
+                    successful = sum(1 for r in migration_results['migration_results'].values() if r.get('success', False))
+                    total = len(migration_results['migration_results'])
+                    lines.append(f"Success Rate: {successful}/{total}")
+                
+                lines.append("")
+            
+            # Sync workflow results
+            if 'sync_workflow_results' in test_results:
+                sync_results = test_results['sync_workflow_results']
+                lines.append("SYNC WORKFLOW RESULTS")
+                lines.append("-" * 30)
+                lines.append(f"Overall Success: {'YES' if sync_results.get('overall_success', False) else 'NO'}")
+                lines.append(f"Duration: {sync_results.get('duration', 0)} seconds")
+                
+                # Document creation
+                if 'document_creation' in sync_results:
+                    doc_success = sum(1 for r in sync_results['document_creation'].values() if r.get('success', False))
+                    doc_total = len(sync_results['document_creation'])
+                    lines.append(f"Document Creation: {doc_success}/{doc_total}")
+                
+                # Synchronization
+                if 'synchronization_results' in sync_results:
+                    sync_success = sum(1 for r in sync_results['synchronization_results'].values() if r.get('status') == 'success')
+                    sync_total = len(sync_results['synchronization_results'])
+                    lines.append(f"Synchronization: {sync_success}/{sync_total}")
+                
+                # Data verification
+                if 'data_verification' in sync_results:
+                    verify_success = sum(1 for r in sync_results['data_verification'].values() if r.get('success', False))
+                    verify_total = len(sync_results['data_verification'])
+                    lines.append(f"Data Verification: {verify_success}/{verify_total}")
+                
+                lines.append("")
+            
+            # Multi-scenario results
+            if 'scenario_results' in test_results:
+                lines.append("SCENARIO RESULTS")
+                lines.append("-" * 30)
+                lines.append(f"Total Scenarios: {test_results.get('total_scenarios', 0)}")
+                lines.append(f"Successful: {test_results.get('successful_scenarios', 0)}")
+                lines.append(f"Failed: {test_results.get('failed_scenarios', 0)}")
+                lines.append(f"Total Duration: {test_results.get('total_duration', 0)} seconds")
+                lines.append("")
+            
+            # Error information
+            if 'error' in test_results:
+                lines.append("ERROR INFORMATION")
+                lines.append("-" * 30)
+                lines.append(f"Error: {test_results['error']}")
+                lines.append("")
+            
+            # Schema consistency
+            if 'schema_consistency_checks' in test_results:
+                consistency_checks = test_results['schema_consistency_checks']
+                if consistency_checks:
+                    latest_check = consistency_checks[-1]
+                    lines.append("SCHEMA CONSISTENCY")
+                    lines.append("-" * 30)
+                    lines.append(f"Overall Consistent: {'YES' if latest_check.get('overall_consistent', False) else 'NO'}")
+                    lines.append(f"Total Databases: {latest_check.get('total_databases', 0)}")
+                    lines.append(f"Consistent Pairs: {latest_check.get('consistent_pairs', 0)}")
+                    lines.append(f"Inconsistent Pairs: {latest_check.get('inconsistent_pairs', 0)}")
+                    lines.append("")
+            
+            lines.append("=" * 60)
+            
+            return "\n".join(lines)
+            
+        except Exception as e:
+            return f"Error generating test summary: {e}"

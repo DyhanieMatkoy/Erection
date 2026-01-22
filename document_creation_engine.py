@@ -658,7 +658,7 @@ class DocumentCreationEngine:
             
             # Ensure at least one counterparty (customer)
             customers = db_manager.execute_query("SELECT COUNT(*) as count FROM counterparties")
-            if customers[0]['count'] == 0:
+            if customers and len(customers) > 0 and customers[0][0] == 0:
                 db_manager.execute_update(
                     "INSERT INTO counterparties (name, inn) VALUES (?, ?)",
                     ("Тестовый заказчик", "1234567890")
@@ -666,7 +666,7 @@ class DocumentCreationEngine:
             
             # Ensure at least one object
             objects = db_manager.execute_query("SELECT COUNT(*) as count FROM objects")
-            if objects[0]['count'] == 0:
+            if objects and len(objects) > 0 and objects[0][0] == 0:
                 db_manager.execute_update(
                     "INSERT INTO objects (name, owner_id, address) VALUES (?, ?, ?)",
                     ("Тестовый объект", 1, "Тестовый адрес")
@@ -674,7 +674,7 @@ class DocumentCreationEngine:
             
             # Ensure at least one organization (contractor)
             organizations = db_manager.execute_query("SELECT COUNT(*) as count FROM organizations")
-            if organizations[0]['count'] == 0:
+            if organizations and len(organizations) > 0 and organizations[0][0] == 0:
                 db_manager.execute_update(
                     "INSERT INTO organizations (name, inn) VALUES (?, ?)",
                     ("Тестовая организация", "0987654321")
@@ -682,7 +682,7 @@ class DocumentCreationEngine:
             
             # Ensure at least one person (responsible/foreman)
             persons = db_manager.execute_query("SELECT COUNT(*) as count FROM persons")
-            if persons[0]['count'] == 0:
+            if persons and len(persons) > 0 and persons[0][0] == 0:
                 db_manager.execute_update(
                     "INSERT INTO persons (full_name, position) VALUES (?, ?)",
                     ("Тестовый сотрудник", "Прораб")
@@ -690,7 +690,7 @@ class DocumentCreationEngine:
             
             # Ensure at least one work type
             works = db_manager.execute_query("SELECT COUNT(*) as count FROM works")
-            if works[0]['count'] == 0:
+            if works and len(works) > 0 and works[0][0] == 0:
                 for work_type in self.data_generator.work_types:
                     db_manager.execute_update(
                         "INSERT INTO works (name, unit, price, labor_rate) VALUES (?, ?, ?, ?)",
@@ -699,6 +699,7 @@ class DocumentCreationEngine:
             
         except Exception as e:
             self.logger.warning(f"Error ensuring reference data: {e}")
+            # Continue without reference data - tests can still run
     
     def verify_initial_document_distribution(self, clients: List) -> Dict[str, Any]:
         """Verify that documents exist only in their respective client databases
