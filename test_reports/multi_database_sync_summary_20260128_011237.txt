@@ -1,0 +1,27 @@
+============================================================
+TEST EXECUTION SUMMARY
+============================================================
+
+BASIC INFORMATION
+------------------------------
+Test Session ID: 20260128_011237
+Test Type: Unknown
+Overall Success: NO
+Scenario: sqlite_only
+
+MIGRATION TEST RESULTS
+------------------------------
+Overall Success: NO
+Duration: 21.82 seconds
+Migrations Tested: 2
+Success Rate: 2/2
+
+SYNC WORKFLOW RESULTS
+------------------------------
+Overall Success: NO
+Duration: 7.57 seconds
+Document Creation: 3/3
+Synchronization: 3/3
+Data Verification: 0/3
+
+============================================================

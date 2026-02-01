@@ -1,0 +1,1065 @@
+{
+  "scenario_name": "sqlite_only",
+  "scenario_info": {
+    "name": "SQLite Only Testing",
+    "description": "SQLite server with SQLite clients (no external DB required)",
+    "server_db_type": "sqlite",
+    "client_db_types": {
+      "client_1": "sqlite",
+      "client_2": "sqlite",
+      "client_3": "sqlite"
+    },
+    "migration_tests": [
+      "add_project_phases_table",
+      "add_priority_to_estimates"
+    ],
+    "expected_duration": 180
+  },
+  "test_session_id": "20260128_134158",
+  "setup_success": true,
+  "sync_workflow_results": {
+    "scenario": "SQLite Only Testing",
+    "document_creation": {
+      "client_1": {
+        "success": true,
+        "document_info": {
+          "number": "EST-20260128-134218",
+          "date": "2026-01-28",
+          "customer_id": null,
+          "object_id": null,
+          "contractor_id": null,
+          "responsible_id": null,
+          "total_sum": 0.0,
+          "total_labor": 0.0,
+          "created_at": "2026-01-28 13:42:18.198879",
+          "modified_at": "2026-01-28 13:42:18.198879",
+          "id": 1
+        }
+      },
+      "client_2": {
+        "success": true,
+        "document_info": {
+          "date": "2026-01-28",
+          "estimate_id": null,
+          "foreman_id": null,
+          "number": "DR-20260128-134218",
+          "created_at": "2026-01-28 13:42:18.204113",
+          "modified_at": "2026-01-28 13:42:18.204113",
+          "id": 1
+        }
+      },
+      "client_3": {
+        "success": true,
+        "document_info": {
+          "number": "TS-20260128-134218",
+          "date": "2026-01-28",
+          "object_id": null,
+          "estimate_id": null,
+          "foreman_id": null,
+          "month_year": "2026-01",
+          "created_at": "2026-01-28 13:42:18.206144",
+          "modified_at": "2026-01-28 13:42:18.206144",
+          "id": 1
+        }
+      }
+    },
+    "synchronization_results": {
+      "client_1": {
+        "client_id": "client_1",
+        "status": "success",
+        "duration": 2.51,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T05:42:20.328966+00:00"
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "status": "success",
+        "duration": 2.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T05:42:22.773544+00:00"
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "status": "success",
+        "duration": 2.52,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T05:42:25.285197+00:00"
+      }
+    },
+    "data_verification": {
+      "client_1": {
+        "client_id": "client_1",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-134218",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-134218",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-134218",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-134218",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-134218",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-134218",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-134218",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-134218",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-134218",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      }
+    },
+    "overall_success": true,
+    "start_time": "2026-01-28T13:42:18.197530",
+    "end_time": "2026-01-28T13:42:25.754759",
+    "duration": 7.56
+  },
+  "migration_test_results": {
+    "scenario": "SQLite Only Testing",
+    "migrations_tested": [
+      "add_project_phases_table",
+      "add_priority_to_estimates"
+    ],
+    "migration_results": {
+      "add_project_phases_table": {
+        "migration_name": "add_project_phases_table",
+        "server_execution": {
+          "success": true,
+          "error": null,
+          "migration_id": "20260128_134225_add_project_phases_table"
+        },
+        "client_propagation": {
+          "client_1": {
+            "success": true,
+            "error": null
+          },
+          "client_2": {
+            "success": true,
+            "error": null
+          },
+          "client_3": {
+            "success": false,
+            "error": "Direct SQL execution failed on client"
+          }
+        },
+        "schema_consistency": null,
+        "success": false
+      },
+      "add_priority_to_estimates": {
+        "migration_name": "add_priority_to_estimates",
+        "server_execution": {
+          "success": true,
+          "error": null,
+          "migration_id": "20260128_134231_add_priority_to_estimates"
+        },
+        "client_propagation": {
+          "client_1": {
+            "success": true,
+            "error": null
+          },
+          "client_2": {
+            "success": true,
+            "error": null
+          },
+          "client_3": {
+            "success": false,
+            "error": "Direct SQL execution failed on client"
+          }
+        },
+        "schema_consistency": null,
+        "success": false
+      }
+    },
+    "schema_consistency_checks": [
+      {
+        "overall_consistent": false,
+        "total_databases": 4,
+        "total_comparisons": 6,
+        "consistent_pairs": 1,
+        "inconsistent_pairs": 5,
+        "snapshots": {
+          "server": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 22,
+            "captured_at": "2026-01-28T13:42:37.061678"
+          },
+          "client_1": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 22,
+            "captured_at": "2026-01-28T13:42:37.074714"
+          },
+          "client_2": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 22,
+            "captured_at": "2026-01-28T13:42:37.084088"
+          },
+          "client_3": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 21,
+            "captured_at": "2026-01-28T13:42:37.136693"
+          }
+        },
+        "comparisons": [
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [
+              {
+                "table_name": "payroll_register",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "payroll_register",
+                    "missing_in_schema1": [
+                      "idx_payroll_date",
+                      "idx_payroll_dimensions",
+                      "idx_payroll_recorder"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "timesheet_lines",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "timesheet_lines",
+                    "missing_in_schema1": [
+                      "idx_timesheet_lines_timesheet",
+                      "idx_timesheet_lines_employee"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "audit_logs",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "audit_logs",
+                    "missing_in_schema1": [
+                      "idx_audit_logs_resource",
+                      "idx_audit_logs_created_at"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "timesheets",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "timesheets",
+                    "missing_in_schema1": [
+                      "idx_timesheets_date",
+                      "idx_timesheets_object",
+                      "idx_timesheets_foreman",
+                      "idx_timesheets_estimate"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "work_execution_register",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "work_execution_register",
+                    "missing_in_schema1": [
+                      "idx_register_dimensions",
+                      "idx_register_recorder"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "estimates",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "estimates",
+                    "missing_in_schema1": [
+                      "idx_estimates_responsible",
+                      "idx_estimates_date"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "daily_reports",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "daily_reports",
+                    "missing_in_schema1": [
+                      "idx_daily_reports_date",
+                      "idx_daily_reports_estimate"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              }
+            ],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [
+              {
+                "table": "payroll_register",
+                "missing_in_schema1": [
+                  "idx_payroll_date",
+                  "idx_payroll_dimensions",
+                  "idx_payroll_recorder"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "timesheet_lines",
+                "missing_in_schema1": [
+                  "idx_timesheet_lines_timesheet",
+                  "idx_timesheet_lines_employee"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "audit_logs",
+                "missing_in_schema1": [
+                  "idx_audit_logs_resource",
+                  "idx_audit_logs_created_at"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "timesheets",
+                "missing_in_schema1": [
+                  "idx_timesheets_date",
+                  "idx_timesheets_object",
+                  "idx_timesheets_foreman",
+                  "idx_timesheets_estimate"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "work_execution_register",
+                "missing_in_schema1": [
+                  "idx_register_dimensions",
+                  "idx_register_recorder"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "estimates",
+                "missing_in_schema1": [
+                  "idx_estimates_responsible",
+                  "idx_estimates_date"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "daily_reports",
+                "missing_in_schema1": [
+                  "idx_daily_reports_date",
+                  "idx_daily_reports_estimate"
+                ],
+                "missing_in_schema2": []
+              }
+            ],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T13:42:37.136693",
+            "config1_id": "server",
+            "config2_id": "client_1"
+          },
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [
+              {
+                "table_name": "payroll_register",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "payroll_register",
+                    "missing_in_schema1": [
+                      "idx_payroll_date",
+                      "idx_payroll_dimensions",
+                      "idx_payroll_recorder"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "timesheet_lines",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "timesheet_lines",
+                    "missing_in_schema1": [
+                      "idx_timesheet_lines_timesheet",
+                      "idx_timesheet_lines_employee"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "audit_logs",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "audit_logs",
+                    "missing_in_schema1": [
+                      "idx_audit_logs_resource",
+                      "idx_audit_logs_created_at"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "timesheets",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "timesheets",
+                    "missing_in_schema1": [
+                      "idx_timesheets_date",
+                      "idx_timesheets_object",
+                      "idx_timesheets_foreman",
+                      "idx_timesheets_estimate"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "work_execution_register",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "work_execution_register",
+                    "missing_in_schema1": [
+                      "idx_register_dimensions",
+                      "idx_register_recorder"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "estimates",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "estimates",
+                    "missing_in_schema1": [
+                      "idx_estimates_responsible",
+                      "idx_estimates_date"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "daily_reports",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "daily_reports",
+                    "missing_in_schema1": [
+                      "idx_daily_reports_date",
+                      "idx_daily_reports_estimate"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              }
+            ],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [
+              {
+                "table": "payroll_register",
+                "missing_in_schema1": [
+                  "idx_payroll_date",
+                  "idx_payroll_dimensions",
+                  "idx_payroll_recorder"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "timesheet_lines",
+                "missing_in_schema1": [
+                  "idx_timesheet_lines_timesheet",
+                  "idx_timesheet_lines_employee"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "audit_logs",
+                "missing_in_schema1": [
+                  "idx_audit_logs_resource",
+                  "idx_audit_logs_created_at"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "timesheets",
+                "missing_in_schema1": [
+                  "idx_timesheets_date",
+                  "idx_timesheets_object",
+                  "idx_timesheets_foreman",
+                  "idx_timesheets_estimate"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "work_execution_register",
+                "missing_in_schema1": [
+                  "idx_register_dimensions",
+                  "idx_register_recorder"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "estimates",
+                "missing_in_schema1": [
+                  "idx_estimates_responsible",
+                  "idx_estimates_date"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "daily_reports",
+                "missing_in_schema1": [
+                  "idx_daily_reports_date",
+                  "idx_daily_reports_estimate"
+                ],
+                "missing_in_schema2": []
+              }
+            ],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T13:42:37.136693",
+            "config1_id": "server",
+            "config2_id": "client_2"
+          },
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [
+              {
+                "table_name": "payroll_register",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "payroll_register",
+                    "missing_in_schema1": [
+                      "idx_payroll_date",
+                      "idx_payroll_dimensions",
+                      "idx_payroll_recorder"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "timesheet_lines",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "timesheet_lines",
+                    "missing_in_schema1": [
+                      "idx_timesheet_lines_timesheet",
+                      "idx_timesheet_lines_employee"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "audit_logs",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "audit_logs",
+                    "missing_in_schema1": [
+                      "idx_audit_logs_resource",
+                      "idx_audit_logs_created_at"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "timesheets",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "timesheets",
+                    "missing_in_schema1": [
+                      "idx_timesheets_date",
+                      "idx_timesheets_object",
+                      "idx_timesheets_foreman",
+                      "idx_timesheets_estimate"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "work_execution_register",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "work_execution_register",
+                    "missing_in_schema1": [
+                      "idx_register_dimensions",
+                      "idx_register_recorder"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "estimates",
+                "tables_match": false,
+                "column_differences": [
+                  {
+                    "type": "missing_in_schema2",
+                    "table": "estimates",
+                    "column": "priority",
+                    "schema1_definition": {
+                      "name": "priority",
+                      "type": "integer",
+                      "nullable": true,
+                      "default": "1",
+                      "primary_key": false
+                    }
+                  }
+                ],
+                "index_differences": [
+                  {
+                    "table": "estimates",
+                    "missing_in_schema1": [
+                      "idx_estimates_responsible",
+                      "idx_estimates_date"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              },
+              {
+                "table_name": "daily_reports",
+                "tables_match": false,
+                "column_differences": [],
+                "index_differences": [
+                  {
+                    "table": "daily_reports",
+                    "missing_in_schema1": [
+                      "idx_daily_reports_date",
+                      "idx_daily_reports_estimate"
+                    ],
+                    "missing_in_schema2": []
+                  }
+                ],
+                "foreign_key_differences": []
+              }
+            ],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": [
+                "project_phases"
+              ]
+            },
+            "column_differences": [
+              {
+                "type": "missing_in_schema2",
+                "table": "estimates",
+                "column": "priority",
+                "schema1_definition": {
+                  "name": "priority",
+                  "type": "integer",
+                  "nullable": true,
+                  "default": "1",
+                  "primary_key": false
+                }
+              }
+            ],
+            "index_differences": [
+              {
+                "table": "payroll_register",
+                "missing_in_schema1": [
+                  "idx_payroll_date",
+                  "idx_payroll_dimensions",
+                  "idx_payroll_recorder"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "timesheet_lines",
+                "missing_in_schema1": [
+                  "idx_timesheet_lines_timesheet",
+                  "idx_timesheet_lines_employee"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "audit_logs",
+                "missing_in_schema1": [
+                  "idx_audit_logs_resource",
+                  "idx_audit_logs_created_at"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "timesheets",
+                "missing_in_schema1": [
+                  "idx_timesheets_date",
+                  "idx_timesheets_object",
+                  "idx_timesheets_foreman",
+                  "idx_timesheets_estimate"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "work_execution_register",
+                "missing_in_schema1": [
+                  "idx_register_dimensions",
+                  "idx_register_recorder"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "estimates",
+                "missing_in_schema1": [
+                  "idx_estimates_responsible",
+                  "idx_estimates_date"
+                ],
+                "missing_in_schema2": []
+              },
+              {
+                "table": "daily_reports",
+                "missing_in_schema1": [
+                  "idx_daily_reports_date",
+                  "idx_daily_reports_estimate"
+                ],
+                "missing_in_schema2": []
+              }
+            ],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T13:42:37.136693",
+            "config1_id": "server",
+            "config2_id": "client_3"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T13:42:37.136693",
+            "config1_id": "client_1",
+            "config2_id": "client_2"
+          },
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [
+              {
+                "table_name": "estimates",
+                "tables_match": false,
+                "column_differences": [
+                  {
+                    "type": "missing_in_schema2",
+                    "table": "estimates",
+                    "column": "priority",
+                    "schema1_definition": {
+                      "name": "priority",
+                      "type": "integer",
+                      "nullable": true,
+                      "default": "1",
+                      "primary_key": false
+                    }
+                  }
+                ],
+                "index_differences": [],
+                "foreign_key_differences": []
+              }
+            ],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": [
+                "project_phases"
+              ]
+            },
+            "column_differences": [
+              {
+                "type": "missing_in_schema2",
+                "table": "estimates",
+                "column": "priority",
+                "schema1_definition": {
+                  "name": "priority",
+                  "type": "integer",
+                  "nullable": true,
+                  "default": "1",
+                  "primary_key": false
+                }
+              }
+            ],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T13:42:37.136693",
+            "config1_id": "client_1",
+            "config2_id": "client_3"
+          },
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [
+              {
+                "table_name": "estimates",
+                "tables_match": false,
+                "column_differences": [
+                  {
+                    "type": "missing_in_schema2",
+                    "table": "estimates",
+                    "column": "priority",
+                    "schema1_definition": {
+                      "name": "priority",
+                      "type": "integer",
+                      "nullable": true,
+                      "default": "1",
+                      "primary_key": false
+                    }
+                  }
+                ],
+                "index_differences": [],
+                "foreign_key_differences": []
+              }
+            ],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": [
+                "project_phases"
+              ]
+            },
+            "column_differences": [
+              {
+                "type": "missing_in_schema2",
+                "table": "estimates",
+                "column": "priority",
+                "schema1_definition": {
+                  "name": "priority",
+                  "type": "integer",
+                  "nullable": true,
+                  "default": "1",
+                  "primary_key": false
+                }
+              }
+            ],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T13:42:37.136693",
+            "config1_id": "client_2",
+            "config2_id": "client_3"
+          }
+        ],
+        "validation_time": "2026-01-28T13:42:37.136693"
+      }
+    ],
+    "overall_success": false,
+    "start_time": "2026-01-28T13:42:25.754759",
+    "end_time": "2026-01-28T13:42:37.136693",
+    "duration": 11.38
+  },
+  "cleanup_success": true,
+  "overall_success": false
+}

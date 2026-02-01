@@ -1,0 +1,536 @@
+{
+  "scenario_name": "sqlite_mysql",
+  "scenario_info": {
+    "name": "SQLite Server with MySQL Desktop Clients",
+    "description": "SQLite server with MySQL clients",
+    "server_db_type": "sqlite",
+    "client_db_types": {
+      "client_1": "mysql",
+      "client_2": "mysql",
+      "client_3": "mysql"
+    },
+    "migration_tests": [
+      "add_foreign_key_constraints"
+    ],
+    "expected_duration": 240
+  },
+  "test_session_id": "20260128_164421",
+  "setup_success": true,
+  "sync_workflow_results": {
+    "scenario": "SQLite Server with MySQL Desktop Clients",
+    "document_creation": {
+      "client_1": {
+        "success": true,
+        "document_info": {
+          "uuid": "b026d9d7-1568-444c-a551-e1dc4a8b21c0",
+          "number": "EST-20260128-164537",
+          "date": "2026-01-28",
+          "customer_id": null,
+          "object_id": null,
+          "contractor_id": null,
+          "responsible_id": null,
+          "total_sum": 0.0,
+          "total_labor": 0.0,
+          "estimate_type": "General",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 16:45:37.316694",
+          "modified_at": "2026-01-28 16:45:37.316694",
+          "id": 1
+        }
+      },
+      "client_2": {
+        "success": true,
+        "document_info": {
+          "uuid": "4f6b932f-d726-42b0-93f3-2ddfe4256c86",
+          "date": "2026-01-28",
+          "estimate_id": null,
+          "foreman_id": null,
+          "number": "DR-20260128-164537",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 16:45:37.330309",
+          "modified_at": "2026-01-28 16:45:37.330309",
+          "id": 1
+        }
+      },
+      "client_3": {
+        "success": true,
+        "document_info": {
+          "uuid": "5612d82e-e21f-4933-b0d3-8e904fd4c316",
+          "number": "TS-20260128-164537",
+          "date": "2026-01-28",
+          "object_id": null,
+          "estimate_id": null,
+          "foreman_id": null,
+          "month_year": "2026-01",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 16:45:37.340464",
+          "modified_at": "2026-01-28 16:45:37.340464",
+          "id": 1
+        }
+      }
+    },
+    "synchronization_results": {
+      "client_1": {
+        "client_id": "client_1",
+        "status": "success",
+        "duration": 2.51,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T08:45:39.437932+00:00"
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "status": "success",
+        "duration": 2.51,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T08:45:41.919538+00:00"
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "status": "success",
+        "duration": 2.51,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T08:45:44.418088+00:00"
+      }
+    },
+    "data_verification": {
+      "client_1": {
+        "client_id": "client_1",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-164537",
+              "uuid": "b026d9d7-1568-444c-a551-e1dc4a8b21c0",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-164537",
+              "uuid": "4f6b932f-d726-42b0-93f3-2ddfe4256c86",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-164537",
+              "uuid": "5612d82e-e21f-4933-b0d3-8e904fd4c316",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-164537",
+              "uuid": "b026d9d7-1568-444c-a551-e1dc4a8b21c0",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-164537",
+              "uuid": "4f6b932f-d726-42b0-93f3-2ddfe4256c86",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-164537",
+              "uuid": "5612d82e-e21f-4933-b0d3-8e904fd4c316",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-164537",
+              "uuid": "b026d9d7-1568-444c-a551-e1dc4a8b21c0",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-164537",
+              "uuid": "4f6b932f-d726-42b0-93f3-2ddfe4256c86",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-164537",
+              "uuid": "5612d82e-e21f-4933-b0d3-8e904fd4c316",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      }
+    },
+    "overall_success": true,
+    "start_time": "2026-01-28T16:45:37.316694",
+    "end_time": "2026-01-28T16:45:44.882530",
+    "duration": 7.57
+  },
+  "migration_test_results": {
+    "scenario": "SQLite Server with MySQL Desktop Clients",
+    "migrations_tested": [
+      "add_foreign_key_constraints"
+    ],
+    "migration_results": {
+      "add_foreign_key_constraints": {
+        "migration_name": "add_foreign_key_constraints",
+        "server_execution": {
+          "success": true,
+          "error": null,
+          "migration_id": "20260128_164544_add_foreign_key_constraints"
+        },
+        "client_propagation": {
+          "client_1": {
+            "success": true,
+            "error": null
+          },
+          "client_2": {
+            "success": true,
+            "error": null
+          },
+          "client_3": {
+            "success": true,
+            "error": null
+          }
+        },
+        "schema_consistency": {
+          "consistent": true,
+          "server_schema": {
+            "version": "head",
+            "database_type": "sqlite"
+          },
+          "client_schemas": {
+            "client_1": {
+              "version": "head",
+              "database_type": "mysql"
+            },
+            "client_2": {
+              "version": "head",
+              "database_type": "mysql"
+            },
+            "client_3": {
+              "version": "head",
+              "database_type": "mysql"
+            }
+          },
+          "inconsistencies": [],
+          "verification_time": "2026-01-28T16:45:47.933466"
+        },
+        "success": true
+      }
+    },
+    "schema_consistency_checks": [
+      {
+        "overall_consistent": false,
+        "total_databases": 4,
+        "total_comparisons": 6,
+        "consistent_pairs": 3,
+        "inconsistent_pairs": 3,
+        "snapshots": {
+          "server": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 28,
+            "captured_at": "2026-01-28T16:45:59.623129"
+          },
+          "client_1": {
+            "database_type": "mysql",
+            "schema_version": null,
+            "table_count": 0,
+            "captured_at": "2026-01-28T16:46:00.494597"
+          },
+          "client_2": {
+            "database_type": "mysql",
+            "schema_version": null,
+            "table_count": 0,
+            "captured_at": "2026-01-28T16:46:01.188597"
+          },
+          "client_3": {
+            "database_type": "mysql",
+            "schema_version": null,
+            "table_count": 0,
+            "captured_at": "2026-01-28T16:46:01.808784"
+          }
+        },
+        "comparisons": [
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "mysql",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": [
+                "users",
+                "organizations",
+                "payroll_register",
+                "sync_changes",
+                "cost_item_materials",
+                "counterparties",
+                "object_version_history",
+                "cost_items",
+                "materials",
+                "persons",
+                "sync_nodes",
+                "work_specifications",
+                "table_part_command_config",
+                "user_settings",
+                "timesheets",
+                "work_unit_migration",
+                "daily_report_executors",
+                "user_table_part_settings",
+                "objects",
+                "constants",
+                "estimates",
+                "daily_reports",
+                "units",
+                "timesheet_lines",
+                "work_execution_register",
+                "estimate_lines",
+                "daily_report_lines",
+                "works"
+              ]
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T16:46:01.811065",
+            "config1_id": "server",
+            "config2_id": "client_1"
+          },
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "mysql",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": [
+                "users",
+                "organizations",
+                "payroll_register",
+                "sync_changes",
+                "cost_item_materials",
+                "counterparties",
+                "object_version_history",
+                "cost_items",
+                "materials",
+                "persons",
+                "sync_nodes",
+                "work_specifications",
+                "table_part_command_config",
+                "user_settings",
+                "timesheets",
+                "work_unit_migration",
+                "daily_report_executors",
+                "user_table_part_settings",
+                "objects",
+                "constants",
+                "estimates",
+                "daily_reports",
+                "units",
+                "timesheet_lines",
+                "work_execution_register",
+                "estimate_lines",
+                "daily_report_lines",
+                "works"
+              ]
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T16:46:01.812134",
+            "config1_id": "server",
+            "config2_id": "client_2"
+          },
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "mysql",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": [
+                "users",
+                "organizations",
+                "payroll_register",
+                "sync_changes",
+                "cost_item_materials",
+                "counterparties",
+                "object_version_history",
+                "cost_items",
+                "materials",
+                "persons",
+                "sync_nodes",
+                "work_specifications",
+                "table_part_command_config",
+                "user_settings",
+                "timesheets",
+                "work_unit_migration",
+                "daily_report_executors",
+                "user_table_part_settings",
+                "objects",
+                "constants",
+                "estimates",
+                "daily_reports",
+                "units",
+                "timesheet_lines",
+                "work_execution_register",
+                "estimate_lines",
+                "daily_report_lines",
+                "works"
+              ]
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T16:46:01.813135",
+            "config1_id": "server",
+            "config2_id": "client_3"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "mysql",
+            "schema2_type": "mysql",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T16:46:01.813135",
+            "config1_id": "client_1",
+            "config2_id": "client_2"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "mysql",
+            "schema2_type": "mysql",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T16:46:01.815580",
+            "config1_id": "client_1",
+            "config2_id": "client_3"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "mysql",
+            "schema2_type": "mysql",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T16:46:01.815580",
+            "config1_id": "client_2",
+            "config2_id": "client_3"
+          }
+        ],
+        "validation_time": "2026-01-28T16:46:01.817453"
+      }
+    ],
+    "overall_success": false,
+    "start_time": "2026-01-28T16:45:44.882530",
+    "end_time": "2026-01-28T16:46:01.817453",
+    "duration": 16.93
+  },
+  "cleanup_success": true,
+  "overall_success": false
+}

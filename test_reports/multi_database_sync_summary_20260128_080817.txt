@@ -1,0 +1,18 @@
+============================================================
+TEST EXECUTION SUMMARY
+============================================================
+
+BASIC INFORMATION
+------------------------------
+Test Session ID: 20260128_080817
+Test Type: Unknown
+Overall Success: NO
+
+SCENARIO RESULTS
+------------------------------
+Total Scenarios: 4
+Successful: 1
+Failed: 3
+Total Duration: 67.69 seconds
+
+============================================================

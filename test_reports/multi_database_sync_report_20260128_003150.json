@@ -1,0 +1,319 @@
+{
+  "scenario_name": "sqlite_only",
+  "scenario_info": {
+    "name": "SQLite Only Testing",
+    "description": "SQLite server with SQLite clients (no external DB required)",
+    "server_db_type": "sqlite",
+    "client_db_types": {
+      "client_1": "sqlite",
+      "client_2": "sqlite",
+      "client_3": "sqlite"
+    },
+    "migration_tests": [
+      "add_project_phases_table",
+      "add_priority_to_estimates"
+    ],
+    "expected_duration": 180
+  },
+  "test_session_id": "20260128_003150",
+  "setup_success": true,
+  "sync_workflow_results": {
+    "scenario": "SQLite Only Testing",
+    "document_creation": {
+      "client_1": {
+        "success": false,
+        "error": "'NoneType' object has no attribute 'get'"
+      },
+      "client_2": {
+        "success": false,
+        "error": "'NoneType' object has no attribute 'get'"
+      },
+      "client_3": {
+        "success": false,
+        "error": "'NoneType' object has no attribute 'get'"
+      }
+    },
+    "synchronization_results": {
+      "client_1": {
+        "client_id": "client_1",
+        "status": "success",
+        "duration": 0.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-27T16:32:00.043788+00:00"
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "status": "success",
+        "duration": 0.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-27T16:32:00.552946+00:00"
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "status": "success",
+        "duration": 0.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-27T16:32:01.060984+00:00"
+      }
+    },
+    "data_verification": {
+      "client_1": {
+        "client_id": "client_1",
+        "total_expected": 0,
+        "found_documents": 0,
+        "missing_documents": [],
+        "verification_details": [],
+        "success": true
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "total_expected": 0,
+        "found_documents": 0,
+        "missing_documents": [],
+        "verification_details": [],
+        "success": true
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "total_expected": 0,
+        "found_documents": 0,
+        "missing_documents": [],
+        "verification_details": [],
+        "success": true
+      }
+    },
+    "overall_success": false,
+    "start_time": "2026-01-28T00:32:00.025990",
+    "end_time": "2026-01-28T00:32:01.554070",
+    "duration": 1.53
+  },
+  "migration_test_results": {
+    "scenario": "SQLite Only Testing",
+    "migrations_tested": [],
+    "migration_results": {},
+    "schema_consistency_checks": [
+      {
+        "overall_consistent": false,
+        "total_databases": 4,
+        "total_comparisons": 6,
+        "consistent_pairs": 3,
+        "inconsistent_pairs": 3,
+        "snapshots": {
+          "server": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 0,
+            "captured_at": "2026-01-28T00:32:06.026180"
+          },
+          "client_1": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 21,
+            "captured_at": "2026-01-28T00:32:06.029716"
+          },
+          "client_2": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 21,
+            "captured_at": "2026-01-28T00:32:06.041698"
+          },
+          "client_3": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 21,
+            "captured_at": "2026-01-28T00:32:06.041698"
+          }
+        },
+        "comparisons": [
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [
+                "counterparties",
+                "objects",
+                "sync_changes",
+                "daily_report_executors",
+                "audit_logs",
+                "payroll_register",
+                "object_version_history",
+                "daily_report_lines",
+                "user_settings",
+                "timesheets",
+                "timesheet_lines",
+                "organizations",
+                "persons",
+                "estimates",
+                "daily_reports",
+                "work_execution_register",
+                "estimate_lines",
+                "works",
+                "sync_nodes",
+                "users",
+                "constants"
+              ],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T00:32:06.041698",
+            "config1_id": "server",
+            "config2_id": "client_1"
+          },
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [
+                "counterparties",
+                "objects",
+                "sync_changes",
+                "daily_report_executors",
+                "audit_logs",
+                "payroll_register",
+                "object_version_history",
+                "daily_report_lines",
+                "user_settings",
+                "timesheets",
+                "timesheet_lines",
+                "organizations",
+                "persons",
+                "estimates",
+                "daily_reports",
+                "work_execution_register",
+                "estimate_lines",
+                "works",
+                "sync_nodes",
+                "users",
+                "constants"
+              ],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T00:32:06.056867",
+            "config1_id": "server",
+            "config2_id": "client_2"
+          },
+          {
+            "schemas_match": false,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [
+                "counterparties",
+                "objects",
+                "sync_changes",
+                "daily_report_executors",
+                "audit_logs",
+                "payroll_register",
+                "object_version_history",
+                "daily_report_lines",
+                "user_settings",
+                "timesheets",
+                "timesheet_lines",
+                "organizations",
+                "persons",
+                "estimates",
+                "daily_reports",
+                "work_execution_register",
+                "estimate_lines",
+                "works",
+                "sync_nodes",
+                "users",
+                "constants"
+              ],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T00:32:06.056867",
+            "config1_id": "server",
+            "config2_id": "client_3"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T00:32:06.057878",
+            "config1_id": "client_1",
+            "config2_id": "client_2"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T00:32:06.058878",
+            "config1_id": "client_1",
+            "config2_id": "client_3"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T00:32:06.059875",
+            "config1_id": "client_2",
+            "config2_id": "client_3"
+          }
+        ],
+        "validation_time": "2026-01-28T00:32:06.060894"
+      }
+    ],
+    "overall_success": false,
+    "start_time": "2026-01-28T00:32:01.561103",
+    "end_time": "2026-01-28T00:32:06.061429",
+    "duration": 4.5
+  },
+  "cleanup_success": true,
+  "overall_success": false
+}
