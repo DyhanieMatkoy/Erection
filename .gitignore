@@ -160,3 +160,7 @@ cython_debug/
 ConstructionTimeManagement_Desktop_v1.0.zip
 ConstructionTimeManagement_Desktop_FIXED_v1.0.zip
 desktop_package/
+
+# Test logs and reports
+test_logs/
+test_reports/
