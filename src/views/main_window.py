@@ -1,9 +1,10 @@
 """Main window"""
 from PyQt6.QtWidgets import (QMainWindow, QMenuBar, QStatusBar, QMdiArea, 
                               QDialog, QVBoxLayout, QLineEdit, QListWidget, 
-                              QListWidgetItem, QLabel)
-from PyQt6.QtGui import QAction, QKeySequence, QShortcut
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+                              QListWidgetItem, QLabel, QPushButton, QProgressBar,
+                              QHBoxLayout, QFrame, QToolTip)
+from PyQt6.QtGui import QAction, QKeySequence, QShortcut, QPixmap, QIcon, QCursor
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint
 from collections import deque
 
 
@@ -102,23 +103,31 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         from ..services.auth_service import AuthService
-        from ..services.sync_service import SyncService
+        from ..services.sync_initializer import initialize_sync_for_app
         from ..data.database_manager import DatabaseManager
         
         self.auth_service = AuthService()
         
-        # Initialize sync service with default parameters
-        db_manager = DatabaseManager()
-        self.sync_service = SyncService(
-            db_manager=db_manager,
-            server_url="http://localhost:8000",  # Default, can be changed in settings
-            node_code="DESKTOP-CLIENT"  # Default, can be changed in settings
-        )
+        # Initialize database manager
+        self.db_manager = DatabaseManager()
+        
+        # Initialize sync service automatically
+        self.sync_service = initialize_sync_for_app(self.db_manager)
+        
+        # If sync service is None, create a dummy one for UI consistency
+        if self.sync_service is None:
+            from ..services.sync_service import SyncService
+            self.sync_service = SyncService(
+                db_manager=self.db_manager,
+                server_url="http://localhost:8000",
+                node_code="DESKTOP-CLIENT"
+            )
         
         self.recent_forms = deque(maxlen=10)  # Track recently opened forms
         self.setup_ui()
         self.setup_shortcuts()
         self.setup_sync_status()
+        self.setup_sync_notifications()
         
         # Show quick navigation on startup
         QTimer.singleShot(100, self.show_quick_navigation)
@@ -309,10 +318,8 @@ class MainWindow(QMainWindow):
         statusbar = self.statusBar()
         statusbar.showMessage("Готов")
         
-        # Add sync status to status bar
-        self.sync_status_label = QLabel("Синхронизация: Не настроена")
-        self.sync_status_label.setStyleSheet("color: gray; margin-left: 10px;")
-        statusbar.addPermanentWidget(self.sync_status_label)
+        # Add sync status widget to status bar
+        self.setup_sync_status_widget(statusbar)
     
     def setup_shortcuts(self):
         """Setup keyboard shortcuts"""
@@ -631,15 +638,95 @@ class MainWindow(QMainWindow):
         from .sync_settings_dialog import SyncSettingsDialog
         
         dialog = SyncSettingsDialog(self.sync_service, self)
+        dialog.settings_changed.connect(self.on_sync_settings_changed)
         dialog.exec()
+    
+    def on_sync_settings_changed(self):
+        """Handle sync settings changed"""
+        self.statusBar().showMessage("Настройки синхронизации обновлены", 3000)
+        self.update_sync_status()
+    
+    def setup_sync_status_widget(self, statusbar):
+        """Setup advanced sync status widget in status bar"""
+        # Create sync status frame
+        self.sync_status_frame = QFrame()
+        self.sync_status_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.sync_status_frame.setStyleSheet("""
+            QFrame {
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: #f9f9f9;
+                margin: 2px;
+                padding: 2px;
+            }
+        """)
+        
+        sync_layout = QHBoxLayout()
+        sync_layout.setContentsMargins(5, 2, 5, 2)
+        sync_layout.setSpacing(5)
+        
+        # Status indicator (colored circle)
+        self.sync_indicator = QLabel("●")
+        self.sync_indicator.setStyleSheet("color: gray; font-size: 12px;")
+        sync_layout.addWidget(self.sync_indicator)
+        
+        # Status text
+        self.sync_status_label = QLabel("Не настроена")
+        self.sync_status_label.setStyleSheet("color: gray; font-size: 11px;")
+        sync_layout.addWidget(self.sync_status_label)
+        
+        # Progress bar (hidden by default)
+        self.sync_progress = QProgressBar()
+        self.sync_progress.setMaximumHeight(12)
+        self.sync_progress.setMaximumWidth(80)
+        self.sync_progress.setVisible(False)
+        sync_layout.addWidget(self.sync_progress)
+        
+        # Conflicts indicator
+        self.conflicts_button = QPushButton("⚠")
+        self.conflicts_button.setMaximumSize(20, 20)
+        self.conflicts_button.setStyleSheet("""
+            QPushButton {
+                border: none;
+                background: transparent;
+                color: orange;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 165, 0, 0.2);
+                border-radius: 10px;
+            }
+        """)
+        self.conflicts_button.setVisible(False)
+        self.conflicts_button.clicked.connect(self.show_conflict_resolution)
+        self.conflicts_button.setToolTip("Есть конфликты синхронизации")
+        sync_layout.addWidget(self.conflicts_button)
+        
+        self.sync_status_frame.setLayout(sync_layout)
+        
+        # Make the frame clickable for settings
+        self.sync_status_frame.mousePressEvent = self.on_sync_status_clicked
+        self.sync_status_frame.setToolTip("Нажмите для настройки синхронизации")
+        
+        statusbar.addPermanentWidget(self.sync_status_frame)
     
     def setup_sync_status(self):
         """Setup synchronization status monitoring"""
         # Connect to sync service signals
         self.sync_service.status_changed.connect(self.update_sync_status)
+        self.sync_service.sync_started.connect(self.on_sync_started)
+        self.sync_service.sync_completed.connect(self.on_sync_completed)
+        self.sync_service.sync_failed.connect(self.on_sync_failed)
+        self.sync_service.conflict_detected.connect(self.on_conflict_detected)
         
         # Update initial status
         self.update_sync_status()
+        
+        # Check for conflicts periodically
+        self.conflict_check_timer = QTimer()
+        self.conflict_check_timer.timeout.connect(self.check_conflicts)
+        self.conflict_check_timer.start(30000)  # Check every 30 seconds
     
     def update_sync_status(self):
         """Update sync status in status bar"""
@@ -649,17 +736,167 @@ class MainWindow(QMainWindow):
             
             if status.get('is_registered', False):
                 if status_text == 'Online':
-                    self.sync_status_label.setText("Синхронизация: Онлайн")
-                    self.sync_status_label.setStyleSheet("color: green; margin-left: 10px;")
+                    self.sync_indicator.setStyleSheet("color: green; font-size: 12px;")
+                    self.sync_status_label.setText("Онлайн")
+                    self.sync_status_label.setStyleSheet("color: green; font-size: 11px;")
+                    self.sync_status_frame.setToolTip("Синхронизация активна. Нажмите для настроек.")
                 elif status_text == 'Syncing':
-                    self.sync_status_label.setText("Синхронизация: Выполняется")
-                    self.sync_status_label.setStyleSheet("color: blue; margin-left: 10px;")
+                    self.sync_indicator.setStyleSheet("color: blue; font-size: 12px;")
+                    self.sync_status_label.setText("Синхронизация")
+                    self.sync_status_label.setStyleSheet("color: blue; font-size: 11px;")
+                    self.sync_status_frame.setToolTip("Выполняется синхронизация...")
                 else:
-                    self.sync_status_label.setText("Синхронизация: Офлайн")
-                    self.sync_status_label.setStyleSheet("color: orange; margin-left: 10px;")
+                    self.sync_indicator.setStyleSheet("color: orange; font-size: 12px;")
+                    self.sync_status_label.setText("Офлайн")
+                    self.sync_status_label.setStyleSheet("color: orange; font-size: 11px;")
+                    self.sync_status_frame.setToolTip("Нет связи с сервером. Нажмите для настроек.")
             else:
-                self.sync_status_label.setText("Синхронизация: Не настроена")
-                self.sync_status_label.setStyleSheet("color: gray; margin-left: 10px;")
+                self.sync_indicator.setStyleSheet("color: gray; font-size: 12px;")
+                self.sync_status_label.setText("Не настроена")
+                self.sync_status_label.setStyleSheet("color: gray; font-size: 11px;")
+                self.sync_status_frame.setToolTip("Синхронизация не настроена. Нажмите для настройки.")
+                
         except Exception as e:
-            self.sync_status_label.setText("Синхронизация: Ошибка")
-            self.sync_status_label.setStyleSheet("color: red; margin-left: 10px;")
+            self.sync_indicator.setStyleSheet("color: red; font-size: 12px;")
+            self.sync_status_label.setText("Ошибка")
+            self.sync_status_label.setStyleSheet("color: red; font-size: 11px;")
+            self.sync_status_frame.setToolTip(f"Ошибка синхронизации: {str(e)}")
+    
+    def on_sync_status_clicked(self, event):
+        """Handle click on sync status widget"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.open_sync_settings()
+    
+    def on_sync_started(self):
+        """Handle sync started"""
+        self.sync_progress.setVisible(True)
+        self.sync_progress.setRange(0, 0)  # Indeterminate progress
+        self.sync_status_label.setText("Синхронизация")
+        self.sync_status_label.setStyleSheet("color: blue; font-size: 11px;")
+        self.sync_indicator.setStyleSheet("color: blue; font-size: 12px;")
+    
+    def on_sync_completed(self, result):
+        """Handle sync completed"""
+        self.sync_progress.setVisible(False)
+        
+        processed = result.get('processed_count', 0)
+        errors = result.get('error_count', 0)
+        
+        if errors == 0:
+            # Show brief success message
+            self.statusBar().showMessage(f"Синхронизация завершена: обработано {processed} записей", 3000)
+        else:
+            # Show warning message
+            self.statusBar().showMessage(f"Синхронизация завершена с ошибками: {processed} записей, {errors} ошибок", 5000)
+        
+        self.update_sync_status()
+    
+    def on_sync_failed(self, error):
+        """Handle sync failed"""
+        self.sync_progress.setVisible(False)
+        self.statusBar().showMessage(f"Ошибка синхронизации: {error}", 5000)
+        self.update_sync_status()
+    
+    def on_conflict_detected(self, conflict_data):
+        """Handle conflict detected"""
+        self.conflicts_button.setVisible(True)
+        self.statusBar().showMessage("Обнаружен конфликт синхронизации", 3000)
+    
+    def check_conflicts(self):
+        """Check for unresolved conflicts"""
+        try:
+            conflicts = self.sync_service.conflict_resolver.get_unresolved_conflicts()
+            if conflicts:
+                self.conflicts_button.setVisible(True)
+                self.conflicts_button.setToolTip(f"Конфликтов: {len(conflicts)}")
+            else:
+                self.conflicts_button.setVisible(False)
+        except Exception:
+            # If conflict resolver is not available, hide the button
+            self.conflicts_button.setVisible(False)
+    
+    def show_conflict_resolution(self):
+        """Show conflict resolution dialog"""
+        from .conflict_resolution_dialog import ConflictResolutionDialog
+        
+        dialog = ConflictResolutionDialog(self.sync_service, self)
+        dialog.conflicts_resolved.connect(self.on_conflicts_resolved)
+        dialog.exec()
+    
+    def setup_sync_notifications(self):
+        """Setup sync notification manager"""
+        from .sync_notification_widget import SyncNotificationManager
+        
+        self.notification_manager = SyncNotificationManager(self)
+        
+        # Connect sync service signals to notifications
+        if self.sync_service:
+            self.sync_service.sync_started.connect(self.notification_manager.show_sync_started)
+            self.sync_service.sync_completed.connect(
+                lambda result: self.notification_manager.show_sync_completed(
+                    result.get('processed_count', 0),
+                    result.get('error_count', 0)
+                )
+            )
+            self.sync_service.sync_failed.connect(self.on_sync_failed_notification)
+            self.sync_service.conflict_detected.connect(
+                lambda conflict: self.notification_manager.show_conflict_detected(1)
+            )
+            self.sync_service.status_changed.connect(self.on_sync_status_changed_for_notifications)
+    
+    def on_sync_failed_notification(self, error: str):
+        """Handle sync failed notification with error type detection"""
+        # Determine error type for appropriate notification
+        error_lower = error.lower()
+        
+        if "connection" in error_lower or "network" in error_lower:
+            error_type = "connection_error"
+        elif "timeout" in error_lower:
+            error_type = "timeout"
+        elif "http 5" in error_lower or "server" in error_lower:
+            error_type = "server_error"
+        else:
+            error_type = "unknown"
+        
+        # Get retry information
+        status = self.sync_service.get_sync_status()
+        retry_in = int(status.get('next_retry_in', 0))
+        
+        # Show appropriate notification
+        if hasattr(self.notification_manager, 'show_network_error'):
+            self.notification_manager.show_network_error(error_type, retry_in)
+        else:
+            # Fallback to generic sync failed notification
+            self.notification_manager.show_sync_failed(error)
+    
+    def on_sync_status_changed_for_notifications(self, status: str):
+        """Handle sync status changes for notifications"""
+        # Track previous status to detect changes
+        if not hasattr(self, '_previous_sync_status'):
+            self._previous_sync_status = 'unknown'
+        
+        if self._previous_sync_status == 'online' and status == 'offline':
+            self.notification_manager.show_connection_lost()
+        elif self._previous_sync_status == 'offline' and status == 'online':
+            self.notification_manager.show_connection_restored()
+        
+        self._previous_sync_status = status
+    
+    def handle_sync_notification_action(self, action_id: str):
+        """Handle actions from sync notifications"""
+        if action_id == "open_sync_settings":
+            self.open_sync_settings()
+        elif action_id == "resolve_conflicts":
+            self.show_conflict_resolution()
+    
+    def resizeEvent(self, event):
+        """Handle window resize - reposition notifications"""
+        super().resizeEvent(event)
+        if hasattr(self, 'notification_manager'):
+            self.notification_manager.position_widget()
+    
+    def on_conflicts_resolved(self, count):
+        """Handle conflicts resolved"""
+        if count > 0:
+            self.statusBar().showMessage(f"Разрешено конфликтов: {count}", 3000)
+            self.check_conflicts()  # Update conflicts indicator

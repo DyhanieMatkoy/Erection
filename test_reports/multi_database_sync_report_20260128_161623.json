@@ -1,0 +1,282 @@
+{
+  "scenario_name": "sqlite_mysql",
+  "scenario_info": {
+    "name": "SQLite Server with MySQL Desktop Clients",
+    "description": "SQLite server with MySQL clients",
+    "server_db_type": "sqlite",
+    "client_db_types": {
+      "client_1": "mysql",
+      "client_2": "mysql",
+      "client_3": "mysql"
+    },
+    "migration_tests": [
+      "add_foreign_key_constraints"
+    ],
+    "expected_duration": 240
+  },
+  "test_session_id": "20260128_161623",
+  "setup_success": true,
+  "sync_workflow_results": {
+    "scenario": "SQLite Server with MySQL Desktop Clients",
+    "document_creation": {
+      "client_1": {
+        "success": true,
+        "document_info": {
+          "uuid": "7dcbf67c-9094-4496-8a2b-2b9e92705056",
+          "number": "EST-20260128-161712",
+          "date": "2026-01-28",
+          "customer_id": null,
+          "object_id": null,
+          "contractor_id": null,
+          "responsible_id": null,
+          "total_sum": 0.0,
+          "total_labor": 0.0,
+          "estimate_type": "General",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 16:17:12.219907",
+          "modified_at": "2026-01-28 16:17:12.219907",
+          "id": 1
+        }
+      },
+      "client_2": {
+        "success": true,
+        "document_info": {
+          "uuid": "dad7a436-7725-40e5-bceb-3ff85b0e9056",
+          "date": "2026-01-28",
+          "estimate_id": null,
+          "foreman_id": null,
+          "number": "DR-20260128-161712",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 16:17:12.224823",
+          "modified_at": "2026-01-28 16:17:12.224823",
+          "id": 1
+        }
+      },
+      "client_3": {
+        "success": true,
+        "document_info": {
+          "uuid": "66842ea1-534b-4dea-a16d-08c9e8a83e9b",
+          "number": "TS-20260128-161712",
+          "date": "2026-01-28",
+          "object_id": null,
+          "estimate_id": null,
+          "foreman_id": null,
+          "month_year": "2026-01",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 16:17:12.233653",
+          "modified_at": "2026-01-28 16:17:12.233653",
+          "id": 1
+        }
+      }
+    },
+    "synchronization_results": {
+      "client_1": {
+        "client_id": "client_1",
+        "status": "success",
+        "duration": 2.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T08:17:14.293926+00:00"
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "status": "success",
+        "duration": 2.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T08:17:16.788513+00:00"
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "status": "success",
+        "duration": 2.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T08:17:19.322034+00:00"
+      }
+    },
+    "data_verification": {
+      "client_1": {
+        "client_id": "client_1",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-161712",
+              "uuid": "7dcbf67c-9094-4496-8a2b-2b9e92705056",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-161712",
+              "uuid": "dad7a436-7725-40e5-bceb-3ff85b0e9056",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-161712",
+              "uuid": "66842ea1-534b-4dea-a16d-08c9e8a83e9b",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-161712",
+              "uuid": "7dcbf67c-9094-4496-8a2b-2b9e92705056",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-161712",
+              "uuid": "dad7a436-7725-40e5-bceb-3ff85b0e9056",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-161712",
+              "uuid": "66842ea1-534b-4dea-a16d-08c9e8a83e9b",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-161712",
+              "uuid": "7dcbf67c-9094-4496-8a2b-2b9e92705056",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-161712",
+              "uuid": "dad7a436-7725-40e5-bceb-3ff85b0e9056",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-161712",
+              "uuid": "66842ea1-534b-4dea-a16d-08c9e8a83e9b",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      }
+    },
+    "overall_success": true,
+    "start_time": "2026-01-28T16:17:12.219907",
+    "end_time": "2026-01-28T16:17:19.799361",
+    "duration": 7.58
+  },
+  "migration_test_results": {
+    "scenario": "SQLite Server with MySQL Desktop Clients",
+    "migrations_tested": [
+      "add_foreign_key_constraints"
+    ],
+    "migration_results": {
+      "add_foreign_key_constraints": {
+        "migration_name": "add_foreign_key_constraints",
+        "server_execution": {
+          "success": true,
+          "error": null,
+          "migration_id": "20260128_161719_add_foreign_key_constraints"
+        },
+        "client_propagation": {
+          "client_1": {
+            "success": false,
+            "error": "Direct SQL execution failed on client"
+          },
+          "client_2": {
+            "success": false,
+            "error": "Direct SQL execution failed on client"
+          },
+          "client_3": {
+            "success": false,
+            "error": "Direct SQL execution failed on client"
+          }
+        },
+        "schema_consistency": null,
+        "success": false
+      }
+    },
+    "schema_consistency_checks": [
+      {
+        "overall_consistent": false,
+        "error": "(1045, \"Access denied for user '\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c'@'172.18.0.1' (using password: NO)\")",
+        "validation_time": "2026-01-28T16:17:19.852711"
+      }
+    ],
+    "overall_success": false,
+    "start_time": "2026-01-28T16:17:19.800366",
+    "end_time": "2026-01-28T16:17:19.852711",
+    "duration": 0.05
+  },
+  "cleanup_success": true,
+  "overall_success": false
+}

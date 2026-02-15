@@ -1,0 +1,497 @@
+{
+  "scenario_name": "sqlite_only",
+  "scenario_info": {
+    "name": "SQLite Only Testing",
+    "description": "SQLite server with SQLite clients (no external DB required)",
+    "server_db_type": "sqlite",
+    "client_db_types": {
+      "client_1": "sqlite",
+      "client_2": "sqlite",
+      "client_3": "sqlite"
+    },
+    "migration_tests": [
+      "add_project_phases_table",
+      "add_priority_to_estimates"
+    ],
+    "expected_duration": 180
+  },
+  "test_session_id": "20260128_155152",
+  "setup_success": true,
+  "sync_workflow_results": {
+    "scenario": "SQLite Only Testing",
+    "document_creation": {
+      "client_1": {
+        "success": true,
+        "document_info": {
+          "uuid": "d9ab285b-d9c5-4376-a95e-efcbddd7440b",
+          "number": "EST-20260128-155216",
+          "date": "2026-01-28",
+          "customer_id": null,
+          "object_id": null,
+          "contractor_id": null,
+          "responsible_id": null,
+          "total_sum": 0.0,
+          "total_labor": 0.0,
+          "estimate_type": "General",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 15:52:16.084593",
+          "modified_at": "2026-01-28 15:52:16.084593",
+          "id": 1
+        }
+      },
+      "client_2": {
+        "success": true,
+        "document_info": {
+          "uuid": "9d3149d8-0117-4457-9896-52b4db53462d",
+          "date": "2026-01-28",
+          "estimate_id": null,
+          "foreman_id": null,
+          "number": "DR-20260128-155216",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 15:52:16.090347",
+          "modified_at": "2026-01-28 15:52:16.090347",
+          "id": 1
+        }
+      },
+      "client_3": {
+        "success": true,
+        "document_info": {
+          "uuid": "06b95d2a-13af-4e51-aea6-d8b95126ec30",
+          "number": "TS-20260128-155216",
+          "date": "2026-01-28",
+          "object_id": null,
+          "estimate_id": null,
+          "foreman_id": null,
+          "month_year": "2026-01",
+          "marked_for_deletion": 0,
+          "created_at": "2026-01-28 15:52:16.093328",
+          "modified_at": "2026-01-28 15:52:16.093328",
+          "id": 1
+        }
+      }
+    },
+    "synchronization_results": {
+      "client_1": {
+        "client_id": "client_1",
+        "status": "success",
+        "duration": 2.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T07:52:18.146919+00:00"
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "status": "success",
+        "duration": 2.5,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T07:52:20.680131+00:00"
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "status": "success",
+        "duration": 2.51,
+        "pending_changes": 0,
+        "last_sync_time": "2026-01-28T07:52:23.210628+00:00"
+      }
+    },
+    "data_verification": {
+      "client_1": {
+        "client_id": "client_1",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-155216",
+              "uuid": "d9ab285b-d9c5-4376-a95e-efcbddd7440b",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-155216",
+              "uuid": "9d3149d8-0117-4457-9896-52b4db53462d",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-155216",
+              "uuid": "06b95d2a-13af-4e51-aea6-d8b95126ec30",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      },
+      "client_2": {
+        "client_id": "client_2",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-155216",
+              "uuid": "d9ab285b-d9c5-4376-a95e-efcbddd7440b",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-155216",
+              "uuid": "9d3149d8-0117-4457-9896-52b4db53462d",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-155216",
+              "uuid": "06b95d2a-13af-4e51-aea6-d8b95126ec30",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      },
+      "client_3": {
+        "client_id": "client_3",
+        "total_expected": 3,
+        "found_documents": 3,
+        "missing_documents": [],
+        "verification_details": [
+          {
+            "type": "estimate",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "EST-20260128-155216",
+              "uuid": "d9ab285b-d9c5-4376-a95e-efcbddd7440b",
+              "type": "estimate"
+            }
+          },
+          {
+            "type": "daily_report",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "DR-20260128-155216",
+              "uuid": "9d3149d8-0117-4457-9896-52b4db53462d",
+              "type": "daily_report"
+            }
+          },
+          {
+            "type": "timesheet",
+            "id": 1,
+            "status": "found",
+            "data": {
+              "found": true,
+              "id": 1,
+              "number": "TS-20260128-155216",
+              "uuid": "06b95d2a-13af-4e51-aea6-d8b95126ec30",
+              "type": "timesheet"
+            }
+          }
+        ],
+        "success": true
+      }
+    },
+    "overall_success": true,
+    "start_time": "2026-01-28T15:52:16.084593",
+    "end_time": "2026-01-28T15:52:23.658987",
+    "duration": 7.57
+  },
+  "migration_test_results": {
+    "scenario": "SQLite Only Testing",
+    "migrations_tested": [
+      "add_project_phases_table",
+      "add_priority_to_estimates"
+    ],
+    "migration_results": {
+      "add_project_phases_table": {
+        "migration_name": "add_project_phases_table",
+        "server_execution": {
+          "success": true,
+          "error": null,
+          "migration_id": "20260128_155223_add_project_phases_table"
+        },
+        "client_propagation": {
+          "client_1": {
+            "success": true,
+            "error": null
+          },
+          "client_2": {
+            "success": true,
+            "error": null
+          },
+          "client_3": {
+            "success": true,
+            "error": null
+          }
+        },
+        "schema_consistency": {
+          "consistent": true,
+          "server_schema": {
+            "version": "head",
+            "database_type": "sqlite"
+          },
+          "client_schemas": {
+            "client_1": {
+              "version": "head",
+              "database_type": "sqlite"
+            },
+            "client_2": {
+              "version": "head",
+              "database_type": "sqlite"
+            },
+            "client_3": {
+              "version": "head",
+              "database_type": "sqlite"
+            }
+          },
+          "inconsistencies": [],
+          "verification_time": "2026-01-28T15:52:23.723190"
+        },
+        "success": true
+      },
+      "add_priority_to_estimates": {
+        "migration_name": "add_priority_to_estimates",
+        "server_execution": {
+          "success": true,
+          "error": null,
+          "migration_id": "20260128_155231_add_priority_to_estimates"
+        },
+        "client_propagation": {
+          "client_1": {
+            "success": true,
+            "error": null
+          },
+          "client_2": {
+            "success": true,
+            "error": null
+          },
+          "client_3": {
+            "success": true,
+            "error": null
+          }
+        },
+        "schema_consistency": {
+          "consistent": true,
+          "server_schema": {
+            "version": "head",
+            "database_type": "sqlite"
+          },
+          "client_schemas": {
+            "client_1": {
+              "version": "head",
+              "database_type": "sqlite"
+            },
+            "client_2": {
+              "version": "head",
+              "database_type": "sqlite"
+            },
+            "client_3": {
+              "version": "head",
+              "database_type": "sqlite"
+            }
+          },
+          "inconsistencies": [],
+          "verification_time": "2026-01-28T15:52:31.836315"
+        },
+        "success": true
+      }
+    },
+    "schema_consistency_checks": [
+      {
+        "overall_consistent": true,
+        "total_databases": 4,
+        "total_comparisons": 6,
+        "consistent_pairs": 6,
+        "inconsistent_pairs": 0,
+        "snapshots": {
+          "server": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 29,
+            "captured_at": "2026-01-28T15:52:39.799839"
+          },
+          "client_1": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 29,
+            "captured_at": "2026-01-28T15:52:39.870324"
+          },
+          "client_2": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 29,
+            "captured_at": "2026-01-28T15:52:39.888561"
+          },
+          "client_3": {
+            "database_type": "sqlite",
+            "schema_version": null,
+            "table_count": 29,
+            "captured_at": "2026-01-28T15:52:39.910525"
+          }
+        },
+        "comparisons": [
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T15:52:39.910525",
+            "config1_id": "server",
+            "config2_id": "client_1"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T15:52:39.917416",
+            "config1_id": "server",
+            "config2_id": "client_2"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T15:52:39.918846",
+            "config1_id": "server",
+            "config2_id": "client_3"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T15:52:39.919855",
+            "config1_id": "client_1",
+            "config2_id": "client_2"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T15:52:39.920854",
+            "config1_id": "client_1",
+            "config2_id": "client_3"
+          },
+          {
+            "schemas_match": true,
+            "schema1_type": "sqlite",
+            "schema2_type": "sqlite",
+            "schema1_version": null,
+            "schema2_version": null,
+            "version_match": true,
+            "table_differences": [],
+            "missing_tables": {
+              "in_schema1": [],
+              "in_schema2": []
+            },
+            "column_differences": [],
+            "index_differences": [],
+            "foreign_key_differences": [],
+            "comparison_time": "2026-01-28T15:52:39.921873",
+            "config1_id": "client_2",
+            "config2_id": "client_3"
+          }
+        ],
+        "validation_time": "2026-01-28T15:52:39.922876"
+      }
+    ],
+    "overall_success": true,
+    "start_time": "2026-01-28T15:52:23.661020",
+    "end_time": "2026-01-28T15:52:39.922876",
+    "duration": 16.26
+  },
+  "cleanup_success": true,
+  "overall_success": true
+}

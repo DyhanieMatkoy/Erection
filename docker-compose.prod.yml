@@ -1,0 +1,190 @@
+version: '3.8'
+
+services:
+  # PostgreSQL для продакшена
+  postgres-prod:
+    image: postgres:15-alpine
+    container_name: ctm-postgres-prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-construction_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./config/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-construction_prod}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - prod-network
+
+  # MySQL для продакшена (альтернатива PostgreSQL)
+  mysql-prod:
+    image: mysql:8.0
+    container_name: ctm-mysql-prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secure_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-construction_prod}
+      MYSQL_USER: ${MYSQL_USER:-ctm_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secure_password}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_prod_data:/var/lib/mysql
+      - ./config/mysql:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-secure_root_password}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - prod-network
+
+  # API Server
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: ctm-api-server
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./config/api:/app/config
+      - api_logs:/app/logs
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - prod-network
+
+  # Web Client (Nginx)
+  web-client:
+    build:
+      context: ./web-client
+      dockerfile: Dockerfile.prod
+    container_name: ctm-web-client
+    ports:
+      - "${WEB_PORT:-80}:80"
+      - "${WEB_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./config/nginx:/etc/nginx/conf.d
+      - ./ssl:/etc/nginx/ssl
+      - web_logs:/var/log/nginx
+    depends_on:
+      - api-server
+    restart: unless-stopped
+    networks:
+      - prod-network
+
+  # Redis для кэширования (опционально)
+  redis:
+    image: redis:7-alpine
+    container_name: ctm-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - prod-network
+
+  # Backup Service
+  backup:
+    image: postgres:15-alpine
+    container_name: ctm-backup
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-construction_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password}
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh
+    command: |
+      sh -c '
+        echo "$$BACKUP_SCHEDULE /backup.sh" | crontab -
+        crond -f
+      '
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - prod-network
+
+  # Monitoring (Prometheus + Grafana)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ctm-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    restart: unless-stopped
+    networks:
+      - prod-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ctm-grafana
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin_password}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - prod-network
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  mysql_prod_data:
+    driver: local
+  redis_data:
+    driver: local
+  api_logs:
+    driver: local
+  web_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  prod-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
